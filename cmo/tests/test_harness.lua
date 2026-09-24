@@ -123,7 +123,8 @@ local function physics()
 end
 
 local guard = 0
-while BL.state.phase ~= "done" and guard < 20000 do
+local max_ticks = 3000 * (#BL_DESIGN.runs + 1)   -- 48 game hours = 2880 one-minute ticks per run
+while BL.state.phase ~= "done" and guard < max_ticks do
   MOCK.now = MOCK.now + 60
   physics()
   BL.tick()

@@ -3,4 +3,5 @@ __pycache__/
 .pytest_cache/
 *.pyc
 cmo/lua/battlelab/bl_design.lua
+!cmo/pilot/bl_design.lua
 results/*_runs.csv
