@@ -220,6 +220,15 @@ def cmd_cmo_ingest(a):
             print(analysis.check_anchors(df, anchors).to_string(index=False, float_format=FMT))
 
 
+def cmd_resolvers(a):
+    from .mechanics.combat import expected_loss_rates
+    t = pd.DataFrame(expected_loss_rates([0.5, 1, 1.5, 2, 3, 4, 5], a.kill_rate, a.round_h))
+    print("Expected loss fraction per hour, reference engagement (quality 1, no modifiers)")
+    print(t.to_string(index=False, float_format=FMT))
+    if a.out:
+        experiment.save(t, a.out, "resolvers", {"kill_rate": a.kill_rate, "round_h": a.round_h})
+
+
 def _read_results(path: str) -> pd.DataFrame:
     from .cmo import ingest
     return ingest(path)     # plain CSV or console log; normalises Lua true/false
@@ -322,6 +331,12 @@ def main(argv=None):
     p.add_argument("results", help="CSV from the harness, or a console log with BLCSV| lines")
     p.add_argument("--scenario")
     p.set_defaults(fn=cmd_cmo_ingest)
+
+    p = sub.add_parser("resolvers", help="loss rates of the combat resolvers side by side")
+    p.add_argument("--kill-rate", type=float, default=0.01)
+    p.add_argument("--round-h", type=float, default=1.0)
+    p.add_argument("--out")
+    p.set_defaults(fn=cmd_resolvers)
 
     p = sub.add_parser("compare-backends",
                        help="compare two result tables (e.g. native vs CMO) run by run")

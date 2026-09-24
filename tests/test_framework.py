@@ -397,3 +397,13 @@ def test_compare_backends_cli_on_mock_cmo(host, tmp_path, capsys):
     out = capsys.readouterr().out
     assert "3 paired runs" in out and "WARNING" not in out
     assert any(ln.split()[:2] == ["airbridge", "share"] for ln in out.splitlines())
+
+
+def test_resolver_loss_rates():
+    from battlelab.mechanics.combat import expected_loss_rates
+    rows = expected_loss_rates([0.5, 1, 2, 3, 5])
+    for r in rows:
+        assert r["lan_exchange"] == pytest.approx(r["odds"] ** 2)       # square law
+    ex = [r["crt_exchange"] for r in rows]
+    assert all(b > a for a, b in zip(ex, ex[1:]))                        # monotone in odds
+    assert [r["crt_p_retreat"] for r in rows][-1] == 1.0
