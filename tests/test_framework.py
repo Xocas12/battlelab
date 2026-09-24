@@ -4,6 +4,7 @@ from __future__ import annotations
 import math
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -220,3 +221,65 @@ def test_lua_harness_with_python_design(host, tmp_path):
     assert {f"p.{n}" for n in host.space.names()} <= set(df.columns)
     ref = experiment.run_batch(host, 3, seed=5)
     assert np.allclose(df["p.risk.tolerance"], ref["p.risk.tolerance"], rtol=1e-5)
+
+
+# ------------------------------------------------------- determinism (2) ---
+def test_runs_identical_across_hash_seeds(tmp_path):
+    """String hashing is randomised per process; results must not depend on it."""
+    code = ("from battlelab.scenario import Scenario\n"
+            f"s = Scenario.load(r'{HOST}')\n"
+            "print([sorted(s.run(s.space.sample(1, i), 1, i)[0].metrics.items(), key=str)"
+            " for i in range(25)])\n")
+    outs = set()
+    for h in ("1", "2", "3"):
+        env = {**__import__("os").environ, "PYTHONHASHSEED": h}
+        r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, env=env)
+        assert r.returncode == 0, r.stderr
+        outs.add(r.stdout)
+    assert len(outs) == 1
+
+
+# ----------------------------------------------------- command decisions ---
+def _events(w, kind):
+    return [e for e in w.log if e.kind == kind]
+
+
+def test_command_decisions_on_schedule_and_orders_at_night(mal):
+    seen_order = False
+    for i in range(80):
+        p = mal.space.sample(3, i)
+        w, _ = mal.run(p, 3, i)
+        cycle = p["hold.decision_h"]
+        for e in _events(w, "command_decision"):
+            k = e.t / cycle
+            assert e.t >= cycle - 1e-9
+            assert k - math.floor(k + 1e-9) < w.dt / cycle + 1e-9   # first turn at/after a point
+        for e in _events(w, "leaves_fight"):
+            if e.data["reason"] == "ordered_withdrawal":
+                seen_order = True
+                clock = (mal.h_hour + e.t) % 24
+                assert not (6.0 <= clock < 20.0), "night_moves order executed by day"
+    assert seen_order
+
+
+def test_command_cycle_reduces_to_continuous_hazard(mal):
+    """decision_h <= dt, no comms loss and no night rule: identical to no command block."""
+    plain = mal.with_overrides({"hold.decision_h": 0.0, "hold.comms_loss": 0.0,
+                                "hold.night_moves": 0})
+    doc = yaml.safe_load(MAL.read_text())
+    m = doc["units"]["nz_22_bn"]["morale"]
+    for k in ("decision_h", "comms_loss", "fog", "night_moves"):
+        m.pop(k)
+    bare = Scenario(doc, MAL.read_text() + "bare")
+    for i in range(40):
+        p = plain.space.sample(5, i)
+        assert plain.run(p, 5, i)[0].metrics == bare.run(p, 5, i)[0].metrics
+
+
+def test_fog_makes_withdrawal_earlier(mal):
+    """Blind decisions with pessimistic fog can only raise the order hazard."""
+    blind = mal.with_overrides({"hold.comms_loss": 1.0, "hold.fog": 0.9})
+    clear = mal.with_overrides({"hold.comms_loss": 0.0})
+    a = experiment.run_batch(blind, 300, seed=6)["m.attacker_ever_controls"].mean()
+    b = experiment.run_batch(clear, 300, seed=6)["m.attacker_ever_controls"].mean()
+    assert a > b + 0.1
