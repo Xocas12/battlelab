@@ -91,6 +91,10 @@ parameters:
   mech.ratio_coeff: {dist: fixed, value: 0.10, assumption: true}
   mech.casualty_coeff: {dist: fixed, value: 0.30, assumption: true}
   mech.ammo_hazard: {dist: fixed, value: 2.0, assumption: true}
+  mech.go_width: {dist: fixed, value: 0.02, assumption: true,
+    note: "logistic go/no-go rule only: spread of accepted risk around the tolerance, per wave or sortie"}
+  mech.info_lag_h: {dist: fixed, value: 0.0, assumption: true,
+    note: "delay between the true landing risk and the decision maker's estimate; 0 = perfect information"}
   doctrine.hasty_defense: {dist: fixed, value: 1.2, assumption: true}
   doctrine.clear_rate: {dist: fixed, value: 0.15, assumption: true, note: "runway obstacle fraction cleared per hour"}
 
@@ -167,6 +171,7 @@ airlift:
 mechanics:
   combat: {resolver: lanchester, kill_rate: $mech.kill_rate, fire_weight_defend: 1.0, fire_weight_attack: 2.0}
   morale: {ratio_coeff: $mech.ratio_coeff, casualty_coeff: $mech.casualty_coeff, ammo_hazard: $mech.ammo_hazard}
+  go_no_go: {rule: threshold, width: $mech.go_width, info_lag_h: $mech.info_lag_h}   # rule: threshold | logistic
 
 outcome: {zone: airfield, airbridge_troops: 500}
 

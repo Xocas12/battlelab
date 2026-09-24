@@ -283,3 +283,48 @@ def test_fog_makes_withdrawal_earlier(mal):
     a = experiment.run_batch(blind, 300, seed=6)["m.attacker_ever_controls"].mean()
     b = experiment.run_batch(clear, 300, seed=6)["m.attacker_ever_controls"].mean()
     assert a > b + 0.1
+
+
+# ------------------------------------------------------------ go / no-go ---
+def _airlift(scenario, run=0):
+    w, mechs = scenario.build(scenario.space.sample(1, run), 1, run)
+    al = next(m for m in mechs if m.name == "airlift")
+    al.setup(w)
+    return w, al
+
+
+def test_logistic_go_rule_acceptance_curve(host):
+    s = host.with_go_rule("logistic")
+    tol, width = 0.05, 0.02
+    for p in (0.03, 0.05, 0.08):
+        acc = []
+        for i in range(1500):
+            w, al = _airlift(s, i)
+            w.sides["RU"].doctrine["risk_tolerance"] = tol
+            acc.append(p <= al.tolerance(w, "wave0"))
+            assert al.tolerance(w, "wave0") == al.tolerance(w, "wave0")   # one nerve per wave
+        assert np.mean(acc) == pytest.approx(1 / (1 + math.exp((p - tol) / width)), abs=0.04)
+
+
+def test_info_lag_uses_old_risk(host):
+    s = host.with_overrides({"mech.info_lag_h": 1.0})
+    w, al = _airlift(s)
+    al.s.info_lag_h = 1.0
+    w.persist["airlift"]["p_hist"] = [(0.0, 0.01), (0.5, 0.02), (1.0, 0.30), (1.5, 0.40)]
+    w.t = 1.75
+    assert al.p_estimate(w) == 0.02
+
+
+def test_logistic_rule_removes_denial_cliff(host, mal):
+    """Under the hard threshold, Maleme's DENIAL alone makes a Hostomel airbridge
+    impossible; the logistic rule turns that cliff into a slope."""
+    names = host.factors["DENIAL"]
+    hard = host.with_params_from(mal, names)
+    soft = host.with_go_rule("logistic").with_params_from(mal, names)
+    assert experiment.run_batch(hard, 200, seed=2)["m.airbridge"].mean() == 0.0
+    assert experiment.run_batch(soft, 200, seed=2)["m.airbridge"].mean() > 0.0
+
+
+def test_unknown_go_rule_rejected(host):
+    with pytest.raises(ValueError):
+        host.with_go_rule("coinflip")

@@ -21,7 +21,7 @@ from typing import Any
 import yaml
 
 from .engine import Engine, Mechanic
-from .mechanics import (RESOLVERS, Airlift, AirliftSpec, AirSituation, ArrivalSpec, Arrivals,
+from .mechanics import (GO_RULES, RESOLVERS, Airlift, AirliftSpec, AirSituation, ArrivalSpec, Arrivals,
                         Combat, Control, Fires, FireSpec, FirstControlTracker, MoraleCheck,
                         Outcome, OutcomeSpec, RunwayEngineering)
 from .params import Param, ParamSpace, parse_dist
@@ -117,6 +117,16 @@ class Scenario:
         combat.update(kwargs)
         v = dict(self.variant)
         v["resolver"] = {"name": name, **kwargs}
+        return Scenario(doc, self._text, self.path, self.space, v)
+
+    def with_go_rule(self, rule: str) -> "Scenario":
+        """Same scenario, different air-landing acceptance rule."""
+        if rule not in GO_RULES:
+            raise ScenarioError(f"unknown go/no-go rule {rule!r}; have {list(GO_RULES)}")
+        doc = copy.deepcopy(self.doc)
+        doc.setdefault("mechanics", {}).setdefault("go_no_go", {})["rule"] = rule
+        v = dict(self.variant)
+        v["go_rule"] = rule
         return Scenario(doc, self._text, self.path, self.space, v)
 
     def with_params_from(self, other: "Scenario", names: list[str]) -> "Scenario":
@@ -243,6 +253,10 @@ class Scenario:
         if self.doc.get("airlift"):
             al = R(self.doc["airlift"], params)
             al["unit_id"] = al.pop("unit")
+            gng = mcfg.get("go_no_go", {})
+            al.update(go_rule=gng.get("rule", "threshold"),
+                      go_width=float(gng.get("width", 0.02)),
+                      info_lag_h=float(gng.get("info_lag_h", 0.0)))
             mechs.append(Airlift(AirliftSpec(**al)))
         return w, mechs
 
