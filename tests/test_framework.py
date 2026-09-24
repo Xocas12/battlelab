@@ -462,3 +462,15 @@ def test_export_design_offset(host, tmp_path):
     assert "{id=5," in out and "{id=6," in out and "{id=0," not in out
     ref = host.space.sample(1, 5)["risk.tolerance"]
     assert repr(float(ref)) in out
+
+
+@pytest.mark.skipif(LUA is None, reason="needs a Lua 5.3 interpreter")
+def test_cmo_build_script_end_to_end(tmp_path):
+    """Empty world -> bl_build_hostomel.lua -> selftest -> 3 replications via bl_run.lua."""
+    r = subprocess.run([LUA, "tests/test_build.lua", "lua", str(tmp_path),
+                        str(ROOT / "cmo" / "pilot" / "bl_design.lua")],
+                       cwd=ROOT / "cmo", capture_output=True, text=True)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "BUILD END-TO-END PASSED" in r.stdout
+    df = ingest(tmp_path / "battlelab_results.csv")
+    assert len(df) == 3 and (df["m.vdv_delivered"] > 0).any()

@@ -29,14 +29,18 @@ Copy `cmo/lua/battlelab/` into your CMO installation's `Lua` folder, so you have
 
 ## 2. Build the scenario once, with these names
 
+**Scripted:** fill in `bl_build_db.lua` and run `ScenEdit_RunScript('battlelab/bl_build_hostomel.lua')` in a new, empty scenario; it creates everything in this section and section 3 (see `cmo/pilot/README.md`). The table below is what it builds, and what to fix by hand if a step reports FAIL.
+
+
 The plugin finds units by name prefix. Everything else in the scenario is left alone and simply respawned each replication.
 
 | Prefix | Side | What | Parameter(s) driving it |
 |---|---|---|---|
-| `RU_HELO_T_01..` | Russia | transport helicopters carrying the assault force (loaded, on their mission) | `mass.aircraft` keeps the first N |
+| `RU_HELO_T_01..` | Russia | transport helicopters on mission `BL Assault` (no cargo needed: troops are the `RU_VDV_` squads) | `mass.aircraft` keeps the first N |
 | `RU_HELO_A_..` | Russia | attack helicopters | (CMO simulates) |
 | `RU_IL76_01..18` | Russia | Il-76s at their base, assigned to mission `BL Airlift` (a ferry/transport mission to Hostomel) | release rule: `risk.tolerance`, `ctx.wave1_t`, `ctx.wave2_t`, `air.att.approach_loss` |
 | `RU_COL_..` | Russia | ground column | spawned at `ctx.t_relief` and ordered to the airfield |
+| `RU_VDV_..` | Russia | airborne squads (templates, parked at the helicopter base) | each `RU_HELO_T_` reaching the airfield unloads its share there; each survives with prob. 1 − `mass.dz_loss` |
 | `UA_NG_01..` | Ukraine | National Guard garrison inside the airfield | `hold.strength` (count), `hold.quality` (proficiency) |
 | `UA_CA_01..` | Ukraine | counterattack force, placed where it forms up | `response.strength` (count), `response.t_ca` (spawn time) |
 | `UA_ART_..` | Ukraine | artillery (optional) | scripted fires start at `denial.t_fires` and stop if all are destroyed |

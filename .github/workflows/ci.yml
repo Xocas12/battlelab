@@ -36,3 +36,5 @@ jobs:
           lua5.3 tests/test_harness.lua lua "$RUNNER_TEMP/bl_io" -
           lua5.3 tests/test_harness.lua lua "$RUNNER_TEMP/bl_noio" - --no-io
           lua5.3 tests/test_probe.lua lua "$RUNNER_TEMP/bl_io" --write
+          mkdir -p "$RUNNER_TEMP/bl_build"
+          lua5.3 tests/test_build.lua lua "$RUNNER_TEMP/bl_build" "$PWD/pilot/bl_design.lua"
