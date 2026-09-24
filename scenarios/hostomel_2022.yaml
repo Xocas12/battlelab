@@ -1,0 +1,182 @@
+id: hostomel_2022
+title: "Hostomel (Antonov) Airport, 24-25 February 2022"
+family: airhead
+clock:
+  h_hour_local: 11.0        # assault formation reaches the airfield ~11:00
+  dt_h: 0.25
+  horizon_h: 48
+
+sources:
+  WOTR2023:
+    cite: "Collins, Kofman & Spencer, 'The Battle of Hostomel Airport: A Key Moment in Russia's Defeat in Kyiv', War on the Rocks, 10 Aug 2023"
+    url: "https://warontherocks.com/the-battle-of-hostomel-airport-a-key-moment-in-russias-defeat-in-kyiv/"
+
+# ---------------------------------------------------------------------------
+# Parameters. Every entry: a distribution + source and/or `assumption: true`.
+# Names are shared with every scenario of the `airhead` family so that factor
+# bundles can be swapped between battles.
+# ---------------------------------------------------------------------------
+parameters:
+  # AIR ---------------------------------------------------------------------
+  air.att.ingress_loss: {dist: uniform, lo: 0.03, hi: 0.10, source: WOTR2023, confidence: medium,
+    note: "6-7 of ~34 helicopters lost over the whole assault; per-transport loss lower"}
+  air.att.approach_loss: {dist: uniform, lo: 0.02, hi: 0.06, source: WOTR2023, assumption: true,
+    note: "residual Ukrainian air defence; WOTR lists fear of losing Il-76s as one abort hypothesis"}
+  air.att.suppression: {dist: uniform, lo: 0.0, hi: 0.2, source: WOTR2023, confidence: low,
+    note: "VKS suppressed fixed sites but not mobile systems; little air support after helicopters left"}
+  air.att.interdiction: {dist: uniform, lo: 0.0, hi: 0.15, assumption: true}
+  air.att.cas: {dist: uniform, lo: 1.0, hi: 1.1, source: WOTR2023, confidence: low,
+    note: "helicopters returned to Belarus; possibly two Su-25s"}
+  # MASS --------------------------------------------------------------------
+  mass.aircraft: {dist: fixed, value: 20, source: WOTR2023, confidence: high,
+    note: "two waves of 10 transport helicopters"}
+  mass.capacity: {dist: fixed, value: 15, source: WOTR2023, confidence: medium,
+    note: "~300 VDV inserted by 20 Mi-8"}
+  mass.dz_loss: {dist: uniform, lo: 0.03, hi: 0.10, assumption: true,
+    note: "concentrated heliborne landing under small-arms fire"}
+  mass.reserve_aircraft: {dist: fixed, value: 0, source: WOTR2023, note: "no airborne reserve dropped"}
+  mass.reserve_capacity: {dist: fixed, value: 12, assumption: true}
+  mass.reserve_dz: {dist: fixed, value: 0.0, assumption: true}
+  mass.t_reserve: {dist: fixed, value: 30.0, assumption: true}
+  # HOLD --------------------------------------------------------------------
+  hold.strength: {dist: uniform, lo: 150, hi: 220, source: WOTR2023, confidence: medium,
+    note: "approximately 200 National Guard soldiers left to defend the airport"}
+  hold.quality: {dist: uniform, lo: 0.5, hi: 0.7, source: WOTR2023, assumption: true,
+    note: "new conscripts and rear-echelon troops; small arms, Igla, ZU-23-2"}
+  hold.dug_in: {dist: fixed, value: 1.3, assumption: true}
+  hold.base_hazard: {dist: uniform, lo: 0.0, hi: 0.03, assumption: true}
+  hold.ammo_out_h: {dist: uniform, lo: 1.5, hi: 3.0, source: WOTR2023, confidence: medium,
+    note: "withdrew after exhausting their basic load, ~2 h into the fight"}
+  # RESPONSE ----------------------------------------------------------------
+  response.t_ca: {dist: uniform, lo: 5.5, hi: 8.0, source: WOTR2023, confidence: medium,
+    note: "ordered immediately, attack began near sunset (~17:30, H+6.5)"}
+  response.strength: {dist: uniform, lo: 400, hi: 900, source: WOTR2023, assumption: true,
+    note: "elements of 80th/95th AAB, 72nd Mech, 3rd SSO, volunteers; size not reported"}
+  response.commit_h: {dist: uniform, lo: 8, hi: 14, assumption: true}
+  response.withdraw_ratio: {dist: fixed, value: 2.0, assumption: true,
+    note: "light infantry leaves rather than fight 2:1 against a mechanised force"}
+  # DENIAL ------------------------------------------------------------------
+  denial.obstacles0: {dist: uniform, lo: 0.5, hi: 0.8, source: WOTR2023, assumption: true,
+    note: "vehicles parked on the runway; a downed Ka-52 added another obstacle"}
+  denial.t_fires: {dist: uniform, lo: 4.0, hi: 7.0, source: WOTR2023, confidence: low,
+    note: "artillery and Su-24 strikes opened the counterattack before sunset"}
+  denial.fire_intensity: {dist: uniform, lo: 0.6, hi: 1.0, source: WOTR2023, assumption: true,
+    note: "Ukraine 'had a decisive advantage in fires around the capital'"}
+  denial.crater_rate: {dist: uniform, lo: 0.06, hi: 0.12, assumption: true}
+  denial.demolish_rate: {dist: uniform, lo: 0.3, hi: 0.6, source: WOTR2023, assumption: true,
+    note: "runway deliberately cratered while withdrawing on the night of 24/25 Feb"}
+  # RISK --------------------------------------------------------------------
+  risk.tolerance: {dist: uniform, lo: 0.03, hi: 0.08, source: WOTR2023, assumption: true,
+    note: "Il-76 wave aborted mid-air; cause unclear. Encodes the 'feared losses' hypothesis"}
+  # CONTEXT (not swapped) ---------------------------------------------------
+  ctx.aircraft: {dist: fixed, value: 18, source: WOTR2023, confidence: high, note: "18 Il-76 from Pskov"}
+  ctx.troops_per_aircraft: {dist: fixed, value: 55, source: WOTR2023, note: "~1,000 troops on 18 Il-76"}
+  ctx.wave1_t: {dist: uniform, lo: 3.5, hi: 6.0, source: WOTR2023, assumption: true,
+    note: "~2 h flight; plan assumed transports or ground forces by late afternoon"}
+  ctx.wave2_t: {dist: uniform, lo: 24.0, hi: 28.0, assumption: true, note: "hypothetical next-morning retry"}
+  ctx.loiter_h: {dist: fixed, value: 1.5, assumption: true}
+  ctx.t_relief: {dist: uniform, lo: 20.0, hi: 28.0, source: WOTR2023, confidence: medium,
+    note: "Russian ground forces reached the airport the morning of 25 Feb"}
+  ctx.relief_strength: {dist: fixed, value: 1500, assumption: true}
+  ctx.night_limited_air: {dist: fixed, value: 0, assumption: true, note: "2022 air power is not day-only"}
+  ctx.wreck_obstacle: {dist: fixed, value: 0.02, assumption: true, note: "an Il-76 wreck blocks a lot of runway"}
+  # MECHANIC CONSTANTS (identical across the family) ------------------------
+  mech.kill_rate: {dist: fixed, value: 0.01, assumption: true, note: "casualties per effective shooter-hour"}
+  mech.ratio_coeff: {dist: fixed, value: 0.10, assumption: true}
+  mech.casualty_coeff: {dist: fixed, value: 0.30, assumption: true}
+  mech.ammo_hazard: {dist: fixed, value: 2.0, assumption: true}
+  doctrine.hasty_defense: {dist: fixed, value: 1.2, assumption: true}
+  doctrine.clear_rate: {dist: fixed, value: 0.15, assumption: true, note: "runway obstacle fraction cleared per hour"}
+
+sides:
+  RU:
+    role: attacker
+    air: {cas: $air.att.cas, suppress_enemy_fires: $air.att.suppression, interdiction: $air.att.interdiction,
+          ingress_loss: $air.att.ingress_loss, approach_loss: $air.att.approach_loss,
+          night_limited: $ctx.night_limited_air}
+    doctrine: {risk_tolerance: $risk.tolerance, clear_rate: $doctrine.clear_rate,
+               hasty_defense: $doctrine.hasty_defense}
+  UA:
+    role: defender
+    air: {night_limited: $ctx.night_limited_air}
+    doctrine: {demolish_rate: $denial.demolish_rate}
+
+zones:
+  airfield: {kind: airfield, control: UA, runway: {obstacles: $denial.obstacles0}}
+
+units:          # arrival order matters for simultaneous arrivals
+  ngu_garrison:
+    side: UA
+    kind: infantry
+    strength: $hold.strength
+    quality: $hold.quality
+    dug_in: $hold.dug_in
+    morale: {base_hazard: $hold.base_hazard, ammo_out_h: $hold.ammo_out_h}
+    arrive: {t: 0.0, zone: airfield}
+  vdv_assault:
+    side: RU
+    kind: air_assault_infantry
+    morale: {on_break: disperse}
+    arrive: {t: 0.0, zone: airfield, mode: air_assault, aircraft: $mass.aircraft,
+             capacity: $mass.capacity, dz_loss: $mass.dz_loss}
+  airborne_reserve:
+    side: RU
+    kind: parachute_infantry
+    morale: {on_break: disperse}
+    arrive: {t: $mass.t_reserve, zone: airfield, mode: parachute, aircraft: $mass.reserve_aircraft,
+             capacity: $mass.reserve_capacity, dz_loss: $mass.reserve_dz, only_if_present: true}
+  ua_counterattack:
+    side: UA
+    kind: mixed_infantry
+    strength: $response.strength
+    morale: {commit_h: $response.commit_h, withdraw_ratio: $response.withdraw_ratio}
+    arrive: {t: $response.t_ca, zone: airfield}
+  ru_ground_column:
+    side: RU
+    kind: mechanised
+    strength: $ctx.relief_strength
+    arrive: {t: $ctx.t_relief, zone: airfield}
+  vdv_airlanded:
+    side: RU
+    kind: airlanded_infantry
+    morale: {on_break: disperse}
+
+fires:
+  - {id: ua_artillery_and_air, side: UA, zone: airfield, active_from: $denial.t_fires,
+     intensity: $denial.fire_intensity, crater_rate: $denial.crater_rate}
+
+airlift:
+  side: RU
+  zone: airfield
+  unit: vdv_airlanded
+  aircraft: $ctx.aircraft
+  troops_per_aircraft: $ctx.troops_per_aircraft
+  mode: waves
+  waves: [$ctx.wave1_t, $ctx.wave2_t]
+  loiter_h: $ctx.loiter_h
+  wreck_obstacle: $ctx.wreck_obstacle
+
+mechanics:
+  combat: {resolver: lanchester, kill_rate: $mech.kill_rate, fire_weight_defend: 1.0, fire_weight_attack: 2.0}
+  morale: {ratio_coeff: $mech.ratio_coeff, casualty_coeff: $mech.casualty_coeff, ammo_hazard: $mech.ammo_hazard}
+
+outcome: {zone: airfield, airbridge_troops: 500}
+
+factors:
+  AIR: [air.att.ingress_loss, air.att.approach_loss, air.att.suppression, air.att.interdiction, air.att.cas]
+  MASS: [mass.aircraft, mass.capacity, mass.dz_loss, mass.reserve_aircraft, mass.reserve_capacity,
+         mass.reserve_dz, mass.t_reserve]
+  HOLD: [hold.strength, hold.quality, hold.dug_in, hold.base_hazard, hold.ammo_out_h]
+  RESPONSE: [response.t_ca, response.strength, response.commit_h, response.withdraw_ratio]
+  DENIAL: [denial.obstacles0, denial.t_fires, denial.fire_intensity, denial.crater_rate, denial.demolish_rate]
+  RISK: [risk.tolerance]
+
+# Historical facts the model should reproduce as a *typical* outcome.
+anchors:
+  - {id: vdv_secure_field_in_hours, metric: t_control, op: between, value: [1.0, 4.0], source: WOTR2023,
+     note: "airfield secured ~13:00, about two hours after the battle began"}
+  - {id: ukraine_retakes_field, metric: defender_retakes, op: eq, value: true, source: WOTR2023,
+     note: "Ukrainian soldiers retook the airfield before the night was through"}
+  - {id: no_airbridge, metric: airbridge, op: eq, value: false, source: WOTR2023}
+  - {id: runway_unusable, metric: runway_end, op: lt, value: 0.6, source: WOTR2023,
+     note: "Ukrainian MoD declared the airfield too damaged to be used"}

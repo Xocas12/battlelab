@@ -1,0 +1,147 @@
+  [1/64] hostomel_2022 swap=(0, 0, 0, 0, 0, 0) P(airbridge)=0.329
+  [2/64] hostomel_2022 swap=(0, 0, 0, 0, 0, 1) P(airbridge)=0.899
+  [3/64] hostomel_2022 swap=(0, 0, 0, 0, 1, 0) P(airbridge)=0.000
+  [4/64] hostomel_2022 swap=(0, 0, 0, 0, 1, 1) P(airbridge)=0.952
+  [5/64] hostomel_2022 swap=(0, 0, 0, 1, 0, 0) P(airbridge)=0.346
+  [6/64] hostomel_2022 swap=(0, 0, 0, 1, 0, 1) P(airbridge)=0.945
+  [7/64] hostomel_2022 swap=(0, 0, 0, 1, 1, 0) P(airbridge)=0.000
+  [8/64] hostomel_2022 swap=(0, 0, 0, 1, 1, 1) P(airbridge)=0.992
+  [9/64] hostomel_2022 swap=(0, 0, 1, 0, 0, 0) P(airbridge)=0.021
+  [10/64] hostomel_2022 swap=(0, 0, 1, 0, 0, 1) P(airbridge)=0.054
+  [11/64] hostomel_2022 swap=(0, 0, 1, 0, 1, 0) P(airbridge)=0.000
+  [12/64] hostomel_2022 swap=(0, 0, 1, 0, 1, 1) P(airbridge)=0.050
+  [13/64] hostomel_2022 swap=(0, 0, 1, 1, 0, 0) P(airbridge)=0.021
+  [14/64] hostomel_2022 swap=(0, 0, 1, 1, 0, 1) P(airbridge)=0.057
+  [15/64] hostomel_2022 swap=(0, 0, 1, 1, 1, 0) P(airbridge)=0.000
+  [16/64] hostomel_2022 swap=(0, 0, 1, 1, 1, 1) P(airbridge)=0.056
+  [17/64] hostomel_2022 swap=(0, 1, 0, 0, 0, 0) P(airbridge)=0.459
+  [18/64] hostomel_2022 swap=(0, 1, 0, 0, 0, 1) P(airbridge)=0.946
+  [19/64] hostomel_2022 swap=(0, 1, 0, 0, 1, 0) P(airbridge)=0.000
+  [20/64] hostomel_2022 swap=(0, 1, 0, 0, 1, 1) P(airbridge)=0.991
+  [21/64] hostomel_2022 swap=(0, 1, 0, 1, 0, 0) P(airbridge)=0.470
+  [22/64] hostomel_2022 swap=(0, 1, 0, 1, 0, 1) P(airbridge)=0.981
+  [23/64] hostomel_2022 swap=(0, 1, 0, 1, 1, 0) P(airbridge)=0.000
+  [24/64] hostomel_2022 swap=(0, 1, 0, 1, 1, 1) P(airbridge)=0.997
+  [25/64] hostomel_2022 swap=(0, 1, 1, 0, 0, 0) P(airbridge)=0.042
+  [26/64] hostomel_2022 swap=(0, 1, 1, 0, 0, 1) P(airbridge)=0.137
+  [27/64] hostomel_2022 swap=(0, 1, 1, 0, 1, 0) P(airbridge)=0.000
+  [28/64] hostomel_2022 swap=(0, 1, 1, 0, 1, 1) P(airbridge)=0.229
+  [29/64] hostomel_2022 swap=(0, 1, 1, 1, 0, 0) P(airbridge)=0.044
+  [30/64] hostomel_2022 swap=(0, 1, 1, 1, 0, 1) P(airbridge)=0.148
+  [31/64] hostomel_2022 swap=(0, 1, 1, 1, 1, 0) P(airbridge)=0.000
+  [32/64] hostomel_2022 swap=(0, 1, 1, 1, 1, 1) P(airbridge)=0.462
+  [33/64] hostomel_2022 swap=(1, 0, 0, 0, 0, 0) P(airbridge)=0.626
+  [34/64] hostomel_2022 swap=(1, 0, 0, 0, 0, 1) P(airbridge)=0.940
+  [35/64] hostomel_2022 swap=(1, 0, 0, 0, 1, 0) P(airbridge)=0.366
+  [36/64] hostomel_2022 swap=(1, 0, 0, 0, 1, 1) P(airbridge)=0.977
+  [37/64] hostomel_2022 swap=(1, 0, 0, 1, 0, 0) P(airbridge)=0.641
+  [38/64] hostomel_2022 swap=(1, 0, 0, 1, 0, 1) P(airbridge)=0.976
+  [39/64] hostomel_2022 swap=(1, 0, 0, 1, 1, 0) P(airbridge)=0.373
+  [40/64] hostomel_2022 swap=(1, 0, 0, 1, 1, 1) P(airbridge)=0.993
+  [41/64] hostomel_2022 swap=(1, 0, 1, 0, 0, 0) P(airbridge)=0.048
+  [42/64] hostomel_2022 swap=(1, 0, 1, 0, 0, 1) P(airbridge)=0.075
+  [43/64] hostomel_2022 swap=(1, 0, 1, 0, 1, 0) P(airbridge)=0.030
+  [44/64] hostomel_2022 swap=(1, 0, 1, 0, 1, 1) P(airbridge)=0.080
+  [45/64] hostomel_2022 swap=(1, 0, 1, 1, 0, 0) P(airbridge)=0.048
+  [46/64] hostomel_2022 swap=(1, 0, 1, 1, 0, 1) P(airbridge)=0.084
+  [47/64] hostomel_2022 swap=(1, 0, 1, 1, 1, 0) P(airbridge)=0.036
+  [48/64] hostomel_2022 swap=(1, 0, 1, 1, 1, 1) P(airbridge)=0.102
+  [49/64] hostomel_2022 swap=(1, 1, 0, 0, 0, 0) P(airbridge)=0.703
+  [50/64] hostomel_2022 swap=(1, 1, 0, 0, 0, 1) P(airbridge)=0.993
+  [51/64] hostomel_2022 swap=(1, 1, 0, 0, 1, 0) P(airbridge)=0.373
+  [52/64] hostomel_2022 swap=(1, 1, 0, 0, 1, 1) P(airbridge)=0.998
+  [53/64] hostomel_2022 swap=(1, 1, 0, 1, 0, 0) P(airbridge)=0.703
+  [54/64] hostomel_2022 swap=(1, 1, 0, 1, 0, 1) P(airbridge)=0.998
+  [55/64] hostomel_2022 swap=(1, 1, 0, 1, 1, 0) P(airbridge)=0.373
+  [56/64] hostomel_2022 swap=(1, 1, 0, 1, 1, 1) P(airbridge)=0.998
+  [57/64] hostomel_2022 swap=(1, 1, 1, 0, 0, 0) P(airbridge)=0.153
+  [58/64] hostomel_2022 swap=(1, 1, 1, 0, 0, 1) P(airbridge)=0.287
+  [59/64] hostomel_2022 swap=(1, 1, 1, 0, 1, 0) P(airbridge)=0.192
+  [60/64] hostomel_2022 swap=(1, 1, 1, 0, 1, 1) P(airbridge)=0.586
+  [61/64] hostomel_2022 swap=(1, 1, 1, 1, 0, 0) P(airbridge)=0.153
+  [62/64] hostomel_2022 swap=(1, 1, 1, 1, 0, 1) P(airbridge)=0.303
+  [63/64] hostomel_2022 swap=(1, 1, 1, 1, 1, 0) P(airbridge)=0.250
+  [64/64] hostomel_2022 swap=(1, 1, 1, 1, 1, 1) P(airbridge)=0.749
+
+hostomel_2022 with maleme_1941's factors: P(airbridge) 0.329 -> 0.749
+  factor  shapley   lo90   hi90  single_swap_p
+    HOLD   -0.445 -0.456 -0.433          0.021
+    RISK    0.432  0.422  0.444          0.899
+    MASS    0.204  0.196  0.211          0.459
+     AIR    0.194  0.186  0.201          0.626
+RESPONSE    0.046  0.041  0.052          0.346
+  DENIAL   -0.011 -0.022 -0.001          0.000
+  [1/64] maleme_1941 swap=(0, 0, 0, 0, 0, 0) P(airbridge)=0.693
+  [2/64] maleme_1941 swap=(0, 0, 0, 0, 0, 1) P(airbridge)=0.210
+  [3/64] maleme_1941 swap=(0, 0, 0, 0, 1, 0) P(airbridge)=0.176
+  [4/64] maleme_1941 swap=(0, 0, 0, 0, 1, 1) P(airbridge)=0.008
+  [5/64] maleme_1941 swap=(0, 0, 0, 1, 0, 0) P(airbridge)=0.472
+  [6/64] maleme_1941 swap=(0, 0, 0, 1, 0, 1) P(airbridge)=0.146
+  [7/64] maleme_1941 swap=(0, 0, 0, 1, 1, 0) P(airbridge)=0.151
+  [8/64] maleme_1941 swap=(0, 0, 0, 1, 1, 1) P(airbridge)=0.008
+  [9/64] maleme_1941 swap=(0, 0, 1, 0, 0, 0) P(airbridge)=0.998
+  [10/64] maleme_1941 swap=(0, 0, 1, 0, 0, 1) P(airbridge)=0.354
+  [11/64] maleme_1941 swap=(0, 0, 1, 0, 1, 0) P(airbridge)=0.893
+  [12/64] maleme_1941 swap=(0, 0, 1, 0, 1, 1) P(airbridge)=0.053
+  [13/64] maleme_1941 swap=(0, 0, 1, 1, 0, 0) P(airbridge)=0.986
+  [14/64] maleme_1941 swap=(0, 0, 1, 1, 0, 1) P(airbridge)=0.347
+  [15/64] maleme_1941 swap=(0, 0, 1, 1, 1, 0) P(airbridge)=0.806
+  [16/64] maleme_1941 swap=(0, 0, 1, 1, 1, 1) P(airbridge)=0.053
+  [17/64] maleme_1941 swap=(0, 1, 0, 0, 0, 0) P(airbridge)=0.094
+  [18/64] maleme_1941 swap=(0, 1, 0, 0, 0, 1) P(airbridge)=0.032
+  [19/64] maleme_1941 swap=(0, 1, 0, 0, 1, 0) P(airbridge)=0.054
+  [20/64] maleme_1941 swap=(0, 1, 0, 0, 1, 1) P(airbridge)=0.002
+  [21/64] maleme_1941 swap=(0, 1, 0, 1, 0, 0) P(airbridge)=0.024
+  [22/64] maleme_1941 swap=(0, 1, 0, 1, 0, 1) P(airbridge)=0.008
+  [23/64] maleme_1941 swap=(0, 1, 0, 1, 1, 0) P(airbridge)=0.008
+  [24/64] maleme_1941 swap=(0, 1, 0, 1, 1, 1) P(airbridge)=0.001
+  [25/64] maleme_1941 swap=(0, 1, 1, 0, 0, 0) P(airbridge)=0.991
+  [26/64] maleme_1941 swap=(0, 1, 1, 0, 0, 1) P(airbridge)=0.341
+  [27/64] maleme_1941 swap=(0, 1, 1, 0, 1, 0) P(airbridge)=0.699
+  [28/64] maleme_1941 swap=(0, 1, 1, 0, 1, 1) P(airbridge)=0.032
+  [29/64] maleme_1941 swap=(0, 1, 1, 1, 0, 0) P(airbridge)=0.441
+  [30/64] maleme_1941 swap=(0, 1, 1, 1, 0, 1) P(airbridge)=0.163
+  [31/64] maleme_1941 swap=(0, 1, 1, 1, 1, 0) P(airbridge)=0.168
+  [32/64] maleme_1941 swap=(0, 1, 1, 1, 1, 1) P(airbridge)=0.020
+  [33/64] maleme_1941 swap=(1, 0, 0, 0, 0, 0) P(airbridge)=0.420
+  [34/64] maleme_1941 swap=(1, 0, 0, 0, 0, 1) P(airbridge)=0.000
+  [35/64] maleme_1941 swap=(1, 0, 0, 0, 1, 0) P(airbridge)=0.062
+  [36/64] maleme_1941 swap=(1, 0, 0, 0, 1, 1) P(airbridge)=0.002
+  [37/64] maleme_1941 swap=(1, 0, 0, 1, 0, 0) P(airbridge)=0.167
+  [38/64] maleme_1941 swap=(1, 0, 0, 1, 0, 1) P(airbridge)=0.000
+  [39/64] maleme_1941 swap=(1, 0, 0, 1, 1, 0) P(airbridge)=0.011
+  [40/64] maleme_1941 swap=(1, 0, 0, 1, 1, 1) P(airbridge)=0.001
+  [41/64] maleme_1941 swap=(1, 0, 1, 0, 0, 0) P(airbridge)=0.997
+  [42/64] maleme_1941 swap=(1, 0, 1, 0, 0, 1) P(airbridge)=0.000
+  [43/64] maleme_1941 swap=(1, 0, 1, 0, 1, 0) P(airbridge)=0.680
+  [44/64] maleme_1941 swap=(1, 0, 1, 0, 1, 1) P(airbridge)=0.017
+  [45/64] maleme_1941 swap=(1, 0, 1, 1, 0, 0) P(airbridge)=0.799
+  [46/64] maleme_1941 swap=(1, 0, 1, 1, 0, 1) P(airbridge)=0.000
+  [47/64] maleme_1941 swap=(1, 0, 1, 1, 1, 0) P(airbridge)=0.155
+  [48/64] maleme_1941 swap=(1, 0, 1, 1, 1, 1) P(airbridge)=0.017
+  [49/64] maleme_1941 swap=(1, 1, 0, 0, 0, 0) P(airbridge)=0.052
+  [50/64] maleme_1941 swap=(1, 1, 0, 0, 0, 1) P(airbridge)=0.000
+  [51/64] maleme_1941 swap=(1, 1, 0, 0, 1, 0) P(airbridge)=0.029
+  [52/64] maleme_1941 swap=(1, 1, 0, 0, 1, 1) P(airbridge)=0.001
+  [53/64] maleme_1941 swap=(1, 1, 0, 1, 0, 0) P(airbridge)=0.008
+  [54/64] maleme_1941 swap=(1, 1, 0, 1, 0, 1) P(airbridge)=0.000
+  [55/64] maleme_1941 swap=(1, 1, 0, 1, 1, 0) P(airbridge)=0.005
+  [56/64] maleme_1941 swap=(1, 1, 0, 1, 1, 1) P(airbridge)=0.000
+  [57/64] maleme_1941 swap=(1, 1, 1, 0, 0, 0) P(airbridge)=0.990
+  [58/64] maleme_1941 swap=(1, 1, 1, 0, 0, 1) P(airbridge)=0.000
+  [59/64] maleme_1941 swap=(1, 1, 1, 0, 1, 0) P(airbridge)=0.494
+  [60/64] maleme_1941 swap=(1, 1, 1, 0, 1, 1) P(airbridge)=0.006
+  [61/64] maleme_1941 swap=(1, 1, 1, 1, 0, 0) P(airbridge)=0.144
+  [62/64] maleme_1941 swap=(1, 1, 1, 1, 0, 1) P(airbridge)=0.000
+  [63/64] maleme_1941 swap=(1, 1, 1, 1, 1, 0) P(airbridge)=0.018
+  [64/64] maleme_1941 swap=(1, 1, 1, 1, 1, 1) P(airbridge)=0.004
+
+maleme_1941 with hostomel_2022's factors: P(airbridge) 0.693 -> 0.004
+  factor  shapley   lo90   hi90  single_swap_p
+    RISK   -0.298 -0.306 -0.291          0.210
+    HOLD    0.242  0.234  0.249          0.998
+    MASS   -0.194 -0.201 -0.189          0.094
+  DENIAL   -0.186 -0.193 -0.178          0.176
+     AIR   -0.133 -0.139 -0.128          0.420
+RESPONSE   -0.119 -0.126 -0.114          0.472
+figure: results/shapley.png

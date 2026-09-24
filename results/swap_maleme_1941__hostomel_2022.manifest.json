@@ -1,0 +1,12 @@
+{
+  "framework": "battlelab",
+  "version": "0.1.0",
+  "created": "2026-09-24T18:59:04",
+  "python": "3.12.3",
+  "numpy": "2.4.4",
+  "home": "a150f37a7aa958a8",
+  "away": "95d0a13d896129b0",
+  "n": 1000,
+  "seed": 1,
+  "metric": "airbridge"
+}

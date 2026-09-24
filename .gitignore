@@ -1,0 +1,6 @@
+__pycache__/
+*.egg-info/
+.pytest_cache/
+*.pyc
+cmo/lua/battlelab/bl_design.lua
+results/*_runs.csv
