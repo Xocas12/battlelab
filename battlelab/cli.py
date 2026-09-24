@@ -11,6 +11,7 @@
                   --grid denial.t_fires=2:12:11 -n 500 --out results/
   battlelab cmo-export scenarios/hostomel_2022.yaml -n 200 --out cmo/lua/battlelab/bl_design.lua
   battlelab cmo-ingest results_cmo.csv --scenario scenarios/hostomel_2022.yaml
+  battlelab compare-backends results/hostomel_2022_runs.csv battlelab_results.csv
 """
 from __future__ import annotations
 
@@ -219,6 +220,24 @@ def cmd_cmo_ingest(a):
             print(analysis.check_anchors(df, anchors).to_string(index=False, float_format=FMT))
 
 
+def _read_results(path: str) -> pd.DataFrame:
+    from .cmo import ingest
+    return ingest(path)     # plain CSV or console log; normalises Lua true/false
+
+
+def cmd_compare_backends(a):
+    x, y = _read_results(a.a), _read_results(a.b)
+    t, info = analysis.compare_backends(x, y)
+    print(f"{info['n_paired']} paired runs ({info['n_a']} in {a.a}, {info['n_b']} in {a.b}); "
+          f"{info['shared_params']} shared parameter columns")
+    if info["param_mismatch"]:
+        print(f"WARNING: parameter draws differ for {info['param_mismatch']}: "
+              "not the same design, so run-by-run pairing is meaningless")
+    print(t.to_string(index=False, float_format=FMT))
+    if a.out:
+        experiment.save(t, a.out, a.name, {"a": a.a, "b": a.b, **info})
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="battlelab", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -303,6 +322,14 @@ def main(argv=None):
     p.add_argument("results", help="CSV from the harness, or a console log with BLCSV| lines")
     p.add_argument("--scenario")
     p.set_defaults(fn=cmd_cmo_ingest)
+
+    p = sub.add_parser("compare-backends",
+                       help="compare two result tables (e.g. native vs CMO) run by run")
+    p.add_argument("a", help="native run CSV (battlelab run --out)")
+    p.add_argument("b", help="CMO results CSV or console log")
+    p.add_argument("--out")
+    p.add_argument("--name", default="compare_backends")
+    p.set_defaults(fn=cmd_compare_backends)
 
     a = ap.parse_args(argv)
     a.fn(a)
