@@ -229,6 +229,17 @@ def cmd_resolvers(a):
         experiment.save(t, a.out, "resolvers", {"kill_rate": a.kill_rate, "round_h": a.round_h})
 
 
+def cmd_report(a):
+    import glob
+
+    from .report import ReportConfig, run_report
+    files = a.scenarios or sorted(glob.glob("scenarios/*.yaml"))
+    cfg = ReportConfig(scenarios=files, n=a.n, seed=a.seed, workers=a.workers, out=a.out,
+                       sweep_scenario=a.sweep, go_rule_pair=tuple(a.go_pair.split(","))
+                       if a.go_pair else None)
+    run_report(cfg)
+
+
 def _read_results(path: str) -> pd.DataFrame:
     from .cmo import ingest
     return ingest(path)     # plain CSV or console log; normalises Lua true/false
@@ -331,6 +342,17 @@ def main(argv=None):
     p.add_argument("results", help="CSV from the harness, or a console log with BLCSV| lines")
     p.add_argument("--scenario")
     p.set_defaults(fn=cmd_cmo_ingest)
+
+    p = sub.add_parser("report", help="run the standard pipeline and write SUMMARY.md")
+    p.add_argument("scenarios", nargs="*", help="default: scenarios/*.yaml")
+    p.add_argument("-n", type=int, default=1000, help="base runs per configuration")
+    p.add_argument("-s", "--seed", type=int, default=1)
+    p.add_argument("-w", "--workers", type=int, default=experiment.cpu_workers())
+    p.add_argument("--out", default="results")
+    p.add_argument("--sweep", default="hostomel_2022", help="scenario id to sweep")
+    p.add_argument("--go-pair", default="hostomel_2022,maleme_1941",
+                   help="scenario ids for the go/no-go rule comparison")
+    p.set_defaults(fn=cmd_report)
 
     p = sub.add_parser("resolvers", help="loss rates of the combat resolvers side by side")
     p.add_argument("--kill-rate", type=float, default=0.01)
