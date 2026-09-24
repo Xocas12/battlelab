@@ -26,7 +26,7 @@ Results (all in results/, regenerated with `scripts/reproduce.sh`, N = 1000, see
 | Maleme with Hostomel's factors, Lanchester | 0.69 -> 0.00 | 0.67 -> 0.00 |
 | Maleme with Hostomel's factors, CRT | 0.40 -> 0.01 | 0.24 -> 0.01 |
 
-Findings that survive the changes: HOLD and RISK remain the two largest Shapley contributions between Hostomel and Maleme, with the same signs, under both resolvers and under all three go/no-go rules (SUMMARY sections 3 and 4). Hostomel's Shapley values for Maleme's factors move by at most 0.03 when the go/no-go rule changes, so the swap conclusions do not rest on the hard threshold. The zero single-swap of DENIAL is a property of the rule and becomes 0.02 under the logistic rule. Changed: under CRT, the Maleme baseline fell from 0.40 to 0.24, because the command cycle holds the NZ battalion on the field until dark, and the CRT's high attacker attrition then wears the paratroops down first.
+Findings that survive the changes: HOLD and RISK remain the two largest Shapley contributions between Hostomel and Maleme, with the same signs, under both resolvers and under all three go/no-go rules (SUMMARY sections 3 and 4). Hostomel's Shapley values for Maleme's factors move by at most 0.03 when the go/no-go rule changes, so the swap conclusions do not rest on the hard threshold. The zero single-swap of DENIAL is a property of the rule and becomes 0.02 under the logistic rule. Changed: under CRT, the Maleme baseline fell from 0.40 to 0.24. The likely cause (not yet isolated) is that the command cycle holds the NZ battalion on the field until dark, and the CRT's high attacker attrition then wears the paratroops down first.
 
 ## 0.1.0 - first draft (2026-09-24)
 
