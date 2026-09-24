@@ -21,6 +21,7 @@ from pathlib import Path
 import pandas as pd
 
 from . import analysis, experiment
+from .mechanics import GO_RULES, RESOLVERS
 from .scenario import Scenario
 
 FMT = "{:.3f}".format
@@ -28,10 +29,15 @@ pd.set_option("display.width", 160)
 pd.set_option("display.max_columns", 20)
 
 
-def _load(path: str, resolver: str | None = None) -> Scenario:
+def _load(path: str, resolver: str | None = None, go_rule: str | None = None,
+          overrides: list[str] | None = None) -> Scenario:
     s = Scenario.load(path)
     if resolver:
         s = s.with_resolver(resolver)
+    if go_rule:
+        s = s.with_go_rule(go_rule)
+    if overrides:
+        s = s.with_overrides(_overrides(overrides))
     errors = [i for i in s.lint() if i.level == "error"]
     if errors:
         for e in errors:
@@ -72,7 +78,7 @@ def cmd_lint(a):
 
 
 def cmd_run(a):
-    s = _load(a.scenario, a.resolver).with_overrides(_overrides(a.set))
+    s = _load(a.scenario, a.resolver, a.go_rule, a.set)
     df = experiment.run_batch(s, a.n, a.seed, a.workers)
     print(analysis.summarize(df).to_string(index=False, float_format=FMT))
     if a.out:
@@ -98,12 +104,17 @@ def cmd_trace(a):
         print(f"trace written to {a.out}")
 
 
+def _sfx(a) -> str:
+    return "".join(f"_{x}" for x in (getattr(a, "resolver", None), getattr(a, "go_rule", None),
+                                     getattr(a, "tag", None)) if x)
+
+
 def _tag(s: Scenario, a) -> str:
-    return s.id + (f"_{a.resolver}" if getattr(a, "resolver", None) else "")
+    return s.id + _sfx(a)
 
 
 def cmd_anchors(a):
-    s = _load(a.scenario, a.resolver)
+    s = _load(a.scenario, a.resolver, a.go_rule, a.set)
     df = experiment.run_batch(s, a.n, a.seed, a.workers)
     t = analysis.check_anchors(df, s.anchors)
     print(t.to_string(index=False, float_format=FMT))
@@ -116,7 +127,7 @@ def cmd_anchors(a):
 
 
 def cmd_calibrate(a):
-    s = _load(a.scenario, a.resolver)
+    s = _load(a.scenario, a.resolver, a.go_rule, a.set)
     df = experiment.run_batch(s, a.n, a.seed, a.workers)
     use = [x for x in s.anchors if not a.anchors or x["id"] in a.anchors.split(",")]
     post, acc = analysis.abc_posterior(df, use)
@@ -126,7 +137,7 @@ def cmd_calibrate(a):
 
 
 def cmd_screen(a):
-    s = _load(a.scenario, a.resolver)
+    s = _load(a.scenario, a.resolver, a.go_rule, a.set)
     df = experiment.run_batch(s, a.n, a.seed, a.workers)
     t = analysis.screen(df, a.metric)
     print(t.to_string(index=False, float_format=FMT))
@@ -136,7 +147,7 @@ def cmd_screen(a):
 
 
 def cmd_swap(a):
-    home, away = _load(a.home, a.resolver), _load(a.away, a.resolver)
+    home, away = (_load(x, a.resolver, a.go_rule, a.set) for x in (a.home, a.away))
     pairs = [(home, away), (away, home)] if a.both else [(home, away)]
     tables, titles = {}, {}
     for h, w in pairs:
@@ -149,29 +160,33 @@ def cmd_swap(a):
         tables[h.id] = t
         titles[h.id] = f"{h.id} + {w.id} factors: {base:.2f} -> {full:.2f}"
         if a.out:
-            sfx = f"_{a.resolver}" if a.resolver else ""
+            sfx = _sfx(a)
             experiment.save(res.table(), a.out, f"swap_{h.id}__{w.id}{sfx}",
                             {"home": h.fingerprint(), "away": w.fingerprint(), "n": a.n,
                              "seed": a.seed, "metric": a.metric})
-            experiment.save(t, a.out, f"shapley_{h.id}__{w.id}{sfx}", {"n": a.n, "seed": a.seed})
+            experiment.save(t, a.out, f"shapley_{h.id}__{w.id}{sfx}",
+                            {"home": h.fingerprint(), "away": w.fingerprint(), "n": a.n,
+                             "seed": a.seed, "variant": h.variant})
     if a.out:
         from . import plots
-        path = Path(a.out) / (f"shapley_{a.resolver}.png" if a.resolver else "shapley.png")
+        path = Path(a.out) / f"shapley{_sfx(a)}.png"
         plots.shapley_bars(tables, titles, str(path))
         print(f"figure: {path}")
 
 
 def cmd_sweep(a):
-    s = _load(a.scenario, a.resolver)
+    s = _load(a.scenario, a.resolver, a.go_rule, a.set)
     grid = dict(experiment.parse_grid(g) for g in a.grid)
     df = experiment.sweep(s, grid, a.n, a.seed, a.metric, a.workers)
     print(df.to_string(index=False, float_format=FMT))
     if a.out:
-        experiment.save(df, a.out, f"sweep_{s.id}", {"grid": grid, "n": a.n, "seed": a.seed})
+        experiment.save(df, a.out, f"sweep_{_tag(s, a)}",
+                        {"scenario": s.fingerprint(), "grid": grid, "n": a.n, "seed": a.seed,
+                         "variant": s.variant})
         if len(grid) == 2:
             from . import plots
             x, y = list(grid)
-            path = Path(a.out) / f"sweep_{s.id}.png"
+            path = Path(a.out) / f"sweep_{_tag(s, a)}.png"
             plots.sweep_heatmap(df, x, y, str(path), f"{s.id}: P({a.metric})")
             print(f"figure: {path}")
 
@@ -208,8 +223,13 @@ def main(argv=None):
         p.add_argument("-n", type=int, default=n, help="runs per configuration")
         p.add_argument("-s", "--seed", type=int, default=1)
         p.add_argument("-w", "--workers", type=int, default=1)
-        p.add_argument("--resolver", choices=["lanchester", "crt"],
+        p.add_argument("--resolver", choices=sorted(RESOLVERS),
                        help="override the scenario's combat resolver")
+        p.add_argument("--go-rule", choices=list(GO_RULES),
+                       help="override the scenario's air-landing go/no-go rule")
+        p.add_argument("--set", action="append",
+                       help="fix a parameter: name=value (repeatable; applied to every scenario)")
+        p.add_argument("--tag", help="suffix for output file names")
 
     p = sub.add_parser("lint")
     p.add_argument("files", nargs="+")
@@ -218,7 +238,6 @@ def main(argv=None):
     p = sub.add_parser("run")
     p.add_argument("scenario")
     common(p)
-    p.add_argument("--set", action="append", help="fix a parameter: name=value")
     p.add_argument("--out")
     p.set_defaults(fn=cmd_run)
 
