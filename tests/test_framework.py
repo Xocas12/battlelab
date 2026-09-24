@@ -430,3 +430,19 @@ def test_resolver_loss_rates():
     ex = [r["crt_exchange"] for r in rows]
     assert all(b > a for a, b in zip(ex, ex[1:]))                        # monotone in odds
     assert [r["crt_p_retreat"] for r in rows][-1] == 1.0
+
+
+# ---------------------------------------------------------------- report ---
+def test_report_smoke(tmp_path):
+    from battlelab.report import ReportConfig, run_report
+    cfg = ReportConfig(scenarios=[str(HOST), str(MAL)], n=12, seed=2, out=str(tmp_path),
+                       sweep_scenario="hostomel_2022",
+                       sweep_grid={"risk.tolerance": [0.05, 0.3], "denial.t_fires": [2.0, 6.0]},
+                       go_rule_pair=("hostomel_2022", "maleme_1941"),
+                       factors=["RISK", "HOLD"], log=False)
+    text = run_report(cfg).read_text()
+    for head in ("## 1.", "## 2.", "## 3.", "## 4.", "## 5.", "## 6."):
+        assert head in text
+    assert "hostomel_2022 given maleme_1941's factors" in text
+    assert (tmp_path / "anchors_maleme_1941_crt.manifest.json").exists()
+    assert (tmp_path / "shapley_hostomel_2022__maleme_1941_lanchester.csv").exists()
