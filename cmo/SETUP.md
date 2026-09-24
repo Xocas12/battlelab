@@ -4,6 +4,25 @@ The harness runs a batch of replications inside one CMO session using only funct
 
 Licence note: the Steam/Matrix edition is licensed for personal use. Professional or commercial analysis needs Command: Professional Edition, which also offers headless batch execution.
 
+## 0. Probe first (5 minutes, any scenario, any PC)
+
+Before building anything, check the API assumptions on your build. This does not run the clock, so machine speed does not matter.
+
+1. Copy `cmo/lua/battlelab/` into `<CMO>/Lua/` (step 1 below).
+2. Open any scenario with an airbase that hosts aircraft and at least one ground unit (a stock scenario is fine). Do not save it afterwards.
+3. In the Lua console: `ScenEdit_RunScript('battlelab/bl_probe.lua')`. For the write checks (spawns and deletes one throwaway unit, tests `course` and side changes): `BL_PROBE_WRITE = true` then run it again.
+4. Copy every `BLPROBE|...` line into a text file. Those lines say whether `base.name`, `damage.dp/startdp` (or `dp_percent`), `loadoutdbid`, `group`, `course` and file output behave as the harness assumes. Fix `bl_core.lua` / `bl_hostomel.lua` and `cmo/tests/mock_cmo.lua` to match, before any batch.
+
+## On a slow machine
+
+A replication is 48 game hours. Wall-clock cost in CMO grows with the number of units, sensors and weapons in flight, not with the battle's length alone. So:
+
+* Measure first: `battlelab cmo-export ... -n 3`, run it, and time it. The harness logs each replication's start and end.
+* Keep the scenario lean: represent the garrison and counterattack with a few ground units each (the `*_nominal` values in `cfg` scale counts, so 10 units standing for 200 men is fine), and delete everything the harness does not use.
+* Lower the graphics load: close map layers and the message log; use the highest time compression the machine sustains without CMO falling back to lower compression (watch the compression readout).
+* Split batches over sessions. The harness does not resume a half-finished batch, but results append to `battlelab_results.csv`, so export one design per session with consecutive offsets (`cmo-export ... -n 10 --start 0`, then `-n 10 --start 10`, ...) and load the pristine `.scen` for each. Run indices, and therefore the parameter draws, match the native engine's, and `cmo-ingest` drops duplicate runs if a session is repeated.
+* You do not need thousands. A few dozen replications already allow a run-by-run `battlelab compare-backends` against `battlelab run scenarios/hostomel_2022.yaml -n <same n> --out results/`.
+
 ## 1. Install the scripts
 
 Copy `cmo/lua/battlelab/` into your CMO installation's `Lua` folder, so you have `<CMO>/Lua/battlelab/bl_core.lua` etc. `ScenEdit_RunScript` resolves paths relative to `<CMO>/Lua`. On some older Steam builds the working folder was `GameMenu_CMANO/Lua` instead; if `RunScript` cannot find the file, try there.

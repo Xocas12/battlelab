@@ -446,3 +446,19 @@ def test_report_smoke(tmp_path):
     assert "hostomel_2022 given maleme_1941's factors" in text
     assert (tmp_path / "anchors_maleme_1941_crt.manifest.json").exists()
     assert (tmp_path / "shapley_hostomel_2022__maleme_1941_lanchester.csv").exists()
+
+
+@pytest.mark.skipif(LUA is None, reason="needs a Lua 5.3 interpreter")
+@pytest.mark.parametrize("mode", [[], ["--write"]])
+def test_cmo_probe_against_mock(tmp_path, mode):
+    r = subprocess.run([LUA, "tests/test_probe.lua", "lua", str(tmp_path)] + mode,
+                       cwd=ROOT / "cmo", capture_output=True, text=True)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "PROBE OK" in r.stdout
+
+
+def test_export_design_offset(host, tmp_path):
+    out = export_design(host, 2, 1, tmp_path / "d.lua", start=5).read_text()
+    assert "{id=5," in out and "{id=6," in out and "{id=0," not in out
+    ref = host.space.sample(1, 5)["risk.tolerance"]
+    assert repr(float(ref)) in out

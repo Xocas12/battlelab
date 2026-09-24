@@ -204,8 +204,8 @@ def cmd_cmo_export(a):
         other = _load(a.swap_from)
         names = [n for f in a.factors.split(",") for n in s.factors[f]]
         s = s.with_params_from(other, names)
-    out = export_design(s, a.n, a.seed, a.out)
-    print(f"wrote {a.n} runs to {out}")
+    out = export_design(s, a.n, a.seed, a.out, start=a.start)
+    print(f"wrote runs {a.start}..{a.start + a.n - 1} to {out}")
 
 
 def cmd_cmo_ingest(a):
@@ -333,6 +333,8 @@ def main(argv=None):
     p.add_argument("scenario")
     p.add_argument("-n", type=int, default=100)
     p.add_argument("-s", "--seed", type=int, default=1)
+    p.add_argument("--start", type=int, default=0,
+                   help="first run index (split a batch over several CMO sessions)")
     p.add_argument("--swap-from", help="borrow factor bundles from this scenario")
     p.add_argument("--factors", default="", help="comma-separated factors to borrow")
     p.add_argument("--out", required=True)
