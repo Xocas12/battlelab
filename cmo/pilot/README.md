@@ -1,6 +1,6 @@
 # Pilot kit: probe this evening, Hostomel pilot overnight
 
-Everything here is pre-generated, so the laptop needs CMO only (no Python).
+Everything here is pre-generated, so the laptop needs CMO only (no Python). What cannot be done without CMO has been tested against the mock CMO API: building the scenario from an empty one, the self-test, and full replications through the real `bl_run.lua` entry point (`cmo/tests/test_build.lua`).
 
 | File | What |
 |---|---|
@@ -19,14 +19,23 @@ Everything here is pre-generated, so the laptop needs CMO only (no Python).
    ```
 4. Copy all `BLPROBE|` lines and send them back. If they show a field the harness reads wrongly, it gets fixed before the overnight run, so send them as early as you can.
 
-## Before the overnight run: build the scenario (the long part)
+## Before the overnight run: build the scenario (scripted, about 15 minutes)
 
-The pilot needs a Hostomel scenario built in the CMO editor with the unit names from `cmo/SETUP.md` section 2 (`RU_HELO_T_..`, `RU_IL76_..`, `UA_NG_..`, `UA_CA_..`, `BL_RWY_..`, reference points `BL_AF_1..4`, mission `BL Airlift`, airbase `Hostomel Airport`) and the two events from section 3. Keep it lean for a slow laptop: a few units per force are enough, since the harness scales counts from `*_nominal` in `bl_hostomel.lua`. Set `BL_HOSTOMEL.cfg.shell_warhead_dbid` in `bl_run.lua` (section 4), or runway shelling is skipped.
+You do not place anything by hand. `bl_build_hostomel.lua` builds the whole scenario: sides, the Hostomel airfield with four runway segments and its polygon, garrison, counterattack, SAMs, artillery, 20 Mi-8s with 20 VDV squads, 18 Il-76s at Pskov, the relief column, both missions, both harness events and the start time.
+
+1. Edit `<CMO>/Lua/battlelab/bl_build_db.lua`: replace each `nil` with a DBID from your database (Database Viewer). This is the only step that needs you: DBIDs differ between database versions.
+2. File > New scenario (pick the database whose DBIDs you used). Open the Lua console and run:
+   ```lua
+   ScenEdit_RunScript('battlelab/bl_build_hostomel.lua')
+   ```
+3. Every `BLBUILD|` line should say OK or SKIP. A FAIL line names the step; do that one step by hand in the editor (the event wiring is the most likely candidate, since those functions have not been tried on a live build yet).
+4. **Save straight away** (File > Save As, e.g. `battlelab_hostomel.scen`), before starting the clock. This saved file is the pristine template; the "scenario loaded" event starts a batch, which clears the map.
+5. Send the `BLBUILD|` lines back if anything failed.
 
 ## Overnight
 
 1. Copy `bl_design.lua` from this folder to `<CMO>/Lua/battlelab/bl_design.lua`.
-2. Load the saved (pristine) scenario, open the Lua console and run `BL.selftest(BL_HOSTOMEL)`. Every line should say OK.
+2. Load the saved scenario (this starts the batch), open the Lua console and run `BL.selftest(BL_HOSTOMEL)`. Every line should say OK; it checks the template the batch captured.
 3. Start the clock at the highest compression the laptop sustains and leave it.
 
 Each replication is 48 game hours. A row is written as each one finishes, so whatever completes overnight is usable; you do not need all 20. If the laptop sleeps, the batch simply stops there.
