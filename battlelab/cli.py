@@ -58,7 +58,12 @@ def cmd_lint(a):
     bad = 0
     scen = []
     for f in a.files:
-        s = Scenario.load(f)
+        try:
+            s = Scenario.load(f)
+        except Exception as e:      # malformed YAML or parameter spec
+            bad += 1
+            print(f"{f}: cannot load: {type(e).__name__}: {e}")
+            continue
         scen.append(s)
         issues = s.lint()
         n_err = sum(i.level == "error" for i in issues)

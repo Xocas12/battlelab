@@ -328,3 +328,30 @@ def test_logistic_rule_removes_denial_cliff(host, mal):
 def test_unknown_go_rule_rejected(host):
     with pytest.raises(ValueError):
         host.with_go_rule("coinflip")
+
+
+# ---------------------------------------------------------------- schema ---
+def test_lint_reports_unknown_and_missing_keys_with_paths():
+    doc = yaml.safe_load(HOST.read_text())
+    doc["units"]["vdv_assault"]["arrive"]["aircrafts"] = 20            # typo
+    del doc["units"]["ua_counterattack"]["arrive"]["zone"]              # missing
+    doc["mechanics"]["combat"]["resolver"] = "dice"                     # bad enum
+    doc["sides"]["RU"]["doctrine"]["risk_tolerence"] = 0.1              # free-form: warning
+    doc["zones"]["airfield"]["runway"]["crater"] = 0.2
+    issues = Scenario(doc).lint()
+    by_where = {i.where: i for i in issues}
+    assert by_where["units.vdv_assault.arrive.aircrafts"].level == "error"
+    assert "unknown key" in by_where["units.vdv_assault.arrive.aircrafts"].message
+    assert any(i.where == "units.ua_counterattack.arrive" and "'zone'" in i.message
+               for i in issues)
+    assert by_where["mechanics.combat.resolver"].level == "error"
+    assert by_where["sides.RU.doctrine.risk_tolerence"].level == "warning"
+    assert by_where["zones.airfield.runway.crater"].level == "error"
+
+
+def test_schema_tracks_dataclasses():
+    """A new field on a spec class is accepted by lint without editing the schema."""
+    from battlelab.scenario import SCHEMA
+    assert "night_moves" in SCHEMA["morale"][0]
+    assert {"t", "zone"} <= SCHEMA["arrive"][1]
+    assert "unit" in SCHEMA["airlift"][1] and "unit_id" not in SCHEMA["airlift"][0]
