@@ -28,6 +28,16 @@ class Morale:
     withdraw_ratio: float = INF     # leave at once if enemy/own effective > this
     commit_h: float = INF           # counterattacks give up after this long
     on_break: str = "withdraw"      # "withdraw" (retreats off-map) or "disperse"
+    # Command decision cycle. decision_h = 0: the unit leaves the fight on its
+    # own continuous hazard. decision_h > 0: the fight-or-leave hazard is only
+    # evaluated by the commander at decision points every decision_h hours,
+    # on a picture that may be missing reports (comms_loss), in which case the
+    # commander assumes at least `fog` casualties. night_moves: an order to
+    # withdraw is only executed in darkness (enemy air superiority by day).
+    decision_h: float = 0.0
+    comms_loss: float = 0.0
+    fog: float = 0.0
+    night_moves: bool = False
 
 
 @dataclass

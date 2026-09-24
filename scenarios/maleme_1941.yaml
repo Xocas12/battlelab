@@ -44,6 +44,14 @@ parameters:
   hold.base_hazard: {dist: uniform, lo: 0.005, hi: 0.03, source: NZH, confidence: medium,
     note: "lost contact with forward companies, reinforcement refused, pulled back from Point 107 overnight"}
   hold.ammo_out_h: {dist: fixed, value: 1000.0, assumption: true, note: "no ammunition crisis reported"}
+  hold.decision_h: {dist: uniform, lo: 2.0, hi: 6.0, assumption: true,
+    note: "battalion HQ decision cycle; runners and failing wireless to forward companies (NZH)"}
+  hold.comms_loss: {dist: uniform, lo: 0.4, hi: 0.8, source: NZH, confidence: medium,
+    note: "22nd Bn commander lost contact with his forward companies on 20 May"}
+  hold.fog: {dist: uniform, lo: 0.3, hi: 0.6, source: NZH, assumption: true,
+    note: "without reports the commander assumed the forward companies were lost; they were largely intact"}
+  hold.night_moves: {dist: fixed, value: 1, source: NZH, assumption: true,
+    note: "withdrawal from Point 107 carried out overnight 20/21 May, under daytime Luftwaffe air superiority"}
   # RESPONSE ----------------------------------------------------------------
   response.t_ca: {dist: uniform, lo: 38.0, hi: 46.0, source: NZH, confidence: medium,
     note: "night 21/22 May, delayed four hours; reached the airfield edge at dawn"}
@@ -100,7 +108,9 @@ units:
     strength: $hold.strength
     quality: $hold.quality
     dug_in: $hold.dug_in
-    morale: {base_hazard: $hold.base_hazard, ammo_out_h: $hold.ammo_out_h}
+    morale: {base_hazard: $hold.base_hazard, ammo_out_h: $hold.ammo_out_h,
+             decision_h: $hold.decision_h, comms_loss: $hold.comms_loss, fog: $hold.fog,
+             night_moves: $hold.night_moves}
     arrive: {t: 0.0, zone: airfield}
   sturmregiment:
     side: DE
@@ -151,7 +161,8 @@ factors:
   AIR: [air.att.ingress_loss, air.att.approach_loss, air.att.suppression, air.att.interdiction, air.att.cas]
   MASS: [mass.aircraft, mass.capacity, mass.dz_loss, mass.reserve_aircraft, mass.reserve_capacity,
          mass.reserve_dz, mass.t_reserve]
-  HOLD: [hold.strength, hold.quality, hold.dug_in, hold.base_hazard, hold.ammo_out_h]
+  HOLD: [hold.strength, hold.quality, hold.dug_in, hold.base_hazard, hold.ammo_out_h,
+         hold.decision_h, hold.comms_loss, hold.fog, hold.night_moves]
   RESPONSE: [response.t_ca, response.strength, response.commit_h, response.withdraw_ratio]
   DENIAL: [denial.obstacles0, denial.t_fires, denial.fire_intensity, denial.crater_rate, denial.demolish_rate]
   RISK: [risk.tolerance]

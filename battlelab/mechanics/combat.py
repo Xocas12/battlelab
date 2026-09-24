@@ -128,7 +128,7 @@ class Combat(Mechanic):
         w.scratch["side_strength"] = {}
         for zid in w.zones:
             present = w.units_in(zid)
-            sides = {u.side for u in present}
+            sides = sorted({u.side for u in present})   # sorted: set order varies by process
             if len(sides) < 2:
                 continue
             eff = {s: 0.0 for s in sides}
@@ -154,7 +154,7 @@ class Combat(Mechanic):
     def _attacking_side(w, present):
         att = [u for u in present if u.posture == "attack"]
         if att:
-            return max({u.side for u in att},
+            return max(sorted({u.side for u in att}),
                        key=lambda s: sum(u.strength for u in att if u.side == s))
         return w.attacker()
 
@@ -168,6 +168,18 @@ class MoraleCheck(Mechanic):
            + ammo_hazard    * [ammo exhausted]
     plus immediate departure when the ratio exceeds `withdraw_ratio`, a
     commitment timeout for counterattacks and forced CRT retreats.
+
+    Command decision cycle (`Morale.decision_h > 0`): the base, ratio and
+    casualty terms are not applied every turn. Instead the commander evaluates
+    them at decision points every `decision_h` hours and orders a withdrawal
+    with probability 1 - exp(-hazard * decision_h). With probability
+    `comms_loss` a decision is taken without reports from the forward
+    elements, and the commander then assumes at least `fog` casualties. With
+    `night_moves` an order is only executed in darkness. Immediate exits
+    (collapse, outmatched, commitment, ammunition, forced retreat) are
+    unaffected: they are the troops' own reaction, not the commander's. With
+    decision_h <= dt, no comms loss and no night rule this reduces exactly to
+    the continuous hazard.
     """
     phase = Phase.MORALE
     name = "morale"
@@ -178,9 +190,17 @@ class MoraleCheck(Mechanic):
         self.retreat_hz = retreat_check_hazard
         self.collapse = collapse_fraction
 
+    @staticmethod
+    def commanded(m, dt: float) -> bool:
+        return m.decision_h > dt + 1e-9 or m.comms_loss > 0 or bool(m.night_moves)
+
+    def judged_hazard(self, m, ratio: float, casualties: float) -> float:
+        return m.base_hazard + self.B0 * max(ratio - 1.0, 0.0) + self.HC * casualties
+
     def step(self, w: World):
         engaged = w.scratch.get("engaged", {})
         forced = w.scratch.get("forced_retreat", set())
+        orders = w.persist.setdefault("withdraw_orders", {})
         g = w.rng("morale")
         for uid, (own, enemy) in engaged.items():
             u = w.units[uid]
@@ -188,6 +208,7 @@ class MoraleCheck(Mechanic):
                 continue
             m = u.morale
             ratio = enemy / max(own, 1e-9)
+            casualties = 1.0 - u.strength / max(u.peak, 1e-9)
             reason = None
             if u.strength <= self.collapse * max(u.peak, 1e-9):
                 reason = "collapse"
@@ -196,9 +217,19 @@ class MoraleCheck(Mechanic):
             elif u.posture == "attack" and u.arrived_at is not None \
                     and w.t - u.arrived_at > m.commit_h:
                 reason = "commitment_expired"
+            elif self.commanded(m, w.dt):
+                self._command(w, u, ratio, casualties)
+                hz = 0.0
+                if u.first_contact is not None and w.t - u.first_contact >= m.ammo_out_h:
+                    hz += self.AMMO
+                if (u.zone, u.side) in forced:
+                    hz += self.retreat_hz
+                if hz > 0 and g.random() < 1.0 - math.exp(-hz * w.dt):
+                    reason = "morale"
+                elif uid in orders and (not m.night_moves or not w.is_day()):
+                    reason = "ordered_withdrawal"
             else:
-                hz = (m.base_hazard + self.B0 * max(ratio - 1.0, 0.0)
-                      + self.HC * (1.0 - u.strength / max(u.peak, 1e-9)))
+                hz = self.judged_hazard(m, ratio, casualties)
                 if u.first_contact is not None and w.t - u.first_contact >= m.ammo_out_h:
                     hz += self.AMMO
                 if (u.zone, u.side) in forced:
@@ -210,3 +241,22 @@ class MoraleCheck(Mechanic):
                 w.emit("leaves_fight", unit=u.id, reason=reason, status=u.status,
                        strength=round(u.strength, 1), ratio=round(ratio, 2))
                 u.zone = None
+                orders.pop(uid, None)
+
+    def _command(self, w: World, u, ratio: float, casualties: float):
+        """One commander decision if a decision point falls in this turn."""
+        m = u.morale
+        nxt = w.persist.setdefault("next_decision", {})
+        cycle = max(m.decision_h, w.dt)
+        if w.t + 1e-9 < nxt.get(u.id, cycle) or u.id in w.persist["withdraw_orders"]:
+            return
+        nxt[u.id] = (math.floor(w.t / cycle + 1e-9) + 1) * cycle
+        g = w.rng("command")
+        blind = g.random() < m.comms_loss
+        seen = max(casualties, m.fog) if blind else casualties
+        hz = self.judged_hazard(m, ratio, seen)
+        order = g.random() < 1.0 - math.exp(-hz * cycle)
+        w.emit("command_decision", unit=u.id, blind=blind, perceived_casualties=round(seen, 2),
+               ratio=round(ratio, 2), order="withdraw" if order else "hold")
+        if order:
+            w.persist["withdraw_orders"][u.id] = w.t
