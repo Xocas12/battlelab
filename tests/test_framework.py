@@ -20,6 +20,7 @@ from battlelab.scenario import Scenario
 ROOT = Path(__file__).resolve().parents[1]
 HOST = ROOT / "scenarios" / "hostomel_2022.yaml"
 MAL = ROOT / "scenarios" / "maleme_1941.yaml"
+YPB = ROOT / "scenarios" / "ypenburg_1940.yaml"
 LUA = shutil.which("lua5.3") or shutil.which("lua")
 
 
@@ -101,7 +102,7 @@ def test_crt_resolver_runs_and_differs(tmp_path):
 
 
 # ------------------------------------------------------------ invariants ---
-@pytest.mark.parametrize("path", [HOST, MAL])
+@pytest.mark.parametrize("path", [HOST, MAL, YPB])
 def test_invariants(path):
     s = Scenario.load(path)
     lift = 0
@@ -128,9 +129,31 @@ def test_invariants(path):
 
 # ------------------------------------------------------------------ lint ---
 def test_shipped_scenarios_lint_clean(host, mal):
-    assert [i for i in host.lint() if i.level == "error"] == []
-    assert [i for i in mal.lint() if i.level == "error"] == []
-    assert Scenario.lint_pair(host, mal) == []
+    ypb = Scenario.load(YPB)
+    for s in (host, mal, ypb):
+        assert [i for i in s.lint() if i.level == "error"] == []
+    for a, b in ((host, mal), (host, ypb), (mal, ypb)):
+        assert Scenario.lint_pair(a, b) == []
+    mech = {n for n in host.space.names() if n.startswith(("mech.", "doctrine."))}
+    for s in (mal, ypb):                              # family constants identical
+        assert {n for n in s.space.names() if n.startswith(("mech.", "doctrine."))} == mech
+        assert all(s.space[n].dist == host.space[n].dist for n in mech)
+
+
+def test_landing_on_contested_field():
+    """land_contested lets a wave land into a fight, at extra risk, attacking."""
+    ypb = Scenario.load(YPB)
+    landed_into_fight = 0
+    for i in range(60):
+        w, _ = ypb.run(ypb.space.sample(2, i), 2, i)
+        for e in w.log:
+            if e.kind == "airlanding" and e.data["control"] == "contested":
+                assert e.data["p_loss"] >= ypb.space["mech.contested_risk"].dist.mean()
+                landed_into_fight += 1
+    assert landed_into_fight > 10
+    off = ypb.with_overrides({"risk.land_contested": 0})
+    df = experiment.run_batch(off, 60, seed=2)
+    assert (df["m.t_first_landing"].isna() | (df["m.t_control"].notna())).all()
 
 
 def test_lint_catches_missing_source_and_bad_ref():

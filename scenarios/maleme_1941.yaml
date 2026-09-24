@@ -69,6 +69,8 @@ parameters:
   # RISK --------------------------------------------------------------------
   risk.tolerance: {dist: uniform, lo: 0.25, hi: 0.40, source: NZH, assumption: true,
     note: "airfield littered with wrecked aircraft, but enough troops landed to tip the balance"}
+  risk.land_contested: {dist: fixed, value: 0, source: NZH, assumption: true,
+    note: "Student waited for the field: transports landed only after the NZ withdrawal"}
   # CONTEXT (not swapped) ---------------------------------------------------
   ctx.aircraft: {dist: uniform, lo: 25, hi: 40, assumption: true, note: "Ju 52 per shuttle sortie"}
   ctx.troops_per_aircraft: {dist: fixed, value: 13, assumption: true}
@@ -86,6 +88,8 @@ parameters:
     note: "logistic go/no-go rule only: spread of accepted risk around the tolerance, per wave or sortie"}
   mech.info_lag_h: {dist: fixed, value: 0.0, assumption: true,
     note: "delay between the true landing risk and the decision maker's estimate; 0 = perfect information"}
+  mech.contested_risk: {dist: fixed, value: 0.35, assumption: true,
+    note: "extra per-aircraft loss when landing on a contested field (only with risk.land_contested); set from Ypenburg 1940 accounts (WOH): of 12 Ju 52 in the first wave few crews or troops came out unscathed"}
   doctrine.hasty_defense: {dist: fixed, value: 1.2, assumption: true}
   doctrine.clear_rate: {dist: fixed, value: 0.15, assumption: true}
 
@@ -96,7 +100,7 @@ sides:
           ingress_loss: $air.att.ingress_loss, approach_loss: $air.att.approach_loss,
           night_limited: $ctx.night_limited_air}
     doctrine: {risk_tolerance: $risk.tolerance, clear_rate: $doctrine.clear_rate,
-               hasty_defense: $doctrine.hasty_defense}
+               hasty_defense: $doctrine.hasty_defense, land_contested: $risk.land_contested}
   NZ:
     role: defender
     air: {night_limited: $ctx.night_limited_air}
@@ -154,6 +158,7 @@ airlift:
   first_after_control_h: $ctx.exploit_delay
   daylight_only: true
   wreck_obstacle: $ctx.wreck_obstacle
+  contested_risk: $mech.contested_risk
 
 mechanics:
   # resolver: lanchester | crt. The CRT is ILLUSTRATIVE, not calibrated: at 1:1 it
@@ -175,7 +180,7 @@ factors:
          hold.decision_h, hold.comms_loss, hold.fog, hold.night_moves]
   RESPONSE: [response.t_ca, response.strength, response.commit_h, response.withdraw_ratio]
   DENIAL: [denial.obstacles0, denial.t_fires, denial.fire_intensity, denial.crater_rate, denial.demolish_rate]
-  RISK: [risk.tolerance]
+  RISK: [risk.tolerance, risk.land_contested]
 
 anchors:
   - {id: nz_leave_field_day1, metric: t_control, op: between, value: [4.0, 24.0], source: NZH,

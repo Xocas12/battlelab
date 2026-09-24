@@ -71,6 +71,7 @@ class AirliftSpec:
     crash_survival: float = 0.5      # troops surviving a lost aircraft
     wreck_obstacle: float = 0.004    # runway blocked per wrecked aircraft
     organisation: float = 0.9        # fraction of landed troops combat-ready
+    contested_risk: float = 0.0      # extra loss prob landing on a contested field
     go_rule: str = "threshold"       # threshold | logistic
     go_width: float = 0.02           # logistic: scale of the acceptance curve
     info_lag_h: float = 0.0          # risk estimate lags the true risk by this long
@@ -85,9 +86,10 @@ class Airlift(Mechanic):
     expected loss per aircraft
         p = own approach_loss + fire_risk * enemy fire on zone
             + runway_risk * (1 - usable runway)
-    A wave (or shuttle sortie) lands only if the side holds the zone, the
-    runway is at least r_min usable, the risk estimate is acceptable and
-    (optionally) it is day. Two acceptance rules:
+    A wave (or shuttle sortie) lands only if the side holds the zone (or it
+    is contested and the side's doctrine has `land_contested`; the landing
+    then adds `contested_risk` to p), the runway is at least r_min usable,
+    the risk estimate is acceptable and (optionally) it is day. Two acceptance rules:
 
       threshold  accept iff p_est <= risk_tolerance (deterministic cliff)
       logistic   each wave/sortie draws its own nerve u ~ U(0,1) once and
@@ -126,7 +128,16 @@ class Airlift(Mechanic):
         r = self.runway(w)
         p = (w.sides[s.side].air.approach_loss + s.fire_risk * fire
              + s.runway_risk * (1.0 - r.usable))
+        if w.zones[s.zone].control == "contested":
+            p += s.contested_risk
         return min(max(p, 0.0), 0.95)
+
+    def may_land(self, w: World) -> bool:
+        ctrl = w.zones[self.s.zone].control
+        if ctrl == self.s.side:
+            return True
+        return ctrl == "contested" and \
+            w.sides[self.s.side].doctrine.get("land_contested", 0.0) > 0.5
 
     def p_estimate(self, w: World) -> float:
         """The risk as the decision maker sees it (lagged by info_lag_h)."""
@@ -154,8 +165,7 @@ class Airlift(Mechanic):
 
     def conditions(self, w: World, p_est: float, key: str = "") -> bool:
         s = self.s
-        z = w.zones[s.zone]
-        if not (z.control == s.side and self.runway(w).usable >= s.r_min):
+        if not (self.may_land(w) and self.runway(w).usable >= s.r_min):
             return False
         if s.daylight_only and not w.is_day():
             return False
@@ -172,8 +182,11 @@ class Airlift(Mechanic):
             u.strength += add
         else:
             u.strength = add
-            u.activate(s.zone, w.t, "defend")
-            u.dug_in = max(u.dug_in, w.sides[s.side].doctrine.get("hasty_defense", 1.0))
+            if w.zones[s.zone].control == s.side:
+                u.activate(s.zone, w.t, "defend")
+                u.dug_in = max(u.dug_in, w.sides[s.side].doctrine.get("hasty_defense", 1.0))
+            else:       # landing into a fight: the troops attack off the aircraft
+                u.activate(s.zone, w.t, "attack")
         u.peak = max(u.peak, u.strength)
         r = self.runway(w)
         r.obstacles = min(1.0, r.obstacles + s.wreck_obstacle * lost)
@@ -182,7 +195,7 @@ class Airlift(Mechanic):
         if st["first_landing"] is None:
             st["first_landing"] = w.t
         w.emit("airlanding", wave=label, aircraft=s.aircraft, lost=lost,
-               troops=round(troops), p_loss=round(p, 3))
+               troops=round(troops), p_loss=round(p, 3), control=w.zones[s.zone].control)
 
     def _idle(self, w: World) -> bool:
         """Nothing to decide this turn (and no risk history to keep)."""
