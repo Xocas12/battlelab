@@ -12,7 +12,7 @@ import json
 import os
 import platform
 import time
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import Executor, ProcessPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -41,21 +41,43 @@ def _run_chunk(args) -> list[dict]:
 
 
 def run_batch(scenario: Scenario, n: int, seed: int = 1, workers: int = 1,
-              keep_params: bool = True, start: int = 0) -> pd.DataFrame:
+              keep_params: bool = True, start: int = 0,
+              executor: Executor | None = None) -> pd.DataFrame:
+    """One row per run. Pass `executor` to reuse a process pool across batches."""
+    return run_batches([scenario], n, seed, workers, keep_params, start, executor)[0]
+
+
+def run_batches(scenarios: list[Scenario], n: int, seed: int = 1, workers: int = 1,
+                keep_params: bool = True, start: int = 0,
+                executor: Executor | None = None) -> list[pd.DataFrame]:
+    """Several batches (same seeds and run indices) through one process pool."""
     idx = list(range(start, start + n))
-    if workers <= 1:
-        rows = _run_chunk((scenario, seed, idx, keep_params))
+    if workers <= 1 and executor is None:
+        parts = [_run_chunk((sc, seed, idx, keep_params)) for sc in scenarios]
     else:
-        chunks = [idx[k::workers] for k in range(workers)]
-        with ProcessPoolExecutor(workers) as ex:
-            rows = [r for part in ex.map(_run_chunk,
-                    [(scenario, seed, c, keep_params) for c in chunks]) for r in part]
-        rows.sort(key=lambda r: r["run"])
-    df = pd.DataFrame(rows)
-    df.attrs["scenario"] = scenario.id
-    df.attrs["fingerprint"] = scenario.fingerprint()
-    df.attrs["seed"] = seed
-    return df
+        k = max(workers, 1)
+        chunks = [idx[j::k] for j in range(k) if idx[j::k]]
+        jobs = [(i, (sc, seed, c, keep_params)) for i, sc in enumerate(scenarios) for c in chunks]
+        own = executor is None
+        ex = executor or ProcessPoolExecutor(k)
+        try:
+            futs = [(i, ex.submit(_run_chunk, job)) for i, job in jobs]
+            parts = [[] for _ in scenarios]
+            for i, f in futs:
+                parts[i].extend(f.result())
+        finally:
+            if own:
+                ex.shutdown()
+        for rows in parts:
+            rows.sort(key=lambda r: r["run"])
+    out = []
+    for sc, rows in zip(scenarios, parts):
+        df = pd.DataFrame(rows)
+        df.attrs["scenario"] = sc.id
+        df.attrs["fingerprint"] = sc.fingerprint()
+        df.attrs["seed"] = seed
+        out.append(df)
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -94,12 +116,19 @@ def factor_swap(home: Scenario, away: Scenario, n: int, seed: int = 1,
     factors = factors or list(home.factors)
     res = SwapResult(home.id, away.id, factors, outcome)
     masks = list(itertools.product([0, 1], repeat=len(factors)))
-    for k, mask in enumerate(masks):
-        df = run_batch(variant(home, away, factors, mask), n, seed, workers, keep_params=False)
+    variants = [variant(home, away, factors, m) for m in masks]
+    if workers > 1:
+        with ProcessPoolExecutor(workers) as ex:
+            dfs = run_batches(variants, n, seed, workers, keep_params=False, executor=ex)
+    else:
+        dfs = []
+        for k, v in enumerate(variants):
+            dfs.append(run_batch(v, n, seed, keep_params=False))
+            if progress:
+                print(f"  [{k + 1}/{len(masks)}] {home.id} swap={masks[k]} "
+                      f"P({outcome})={dfs[-1][f'm.{outcome}'].mean():.3f}", flush=True)
+    for mask, df in zip(masks, dfs):
         res.runs[mask] = df[f"m.{outcome}"].astype(float).to_numpy()
-        if progress:
-            print(f"  [{k + 1}/{len(masks)}] {home.id} swap={mask} "
-                  f"P({outcome})={res.runs[mask].mean():.3f}", flush=True)
     return res
 
 
@@ -109,12 +138,17 @@ def factor_swap(home: Scenario, away: Scenario, n: int, seed: int = 1,
 def sweep(scenario: Scenario, grid: dict[str, list[float]], n: int, seed: int = 1,
           outcome: str = "airbridge", workers: int = 1) -> pd.DataFrame:
     names = list(grid)
+    points = list(itertools.product(*(grid[k] for k in names)))
+    variants = [scenario.with_overrides(dict(zip(names, vals))) for vals in points]
+    if workers > 1:
+        with ProcessPoolExecutor(workers) as ex:
+            dfs = run_batches(variants, n, seed, workers, keep_params=False, executor=ex)
+    else:
+        dfs = [run_batch(v, n, seed, keep_params=False) for v in variants]
     rows = []
-    for values in itertools.product(*(grid[k] for k in names)):
-        sc = scenario.with_overrides(dict(zip(names, values)))
-        df = run_batch(sc, n, seed, workers, keep_params=False)
+    for vals, df in zip(points, dfs):
         v = df[f"m.{outcome}"].astype(float)
-        rows.append({**dict(zip(names, values)), "p": v.mean(), "n": len(v)})
+        rows.append({**dict(zip(names, vals)), "p": v.mean(), "n": len(v)})
     return pd.DataFrame(rows)
 
 
