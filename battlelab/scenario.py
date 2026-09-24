@@ -22,9 +22,24 @@ from typing import Any
 import yaml
 
 from .engine import Engine, Mechanic
-from .mechanics import (GO_RULES, RESOLVERS, Airlift, AirliftSpec, AirSituation, ArrivalSpec, Arrivals,
-                        Combat, Control, Fires, FireSpec, FirstControlTracker, MoraleCheck,
-                        Outcome, OutcomeSpec, RunwayEngineering)
+from .mechanics import (
+    GO_RULES,
+    RESOLVERS,
+    Airlift,
+    AirliftSpec,
+    AirSituation,
+    Arrivals,
+    ArrivalSpec,
+    Combat,
+    Control,
+    Fires,
+    FireSpec,
+    FirstControlTracker,
+    MoraleCheck,
+    Outcome,
+    OutcomeSpec,
+    RunwayEngineering,
+)
 from .params import Param, ParamSpace, parse_dist
 from .state import AirPosture, Morale, Runway, Side, Unit, World, Zone
 
@@ -250,7 +265,7 @@ class Scenario:
 
     # -- construction --------------------------------------------------------
     @classmethod
-    def load(cls, path: str | Path) -> "Scenario":
+    def load(cls, path: str | Path) -> Scenario:
         text = Path(path).read_text()
         return cls(yaml.safe_load(text), text, str(path))
 
@@ -259,7 +274,7 @@ class Scenario:
         h.update(json.dumps(self.variant, sort_keys=True, default=str).encode())
         return h.hexdigest()[:16]
 
-    def with_overrides(self, overrides: dict[str, Any]) -> "Scenario":
+    def with_overrides(self, overrides: dict[str, Any]) -> Scenario:
         """Override parameters: a number fixes it, a dist spec replaces it."""
         space = self.space
         for name, val in overrides.items():
@@ -271,7 +286,7 @@ class Scenario:
         v.setdefault("overrides", {}).update({k: str(x) for k, x in overrides.items()})
         return Scenario(self.doc, self._text, self.path, space, v)
 
-    def with_resolver(self, name: str, **kwargs) -> "Scenario":
+    def with_resolver(self, name: str, **kwargs) -> Scenario:
         """Same scenario, different combat resolver (structural sensitivity)."""
         if name not in RESOLVERS:
             raise ScenarioError(f"unknown resolver {name!r}; have {sorted(RESOLVERS)}")
@@ -283,7 +298,7 @@ class Scenario:
         v["resolver"] = {"name": name, **kwargs}
         return Scenario(doc, self._text, self.path, self.space, v)
 
-    def with_go_rule(self, rule: str) -> "Scenario":
+    def with_go_rule(self, rule: str) -> Scenario:
         """Same scenario, different air-landing acceptance rule."""
         if rule not in GO_RULES:
             raise ScenarioError(f"unknown go/no-go rule {rule!r}; have {list(GO_RULES)}")
@@ -293,7 +308,7 @@ class Scenario:
         v["go_rule"] = rule
         return Scenario(doc, self._text, self.path, self.space, v)
 
-    def with_params_from(self, other: "Scenario", names: list[str]) -> "Scenario":
+    def with_params_from(self, other: Scenario, names: list[str]) -> Scenario:
         """Take the named parameters (distribution + provenance) from `other`."""
         space = self.space
         for n in names:
@@ -366,7 +381,7 @@ class Scenario:
         return issues
 
     @staticmethod
-    def lint_pair(a: "Scenario", b: "Scenario") -> list[Issue]:
+    def lint_pair(a: Scenario, b: Scenario) -> list[Issue]:
         """Factor bundles must be identical so that swaps are well defined."""
         issues = []
         if a.factors.keys() != b.factors.keys():
@@ -436,7 +451,7 @@ class Scenario:
 
 
 def _default_trace(w: World) -> dict:
-    row = {"t": w.t}
+    row: dict[str, Any] = {"t": w.t}
     for z in w.zones.values():
         row[f"control:{z.id}"] = z.control
         if z.runway:

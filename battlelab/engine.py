@@ -6,8 +6,8 @@ read; the scenario loader checks those declarations before anything runs.
 """
 from __future__ import annotations
 
+from collections.abc import Callable, Iterable
 from enum import IntEnum
-from typing import Callable, Iterable
 
 from .state import World
 
@@ -19,6 +19,7 @@ class Phase(IntEnum):
     COMBAT = 30       # attrition in contested zones
     MORALE = 40       # withdraw / break decisions
     CONTROL = 50      # zone control
+    AFTER_CONTROL = 51  # bookkeeping that needs this turn's control
     ENGINEERING = 60  # clearance, demolition
     AIRLIFT = 70      # air-landing decisions and landings
     RECORD = 90       # metrics, traces

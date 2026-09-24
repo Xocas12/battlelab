@@ -14,7 +14,7 @@ import yaml
 from battlelab import analysis, experiment
 from battlelab.cmo import export_design, ingest
 from battlelab.mechanics import LanchesterPoisson
-from battlelab.params import Fixed, LogNormal, ParamSpace, Triangular, Uniform, parse_dist
+from battlelab.params import Fixed, LogNormal, Triangular, Uniform, parse_dist
 from battlelab.scenario import Scenario
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -115,7 +115,8 @@ def test_invariants(path):
             if z.runway:
                 assert 0.0 <= z.runway.usable <= 1.0
             assert z.control in (None, "contested", *w.sides)
-        waves = len(al["waves"]) if al.get("mode") == "waves" else math.ceil(48 / p["ctx.interval_h"]) + 1
+        waves = (len(al["waves"]) if al.get("mode") == "waves"
+                 else math.ceil(48 / p["ctx.interval_h"]) + 1)
         lift = p["ctx.aircraft"] * p["ctx.troops_per_aircraft"] * waves
         assert m["landed"] <= lift + 1e-6
         if m["t_control"] is not None:
@@ -159,7 +160,7 @@ def test_shapley_efficiency_and_additivity():
 
 def test_swap_variants(host, mal):
     all_on = experiment.variant(host, mal, list(host.factors), (1,) * len(host.factors))
-    for f, names in host.factors.items():
+    for names in host.factors.values():
         for n in names:
             assert all_on.space[n] == mal.space[n]
     assert all_on.space["ctx.t_relief"] == host.space["ctx.t_relief"]     # context untouched
@@ -192,7 +193,8 @@ def test_export_and_ingest_roundtrip(host, tmp_path):
         chk = tmp_path / "chk.lua"
         chk.write_text(f"dofile('{out}') assert(#BL_DESIGN.runs == 4) "
                        "assert(BL_DESIGN.runs[1].p['risk.tolerance'] > 0) print('ok')")
-        assert subprocess.run([LUA, str(chk)], capture_output=True, text=True).stdout.strip() == "ok"
+        r = subprocess.run([LUA, str(chk)], capture_output=True, text=True)
+        assert r.stdout.strip() == "ok"
     log = tmp_path / "console.txt"
     log.write_text("noise\nBLCSV|run,seed,m.airbridge,p.risk.tolerance\n"
                    "BLCSV|0,11,true,0.05\nother\nBLCSV|1,12,false,0.07\n")

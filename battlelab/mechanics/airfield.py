@@ -5,7 +5,7 @@ import math
 from dataclasses import dataclass, field
 
 from ..engine import Mechanic, Phase
-from ..state import World
+from ..state import Runway, World
 
 
 class Control(Mechanic):
@@ -106,7 +106,14 @@ class Airlift(Mechanic):
             raise ValueError(f"unknown go_rule {spec.go_rule!r}; have {GO_RULES}")
         self.s = spec
 
+    def runway(self, w: World) -> Runway:
+        r = w.zones[self.s.zone].runway
+        if r is None:
+            raise ValueError(f"airlift zone {self.s.zone!r} has no runway")
+        return r
+
     def setup(self, w: World):
+        self.runway(w)
         w.persist["airlift"] = {"landed": 0.0, "lost": 0, "waves": [None] * len(self.s.waves),
                                 "next_slot": math.inf, "first_landing": None,
                                 "p_hist": [], "nerve": {}}
@@ -116,7 +123,7 @@ class Airlift(Mechanic):
         s = self.s
         enemy = w.enemy_of(s.side)
         fire = w.scratch.get("fire", {}).get((enemy, s.zone), 0.0)
-        r = w.zones[s.zone].runway
+        r = self.runway(w)
         p = (w.sides[s.side].air.approach_loss + s.fire_risk * fire
              + s.runway_risk * (1.0 - r.usable))
         return min(max(p, 0.0), 0.95)
@@ -148,7 +155,7 @@ class Airlift(Mechanic):
     def conditions(self, w: World, p_est: float, key: str = "") -> bool:
         s = self.s
         z = w.zones[s.zone]
-        if not (z.control == s.side and z.runway.usable >= s.r_min):
+        if not (z.control == s.side and self.runway(w).usable >= s.r_min):
             return False
         if s.daylight_only and not w.is_day():
             return False
@@ -168,7 +175,7 @@ class Airlift(Mechanic):
             u.activate(s.zone, w.t, "defend")
             u.dug_in = max(u.dug_in, w.sides[s.side].doctrine.get("hasty_defense", 1.0))
         u.peak = max(u.peak, u.strength)
-        r = w.zones[s.zone].runway
+        r = self.runway(w)
         r.obstacles = min(1.0, r.obstacles + s.wreck_obstacle * lost)
         st["landed"] += troops
         st["lost"] += lost
@@ -199,7 +206,7 @@ class Airlift(Mechanic):
                     st["waves"][i] = "aborted"
                     w.emit("airlift_abort", wave=f"wave{i + 1}", p_loss=round(p, 3),
                            p_est=round(p_est, 3), control=w.zones[s.zone].control,
-                           runway=round(w.zones[s.zone].runway.usable, 2))
+                           runway=round(self.runway(w).usable, 2))
         else:
             t_ctrl = w.persist.get("first_control", {}).get((s.side, s.zone))
             if math.isinf(st["next_slot"]) and t_ctrl is not None:
@@ -217,7 +224,7 @@ class Airlift(Mechanic):
 
 class FirstControlTracker(Mechanic):
     """Remembers when each side first held each zone (used by others)."""
-    phase = Phase.CONTROL + 1   # runs right after Control
+    phase = Phase.AFTER_CONTROL
     name = "first_control"
 
     def step(self, w: World):
