@@ -357,3 +357,13 @@ def test_schema_tracks_dataclasses():
     assert "night_moves" in SCHEMA["morale"][0]
     assert {"t", "zone"} <= SCHEMA["arrive"][1]
     assert "unit" in SCHEMA["airlift"][1] and "unit_id" not in SCHEMA["airlift"][0]
+
+
+# -------------------------------------------------------------- parallel ---
+def test_parallel_batches_match_serial(host, mal):
+    a = experiment.run_batch(mal, 40, seed=8)
+    b = experiment.run_batch(mal, 40, seed=8, workers=2)
+    assert a.equals(b)
+    s1 = experiment.factor_swap(host, mal, 20, seed=8, factors=["RISK", "HOLD"])
+    s2 = experiment.factor_swap(host, mal, 20, seed=8, factors=["RISK", "HOLD"], workers=2)
+    assert all(np.array_equal(s1.runs[k], s2.runs[k]) for k in s1.runs)

@@ -184,8 +184,20 @@ class Airlift(Mechanic):
         w.emit("airlanding", wave=label, aircraft=s.aircraft, lost=lost,
                troops=round(troops), p_loss=round(p, 3))
 
+    def _idle(self, w: World) -> bool:
+        """Nothing to decide this turn (and no risk history to keep)."""
+        s, st = self.s, w.persist["airlift"]
+        if s.info_lag_h > 0:
+            return False
+        if s.mode == "waves":
+            return all(st["waves"][i] is not None or w.t < t0 for i, t0 in enumerate(s.waves))
+        return not math.isinf(st["next_slot"]) and w.t < st["next_slot"]
+
     def step(self, w: World):
         s, st = self.s, w.persist["airlift"]
+        if self._idle(w):
+            w.metrics["landed"] = st["landed"]
+            return
         p = self.p_loss(w)
         if s.info_lag_h > 0:
             st["p_hist"].append((w.t, p))

@@ -131,6 +131,7 @@ class World:
         self.persist: dict[str, Any] = {}     # per-run state owned by mechanics
         self._seed, self._run = seed, run_index
         self._rngs: dict[str, np.random.Generator] = {}
+        self._enemy: dict[str, str] = {}
 
     # -- randomness: one independent stream per named component -------------
     def rng(self, stream: str) -> np.random.Generator:
@@ -158,10 +159,15 @@ class World:
                 if u.active and u.zone == zone and (side is None or u.side == side)]
 
     def enemy_of(self, side: str) -> str:
-        others = [s for s in self.sides if s != side]
-        if len(others) != 1:
-            raise ValueError("two-sided scenarios only (for now)")
-        return others[0]
+        cache = self._enemy
+        if len(cache) != len(self.sides):
+            cache.clear()
+            for sid in self.sides:
+                others = [s for s in self.sides if s != sid]
+                if len(others) != 1:
+                    raise ValueError("two-sided scenarios only (for now)")
+                cache[sid] = others[0]
+        return cache[side]
 
     def attacker(self) -> str:
         return next(s.id for s in self.sides.values() if s.role == "attacker")
