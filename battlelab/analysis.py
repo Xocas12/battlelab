@@ -186,3 +186,57 @@ def abc_posterior(df: pd.DataFrame, anchors: list[dict]) -> tuple[pd.DataFrame, 
     if len(out):
         out = out.sort_values("shift_sd", key=np.abs, ascending=False).reset_index(drop=True)
     return out, acc
+
+
+# ---------------------------------------------------------------------------
+# Backend comparison (native engine vs CMO, or any two result tables)
+# ---------------------------------------------------------------------------
+def compare_backends(a: pd.DataFrame, b: pd.DataFrame, rtol: float = 1e-5
+                     ) -> tuple[pd.DataFrame, dict]:
+    """Compare two result tables run by run.
+
+    Rows are paired on `run`. Shared `p.*` columns must agree (same design,
+    same draws); `info["param_mismatch"]` lists the ones that do not. For each
+    shared metric: boolean metrics report both shares, the paired difference
+    with a 95% interval, agreement and the two discordant counts (a McNemar
+    table); numeric metrics report both means, the paired mean difference with
+    a 95% interval and the correlation.
+    """
+    m = a.merge(b, on="run", suffixes=("|a", "|b"))
+    info: dict = {"n_a": len(a), "n_b": len(b), "n_paired": len(m), "param_mismatch": []}
+    shared_p = sorted(c for c in a.columns if c.startswith("p.") and c in b.columns)
+    for c in shared_p:
+        x = pd.to_numeric(m[f"{c}|a"], errors="coerce").to_numpy(float)
+        y = pd.to_numeric(m[f"{c}|b"], errors="coerce").to_numpy(float)
+        if not np.allclose(x, y, rtol=rtol, atol=1e-9, equal_nan=True):
+            info["param_mismatch"].append(c[2:])
+    info["shared_params"] = len(shared_p)
+    rows = []
+    for c in sorted(c for c in a.columns if c.startswith("m.") and c in b.columns):
+        sa, sb = m[f"{c}|a"], m[f"{c}|b"]
+        if sa.dtype == bool or sb.dtype == bool:
+            x, y = sa.astype(bool).to_numpy(), sb.astype(bool).to_numpy()
+            d = x.astype(float) - y.astype(float)
+            se = d.std(ddof=1) / math.sqrt(len(d)) if len(d) > 1 else math.nan
+            rows.append({"metric": c[2:], "kind": "share", "a": x.mean(), "b": y.mean(),
+                         "diff": d.mean(), "lo95": d.mean() - 1.96 * se,
+                         "hi95": d.mean() + 1.96 * se, "agree": float((x == y).mean()),
+                         "only_a": int((x & ~y).sum()), "only_b": int((~x & y).sum()),
+                         "corr": math.nan, "n": len(d)})
+        else:
+            x = pd.to_numeric(sa, errors="coerce")
+            y = pd.to_numeric(sb, errors="coerce")
+            ok = x.notna() & y.notna()
+            if ok.sum() < 2:
+                continue
+            d = (x - y)[ok]
+            se = d.std(ddof=1) / math.sqrt(len(d))
+            corr = float(np.corrcoef(x[ok], y[ok])[0, 1]) if x[ok].std() > 0 and \
+                y[ok].std() > 0 else math.nan
+            rows.append({"metric": c[2:], "kind": "mean", "a": x[ok].mean(), "b": y[ok].mean(),
+                         "diff": d.mean(), "lo95": d.mean() - 1.96 * se,
+                         "hi95": d.mean() + 1.96 * se, "agree": math.nan,
+                         "only_a": int((x.notna() & y.isna()).sum()),
+                         "only_b": int((x.isna() & y.notna()).sum()), "corr": corr,
+                         "n": int(ok.sum())})
+    return pd.DataFrame(rows), info

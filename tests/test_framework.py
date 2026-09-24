@@ -367,3 +367,33 @@ def test_parallel_batches_match_serial(host, mal):
     s1 = experiment.factor_swap(host, mal, 20, seed=8, factors=["RISK", "HOLD"])
     s2 = experiment.factor_swap(host, mal, 20, seed=8, factors=["RISK", "HOLD"], workers=2)
     assert all(np.array_equal(s1.runs[k], s2.runs[k]) for k in s1.runs)
+
+
+# ------------------------------------------------------ backend compare ---
+def test_compare_backends_pairs_runs_and_flags_design_mismatch(host):
+    a = experiment.run_batch(host, 60, seed=3)
+    b = a.copy()
+    b.loc[:9, "m.airbridge"] = ~b.loc[:9, "m.airbridge"].astype(bool)
+    t, info = analysis.compare_backends(a, b)
+    assert info["n_paired"] == 60 and info["param_mismatch"] == []
+    row = t.set_index("metric").loc["airbridge"]
+    assert row["agree"] == pytest.approx(50 / 60)
+    assert row["only_a"] + row["only_b"] == 10
+    assert t.set_index("metric").loc["landed", "diff"] == pytest.approx(0.0)
+    c = experiment.run_batch(host, 60, seed=4)
+    assert "risk.tolerance" in analysis.compare_backends(a, c)[1]["param_mismatch"]
+
+
+@pytest.mark.skipif(LUA is None, reason="needs a Lua 5.3 interpreter")
+def test_compare_backends_cli_on_mock_cmo(host, tmp_path, capsys):
+    from battlelab.cli import main
+    design = export_design(host, 3, 5, tmp_path / "bl_design.lua")
+    r = subprocess.run([LUA, "tests/test_harness.lua", "lua", str(tmp_path), str(design)],
+                       cwd=ROOT / "cmo", capture_output=True, text=True)
+    assert r.returncode == 0
+    native = tmp_path / "native.csv"
+    experiment.run_batch(host, 3, seed=5).to_csv(native, index=False)
+    main(["compare-backends", str(native), str(tmp_path / "battlelab_results.csv")])
+    out = capsys.readouterr().out
+    assert "3 paired runs" in out and "WARNING" not in out
+    assert any(ln.split()[:2] == ["airbridge", "share"] for ln in out.splitlines())
