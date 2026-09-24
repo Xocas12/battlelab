@@ -57,7 +57,8 @@ mkdir -p /tmp/out && cd cmo && lua5.3 tests/test_harness.lua lua /tmp/out -  # L
 * Empty zones keep their last controller.
 * `losses_*` metrics are peak minus final strength of units; strength that withdrew is not a loss.
 * Scenario sourcing for Ypenburg comes from search excerpts, not full texts (the build sandbox could not reach the sources). Check against War over Holland and Brongers before trusting any Ypenburg number.
-* The CMO harness has only run against the mock. See `cmo/SETUP.md` "Known gaps".
+* The CMO harness, probe and scenario builder have only run against the mock (`cmo/tests/`). See `cmo/SETUP.md` "Known gaps". Any CMO API added to the Lua side must be added to `cmo/tests/mock_cmo.lua` with the documented signature.
+* In CMO the heliborne troops are scripted (`RU_VDV_` squads unloaded by helicopters reaching the airfield), not CMO cargo: respawned aircraft carry no cargo.
 
 ## Done in 0.2.0 (see CHANGELOG)
 
@@ -66,7 +67,7 @@ Old backlog items 1 (command decision cycles for Maleme), 2 (selectable go/no-go
 ## Backlog (in priority order, with acceptance criteria)
 
 1. **Airborne shock / perimeter defence (Ypenburg).** A mechanism for the first hours of an airborne assault: a temporary morale or effectiveness penalty on defenders hit by a surprise landing, and/or splitting the airfield into perimeter sectors so defenders cannot all engage at once. Done when: the Ypenburg joint anchor share is at least 0.3 under Lanchester, Hostomel and Maleme anchors are not worse by more than 0.05, new parameters are sourced or flagged, and tests are added.
-2. **CMO live verification.** Run `BL.selftest(BL_HOSTOMEL)` and a 3-run pilot in a real build; fix field names (`base`, `damage`, `group`, `loadoutdbid`, `course`) as needed and keep the mock in sync. Then run 200 replications and compare them with `battlelab compare-backends`.
+2. **CMO live verification.** Kit ready in `cmo/pilot/` (README there). Order: `bl_probe.lua` output -> fix field names (`base`, `damage`, `group`, `loadoutdbid`, `course`) and keep the mock in sync; `bl_build_hostomel.lua` output -> fix any construction call that FAILs (event wiring and `ScenEdit_SetTime` are the least certain); overnight pilot -> `battlelab compare-backends cmo/pilot/native_hostomel_runs0-19.csv battlelab_results.csv`. Done when: a pilot batch completes live and the comparison table is in results/.
 3. **Ypenburg sourcing pass.** Replace the search-excerpt sourcing with page-level citations from War over Holland and Brongers (2004); revisit every `confidence: low` entry. Done when: under 30 of 49 parameters are flagged assumptions, or each remaining flag says why no source exists.
 4. **Within-campaign controls.** Heraklion and Rethymno (Crete, 1941) as extra members, plus Valkenburg and Ockenburg (The Hague, 1940). Soft ground at Valkenburg needs a runway-bearing mechanic (aircraft bog down and become obstacles without being shot down).
 5. **Timing distribution for Maleme.** Replace the day/night step in `night_moves` with a withdrawal window that has its own uncertainty, and add an anchor on the *time* of the first landing that is stricter than day 2.
