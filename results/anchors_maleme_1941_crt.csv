@@ -1,0 +1,6 @@
+anchor,metric,op,target,share,lo95,hi95,source
+nz_leave_field_day1,t_control,between,"[4.0, 24.0]",0.1505,0.1354999352936696,0.16684012990908892,NZH
+landings_begin_day2,t_first_landing,between,"[20.0, 40.0]",0.133,0.11881869803193344,0.14858846628684308,NZH
+airbridge,airbridge,eq,True,0.2605,0.24173614590163967,0.28018215342900604,NZH
+counterattack_fails,defender_retakes,eq,False,0.9995,0.9971730649772383,0.9999117345398496,NZH
+ALL (joint),,,,0.1325,0.11834328021251322,0.1480658012238638,

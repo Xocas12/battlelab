@@ -11,17 +11,17 @@ Both engines feed the same analysis code: summaries, historical-anchor checks, r
 
 The failure mode of a quick battle model is untraceable numbers: parameters picked to make the answer look right, no record of where they came from, and a single structure presented as if it were the truth. The framework is designed against that:
 
-* **Scenarios are data.** Every parameter lives in the scenario YAML with a distribution, a source key or an explicit `assumption: true`, a confidence level and a note. `battlelab lint` refuses to run a scenario with an unsourced, unflagged parameter.
+* **Scenarios are data.** Every parameter lives in the scenario YAML with a distribution, a source key or an explicit `assumption: true`, a confidence level and a note. `battlelab lint` refuses to run a scenario with an unsourced, unflagged parameter, and reports unknown or missing keys with their path.
 * **History is a test, not a target.** Each scenario lists *anchors* (things that actually happened). `battlelab anchors` reports how typical history is inside the model. `battlelab calibrate` shows which parameters the historical record actually constrains.
-* **Structure is a variable.** Combat resolution is pluggable (stochastic Lanchester or a board-game CRT) so conclusions can be checked for dependence on the attrition model.
+* **Structure is a variable.** Combat resolution is pluggable (stochastic Lanchester or a board-game CRT), and so is the air-landing go/no-go rule (hard threshold, logistic acceptance, lagged risk estimate), so conclusions can be checked for dependence on modelling choices.
 * **Common random numbers.** Each parameter's draw depends only on (seed, run, parameter name), so swapping one factor never reshuffles the others. This is what makes factor-swap differences and Shapley values meaningful at modest run counts.
 * **Everything is traceable.** Saved results carry a manifest with scenario fingerprints, seeds and overrides.
 
 ## Install
 
 ```bash
-pip install -e .[dev]        # numpy, pandas, pyyaml, matplotlib; pytest for tests
-pytest -q                    # 23 tests; the Lua harness tests need lua5.3 on PATH
+pip install -e .[dev]        # numpy, pandas, pyyaml, matplotlib; pytest, ruff, mypy for development
+python -m pytest -q          # the Lua harness tests need lua5.3 on PATH
 ```
 
 ## Quick start
@@ -37,7 +37,13 @@ battlelab swap scenarios/hostomel_2022.yaml scenarios/maleme_1941.yaml --both -n
 battlelab sweep scenarios/hostomel_2022.yaml --grid risk.tolerance=0:0.4:9 \
                 --grid denial.t_fires=1:12:12 -n 400 --out results/
 battlelab run scenarios/hostomel_2022.yaml --set risk.tolerance=0.2     # counterfactual
+battlelab anchors scenarios/hostomel_2022.yaml --go-rule logistic        # structural variant
+battlelab report -n 1000 -w 4                                            # everything -> results/SUMMARY.md
+battlelab resolvers                                                      # the two attrition models side by side
+battlelab compare-backends results/hostomel_2022_runs.csv battlelab_results.csv   # native vs CMO
 ```
+
+Every experiment command accepts `--resolver lanchester|crt`, `--go-rule threshold|logistic`, `--set name=value` (repeatable) and `--tag` for output names, and `-w` for worker processes.
 
 ## Layout
 
@@ -49,12 +55,14 @@ battlelab/
   mechanics/       movement.py (arrivals, air, fires), combat.py (resolvers, morale),
                    airfield.py (control, engineering, airlift, outcome)
   scenario.py      YAML -> World + mechanics; $parameter references; lint
-  experiment.py    batches, factor swaps, sweeps, manifests
-  analysis.py      Wilson CIs, Shapley (+bootstrap), anchors, ABC calibration, screening
+  experiment.py    batches, factor swaps, sweeps, manifests (one process pool per experiment)
+  analysis.py      Wilson CIs, Shapley (+bootstrap), anchors, ABC calibration, screening,
+                   backend comparison
   plots.py         standard figures
+  report.py        the `battlelab report` pipeline that writes results/SUMMARY.md
   cmo.py           export designs to Lua, ingest CMO results
   cli.py           the `battlelab` command
-scenarios/         hostomel_2022.yaml, maleme_1941.yaml (the "airhead" family)
+scenarios/         hostomel_2022.yaml, maleme_1941.yaml, ypenburg_1940.yaml (the "airhead" family)
 cmo/lua/battlelab/ bl_core.lua (replication engine), bl_hostomel.lua (plugin), bl_run.lua
 cmo/tests/         mock_cmo.lua + test_harness.lua (offline tests of the harness)
 docs/              ARCHITECTURE.md, MODELING_STANDARDS.md
@@ -77,11 +85,12 @@ Build the scenario in the CMO editor using the naming conventions in `cmo/SETUP.
 
 ## Current results and handoff
 
-First-draft results, with every number traced to a file, are in `results/SUMMARY.md`; `scripts/reproduce.sh` regenerates them. `CLAUDE.md` holds the working rules, known issues and the prioritised backlog for further development.
+Results, with every number traced to a file, are in `results/SUMMARY.md`, written by `battlelab report`; `scripts/reproduce.sh` regenerates them. `CLAUDE.md` holds the working rules, known issues and the prioritised backlog for further development.
 
 ## Status and honest limits
 
-* The native engine is tested (determinism, CRN independence, resolver expectations, invariants over hundreds of runs, lint, Shapley identities).
+* The native engine is tested (determinism across processes, CRN independence, resolver expectations, invariants over hundreds of runs, lint and schema, Shapley identities, reductions of every new mechanism to the old behaviour). CI runs the tests, ruff, mypy and the Lua harness on every push.
 * The CMO harness is tested only against a mock of the CMO Lua API built from the published documentation. Some unit-wrapper fields it reads (`base`, `damage`, `loadoutdbid`, `group`) and the `course` field of `ScenEdit_SetUnit` are used defensively but have not been verified in a live CMO build. Run the self-test first.
-* The combat, morale and landing-risk constants are flagged assumptions. The CRT table is a structural alternative, not a calibrated one.
+* The combat, morale and landing-risk constants are flagged assumptions. The CRT table is a structural alternative, not a calibrated one (`battlelab resolvers` shows how far apart the two are).
+* Ypenburg 1940 was sourced from search excerpts only; its parameters are mostly low-confidence assumptions and the model reproduces its history poorly (see `CLAUDE.md`).
 * See `docs/MODELING_STANDARDS.md` for how results should and should not be read.

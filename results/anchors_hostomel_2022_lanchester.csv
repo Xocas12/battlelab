@@ -1,0 +1,6 @@
+anchor,metric,op,target,share,lo95,hi95,source
+vdv_secure_field_in_hours,t_control,between,"[1.0, 4.0]",0.8775,0.8624026344653455,0.8911499417462672,WOTR2023
+ukraine_retakes_field,defender_retakes,eq,True,0.722,0.7019535611808497,0.7411952386045225,WOTR2023
+no_airbridge,airbridge,eq,False,0.6845,0.6637957304537841,0.7044968531516266,WOTR2023
+runway_unusable,runway_end,lt,0.6,1.0,0.9980828823994873,1.0,WOTR2023
+ALL (joint),,,,0.602,0.5803714899808718,0.6232374180286235,
