@@ -35,3 +35,4 @@ jobs:
           mkdir -p "$RUNNER_TEMP/bl_io" "$RUNNER_TEMP/bl_noio"
           lua5.3 tests/test_harness.lua lua "$RUNNER_TEMP/bl_io" -
           lua5.3 tests/test_harness.lua lua "$RUNNER_TEMP/bl_noio" - --no-io
+          lua5.3 tests/test_probe.lua lua "$RUNNER_TEMP/bl_io" --write

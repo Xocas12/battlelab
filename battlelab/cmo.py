@@ -26,11 +26,13 @@ def _lua_num(x: float) -> str:
 
 
 def export_design(scenario: Scenario, n: int, seed: int, path: str | Path,
-                  params: list[str] | None = None) -> Path:
+                  params: list[str] | None = None, start: int = 0) -> Path:
     """Write BL_DESIGN = {...} for the CMO harness.
 
     `params` limits which parameters are exported (default: all). Each run also
     gets its own integer seed for the Lua-side PRNG (unit culling, jitter).
+    `start` offsets the run indices, so a batch can be split over several CMO
+    sessions (runs start..start+n-1) whose rows append to the same results file.
     """
     names = params or scenario.space.names()
     lines = [
@@ -44,7 +46,7 @@ def export_design(scenario: Scenario, n: int, seed: int, path: str | Path,
         f"  param_names = {{{', '.join(repr(k) for k in names)}}},",
         "  runs = {",
     ]
-    for i in range(n):
+    for i in range(start, start + n):
         p = scenario.space.sample(seed, i)
         run_seed = (stable_hash(f"{seed}:{i}") % 2147483646) + 1
         kv = ", ".join(f"['{k}']={_lua_num(p[k])}" for k in names)
