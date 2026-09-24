@@ -5,3 +5,5 @@ __pycache__/
 cmo/lua/battlelab/bl_design.lua
 !cmo/pilot/bl_design.lua
 results/*_runs.csv
+.mypy_cache/
+.ruff_cache/
