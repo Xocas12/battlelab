@@ -447,6 +447,11 @@ def test_report_smoke(tmp_path):
     assert "hostomel_2022 given maleme_1941's factors" in text
     assert (tmp_path / "anchors_maleme_1941_crt.manifest.json").exists()
     assert (tmp_path / "shapley_hostomel_2022__maleme_1941_lanchester.csv").exists()
+    assert "## Reading these results" not in text                  # no NOTES.md: no section
+    (tmp_path / "NOTES.md").write_text(
+        "# Notes\nMaleme joint {{anchor.maleme_1941.lanchester.joint}}.")
+    text = run_report(cfg).read_text()
+    assert "## Reading these results\n\nMaleme joint 0." in text
 
 
 @pytest.mark.skipif(LUA is None, reason="needs a Lua 5.3 interpreter")
@@ -535,4 +540,15 @@ def test_commit_time():
     assert at(0, 0, 13.25) == 13.25                   # defaults: no gate
     assert at(3, 0, 13.25) == 16.25                   # lag only
     assert at(3, 8, 13.25) == 24.0                    # next decision point after the report
-    assert at(3, 8, 13.0) == 16.0 + 8 - 8 or at(3, 8, 13.0) == 16.0   # exactly on a point
+    assert at(3, 8, 13.0) == 16.0                     # report lands exactly on a point
+
+
+def test_notes_placeholders():
+    from battlelab.report import fill_notes
+    vals = {"anchor.x.lanchester.joint": 0.6789, "shapley.a__b.crt.RISK": -0.25}
+    out = fill_notes("# Title\nJoint {{anchor.x.lanchester.joint}}"
+                     " ({{ anchor.x.lanchester.joint|pct }}),"
+                     " RISK {{shapley.a__b.crt.RISK|signed}}.", vals)
+    assert out == "Joint 0.68 (68%), RISK -0.25."
+    with pytest.raises(SystemExit, match="unknown result keys: nope"):
+        fill_notes("{{nope}}", vals)
