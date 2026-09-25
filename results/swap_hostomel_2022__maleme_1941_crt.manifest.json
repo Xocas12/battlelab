@@ -1,12 +1,12 @@
 {
   "framework": "battlelab",
-  "version": "0.1.0",
-  "created": "2026-09-24T19:57:59",
-  "python": "3.12.3",
-  "numpy": "2.4.4",
-  "home": "301f1330a8800f33",
-  "away": "2523c85b6655df98",
+  "version": "0.2.0",
+  "created": "2026-09-24T21:18:31",
+  "python": "3.11.15",
+  "numpy": "2.4.6",
+  "home": "9508ed52a5868558",
+  "away": "fa5eb9c556ec18cd",
   "n": 400,
   "seed": 1,
-  "metric": "airbridge"
+  "resolver": "crt"
 }

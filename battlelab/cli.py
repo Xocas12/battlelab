@@ -11,6 +11,7 @@
                   --grid denial.t_fires=2:12:11 -n 500 --out results/
   battlelab cmo-export scenarios/hostomel_2022.yaml -n 200 --out cmo/lua/battlelab/bl_design.lua
   battlelab cmo-ingest results_cmo.csv --scenario scenarios/hostomel_2022.yaml
+  battlelab compare-backends results/hostomel_2022_runs.csv battlelab_results.csv
 """
 from __future__ import annotations
 
@@ -21,6 +22,7 @@ from pathlib import Path
 import pandas as pd
 
 from . import analysis, experiment
+from .mechanics import GO_RULES, RESOLVERS
 from .scenario import Scenario
 
 FMT = "{:.3f}".format
@@ -28,10 +30,15 @@ pd.set_option("display.width", 160)
 pd.set_option("display.max_columns", 20)
 
 
-def _load(path: str, resolver: str | None = None) -> Scenario:
+def _load(path: str, resolver: str | None = None, go_rule: str | None = None,
+          overrides: list[str] | None = None) -> Scenario:
     s = Scenario.load(path)
     if resolver:
         s = s.with_resolver(resolver)
+    if go_rule:
+        s = s.with_go_rule(go_rule)
+    if overrides:
+        s = s.with_overrides(_overrides(overrides))
     errors = [i for i in s.lint() if i.level == "error"]
     if errors:
         for e in errors:
@@ -52,7 +59,12 @@ def cmd_lint(a):
     bad = 0
     scen = []
     for f in a.files:
-        s = Scenario.load(f)
+        try:
+            s = Scenario.load(f)
+        except Exception as e:      # malformed YAML or parameter spec
+            bad += 1
+            print(f"{f}: cannot load: {type(e).__name__}: {e}")
+            continue
         scen.append(s)
         issues = s.lint()
         n_err = sum(i.level == "error" for i in issues)
@@ -72,7 +84,7 @@ def cmd_lint(a):
 
 
 def cmd_run(a):
-    s = _load(a.scenario, a.resolver).with_overrides(_overrides(a.set))
+    s = _load(a.scenario, a.resolver, a.go_rule, a.set)
     df = experiment.run_batch(s, a.n, a.seed, a.workers)
     print(analysis.summarize(df).to_string(index=False, float_format=FMT))
     if a.out:
@@ -98,12 +110,17 @@ def cmd_trace(a):
         print(f"trace written to {a.out}")
 
 
+def _sfx(a) -> str:
+    return "".join(f"_{x}" for x in (getattr(a, "resolver", None), getattr(a, "go_rule", None),
+                                     getattr(a, "tag", None)) if x)
+
+
 def _tag(s: Scenario, a) -> str:
-    return s.id + (f"_{a.resolver}" if getattr(a, "resolver", None) else "")
+    return s.id + _sfx(a)
 
 
 def cmd_anchors(a):
-    s = _load(a.scenario, a.resolver)
+    s = _load(a.scenario, a.resolver, a.go_rule, a.set)
     df = experiment.run_batch(s, a.n, a.seed, a.workers)
     t = analysis.check_anchors(df, s.anchors)
     print(t.to_string(index=False, float_format=FMT))
@@ -116,7 +133,7 @@ def cmd_anchors(a):
 
 
 def cmd_calibrate(a):
-    s = _load(a.scenario, a.resolver)
+    s = _load(a.scenario, a.resolver, a.go_rule, a.set)
     df = experiment.run_batch(s, a.n, a.seed, a.workers)
     use = [x for x in s.anchors if not a.anchors or x["id"] in a.anchors.split(",")]
     post, acc = analysis.abc_posterior(df, use)
@@ -126,7 +143,7 @@ def cmd_calibrate(a):
 
 
 def cmd_screen(a):
-    s = _load(a.scenario, a.resolver)
+    s = _load(a.scenario, a.resolver, a.go_rule, a.set)
     df = experiment.run_batch(s, a.n, a.seed, a.workers)
     t = analysis.screen(df, a.metric)
     print(t.to_string(index=False, float_format=FMT))
@@ -136,7 +153,7 @@ def cmd_screen(a):
 
 
 def cmd_swap(a):
-    home, away = _load(a.home, a.resolver), _load(a.away, a.resolver)
+    home, away = (_load(x, a.resolver, a.go_rule, a.set) for x in (a.home, a.away))
     pairs = [(home, away), (away, home)] if a.both else [(home, away)]
     tables, titles = {}, {}
     for h, w in pairs:
@@ -149,29 +166,33 @@ def cmd_swap(a):
         tables[h.id] = t
         titles[h.id] = f"{h.id} + {w.id} factors: {base:.2f} -> {full:.2f}"
         if a.out:
-            sfx = f"_{a.resolver}" if a.resolver else ""
+            sfx = _sfx(a)
             experiment.save(res.table(), a.out, f"swap_{h.id}__{w.id}{sfx}",
                             {"home": h.fingerprint(), "away": w.fingerprint(), "n": a.n,
                              "seed": a.seed, "metric": a.metric})
-            experiment.save(t, a.out, f"shapley_{h.id}__{w.id}{sfx}", {"n": a.n, "seed": a.seed})
+            experiment.save(t, a.out, f"shapley_{h.id}__{w.id}{sfx}",
+                            {"home": h.fingerprint(), "away": w.fingerprint(), "n": a.n,
+                             "seed": a.seed, "variant": h.variant})
     if a.out:
         from . import plots
-        path = Path(a.out) / (f"shapley_{a.resolver}.png" if a.resolver else "shapley.png")
+        path = Path(a.out) / f"shapley{_sfx(a)}.png"
         plots.shapley_bars(tables, titles, str(path))
         print(f"figure: {path}")
 
 
 def cmd_sweep(a):
-    s = _load(a.scenario, a.resolver)
+    s = _load(a.scenario, a.resolver, a.go_rule, a.set)
     grid = dict(experiment.parse_grid(g) for g in a.grid)
     df = experiment.sweep(s, grid, a.n, a.seed, a.metric, a.workers)
     print(df.to_string(index=False, float_format=FMT))
     if a.out:
-        experiment.save(df, a.out, f"sweep_{s.id}", {"grid": grid, "n": a.n, "seed": a.seed})
+        experiment.save(df, a.out, f"sweep_{_tag(s, a)}",
+                        {"scenario": s.fingerprint(), "grid": grid, "n": a.n, "seed": a.seed,
+                         "variant": s.variant})
         if len(grid) == 2:
             from . import plots
             x, y = list(grid)
-            path = Path(a.out) / f"sweep_{s.id}.png"
+            path = Path(a.out) / f"sweep_{_tag(s, a)}.png"
             plots.sweep_heatmap(df, x, y, str(path), f"{s.id}: P({a.metric})")
             print(f"figure: {path}")
 
@@ -183,8 +204,8 @@ def cmd_cmo_export(a):
         other = _load(a.swap_from)
         names = [n for f in a.factors.split(",") for n in s.factors[f]]
         s = s.with_params_from(other, names)
-    out = export_design(s, a.n, a.seed, a.out)
-    print(f"wrote {a.n} runs to {out}")
+    out = export_design(s, a.n, a.seed, a.out, start=a.start)
+    print(f"wrote runs {a.start}..{a.start + a.n - 1} to {out}")
 
 
 def cmd_cmo_ingest(a):
@@ -199,6 +220,44 @@ def cmd_cmo_ingest(a):
             print(analysis.check_anchors(df, anchors).to_string(index=False, float_format=FMT))
 
 
+def cmd_resolvers(a):
+    from .mechanics.combat import expected_loss_rates
+    t = pd.DataFrame(expected_loss_rates([0.5, 1, 1.5, 2, 3, 4, 5], a.kill_rate, a.round_h))
+    print("Expected loss fraction per hour, reference engagement (quality 1, no modifiers)")
+    print(t.to_string(index=False, float_format=FMT))
+    if a.out:
+        experiment.save(t, a.out, "resolvers", {"kill_rate": a.kill_rate, "round_h": a.round_h})
+
+
+def cmd_report(a):
+    import glob
+
+    from .report import ReportConfig, run_report
+    files = a.scenarios or sorted(glob.glob("scenarios/*.yaml"))
+    cfg = ReportConfig(scenarios=files, n=a.n, seed=a.seed, workers=a.workers, out=a.out,
+                       sweep_scenario=a.sweep, go_rule_pair=tuple(a.go_pair.split(","))
+                       if a.go_pair else None)
+    run_report(cfg)
+
+
+def _read_results(path: str) -> pd.DataFrame:
+    from .cmo import ingest
+    return ingest(path)     # plain CSV or console log; normalises Lua true/false
+
+
+def cmd_compare_backends(a):
+    x, y = _read_results(a.a), _read_results(a.b)
+    t, info = analysis.compare_backends(x, y)
+    print(f"{info['n_paired']} paired runs ({info['n_a']} in {a.a}, {info['n_b']} in {a.b}); "
+          f"{info['shared_params']} shared parameter columns")
+    if info["param_mismatch"]:
+        print(f"WARNING: parameter draws differ for {info['param_mismatch']}: "
+              "not the same design, so run-by-run pairing is meaningless")
+    print(t.to_string(index=False, float_format=FMT))
+    if a.out:
+        experiment.save(t, a.out, a.name, {"a": a.a, "b": a.b, **info})
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="battlelab", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -208,8 +267,13 @@ def main(argv=None):
         p.add_argument("-n", type=int, default=n, help="runs per configuration")
         p.add_argument("-s", "--seed", type=int, default=1)
         p.add_argument("-w", "--workers", type=int, default=1)
-        p.add_argument("--resolver", choices=["lanchester", "crt"],
+        p.add_argument("--resolver", choices=sorted(RESOLVERS),
                        help="override the scenario's combat resolver")
+        p.add_argument("--go-rule", choices=list(GO_RULES),
+                       help="override the scenario's air-landing go/no-go rule")
+        p.add_argument("--set", action="append",
+                       help="fix a parameter: name=value (repeatable; applied to every scenario)")
+        p.add_argument("--tag", help="suffix for output file names")
 
     p = sub.add_parser("lint")
     p.add_argument("files", nargs="+")
@@ -218,7 +282,6 @@ def main(argv=None):
     p = sub.add_parser("run")
     p.add_argument("scenario")
     common(p)
-    p.add_argument("--set", action="append", help="fix a parameter: name=value")
     p.add_argument("--out")
     p.set_defaults(fn=cmd_run)
 
@@ -270,6 +333,8 @@ def main(argv=None):
     p.add_argument("scenario")
     p.add_argument("-n", type=int, default=100)
     p.add_argument("-s", "--seed", type=int, default=1)
+    p.add_argument("--start", type=int, default=0,
+                   help="first run index (split a batch over several CMO sessions)")
     p.add_argument("--swap-from", help="borrow factor bundles from this scenario")
     p.add_argument("--factors", default="", help="comma-separated factors to borrow")
     p.add_argument("--out", required=True)
@@ -279,6 +344,31 @@ def main(argv=None):
     p.add_argument("results", help="CSV from the harness, or a console log with BLCSV| lines")
     p.add_argument("--scenario")
     p.set_defaults(fn=cmd_cmo_ingest)
+
+    p = sub.add_parser("report", help="run the standard pipeline and write SUMMARY.md")
+    p.add_argument("scenarios", nargs="*", help="default: scenarios/*.yaml")
+    p.add_argument("-n", type=int, default=1000, help="base runs per configuration")
+    p.add_argument("-s", "--seed", type=int, default=1)
+    p.add_argument("-w", "--workers", type=int, default=experiment.cpu_workers())
+    p.add_argument("--out", default="results")
+    p.add_argument("--sweep", default="hostomel_2022", help="scenario id to sweep")
+    p.add_argument("--go-pair", default="hostomel_2022,maleme_1941",
+                   help="scenario ids for the go/no-go rule comparison")
+    p.set_defaults(fn=cmd_report)
+
+    p = sub.add_parser("resolvers", help="loss rates of the combat resolvers side by side")
+    p.add_argument("--kill-rate", type=float, default=0.01)
+    p.add_argument("--round-h", type=float, default=1.0)
+    p.add_argument("--out")
+    p.set_defaults(fn=cmd_resolvers)
+
+    p = sub.add_parser("compare-backends",
+                       help="compare two result tables (e.g. native vs CMO) run by run")
+    p.add_argument("a", help="native run CSV (battlelab run --out)")
+    p.add_argument("b", help="CMO results CSV or console log")
+    p.add_argument("--out")
+    p.add_argument("--name", default="compare_backends")
+    p.set_defaults(fn=cmd_compare_backends)
 
     a = ap.parse_args(argv)
     a.fn(a)

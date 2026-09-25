@@ -44,6 +44,14 @@ parameters:
   hold.base_hazard: {dist: uniform, lo: 0.005, hi: 0.03, source: NZH, confidence: medium,
     note: "lost contact with forward companies, reinforcement refused, pulled back from Point 107 overnight"}
   hold.ammo_out_h: {dist: fixed, value: 1000.0, assumption: true, note: "no ammunition crisis reported"}
+  hold.decision_h: {dist: uniform, lo: 2.0, hi: 6.0, assumption: true,
+    note: "battalion HQ decision cycle; runners and failing wireless to forward companies (NZH)"}
+  hold.comms_loss: {dist: uniform, lo: 0.4, hi: 0.8, source: NZH, confidence: medium,
+    note: "22nd Bn commander lost contact with his forward companies on 20 May"}
+  hold.fog: {dist: uniform, lo: 0.3, hi: 0.6, source: NZH, assumption: true,
+    note: "without reports the commander assumed the forward companies were lost; they were largely intact"}
+  hold.night_moves: {dist: fixed, value: 1, source: NZH, assumption: true,
+    note: "withdrawal from Point 107 carried out overnight 20/21 May, under daytime Luftwaffe air superiority"}
   # RESPONSE ----------------------------------------------------------------
   response.t_ca: {dist: uniform, lo: 38.0, hi: 46.0, source: NZH, confidence: medium,
     note: "night 21/22 May, delayed four hours; reached the airfield edge at dawn"}
@@ -61,6 +69,8 @@ parameters:
   # RISK --------------------------------------------------------------------
   risk.tolerance: {dist: uniform, lo: 0.25, hi: 0.40, source: NZH, assumption: true,
     note: "airfield littered with wrecked aircraft, but enough troops landed to tip the balance"}
+  risk.land_contested: {dist: fixed, value: 0, source: NZH, assumption: true,
+    note: "Student waited for the field: transports landed only after the NZ withdrawal"}
   # CONTEXT (not swapped) ---------------------------------------------------
   ctx.aircraft: {dist: uniform, lo: 25, hi: 40, assumption: true, note: "Ju 52 per shuttle sortie"}
   ctx.troops_per_aircraft: {dist: fixed, value: 13, assumption: true}
@@ -74,6 +84,12 @@ parameters:
   mech.ratio_coeff: {dist: fixed, value: 0.10, assumption: true}
   mech.casualty_coeff: {dist: fixed, value: 0.30, assumption: true}
   mech.ammo_hazard: {dist: fixed, value: 2.0, assumption: true}
+  mech.go_width: {dist: fixed, value: 0.02, assumption: true,
+    note: "logistic go/no-go rule only: spread of accepted risk around the tolerance, per wave or sortie"}
+  mech.info_lag_h: {dist: fixed, value: 0.0, assumption: true,
+    note: "delay between the true landing risk and the decision maker's estimate; 0 = perfect information"}
+  mech.contested_risk: {dist: fixed, value: 0.35, assumption: true,
+    note: "extra per-aircraft loss when landing on a contested field (only with risk.land_contested); set from Ypenburg 1940 accounts (WOH): of 12 Ju 52 in the first wave few crews or troops came out unscathed"}
   doctrine.hasty_defense: {dist: fixed, value: 1.2, assumption: true}
   doctrine.clear_rate: {dist: fixed, value: 0.15, assumption: true}
 
@@ -84,7 +100,7 @@ sides:
           ingress_loss: $air.att.ingress_loss, approach_loss: $air.att.approach_loss,
           night_limited: $ctx.night_limited_air}
     doctrine: {risk_tolerance: $risk.tolerance, clear_rate: $doctrine.clear_rate,
-               hasty_defense: $doctrine.hasty_defense}
+               hasty_defense: $doctrine.hasty_defense, land_contested: $risk.land_contested}
   NZ:
     role: defender
     air: {night_limited: $ctx.night_limited_air}
@@ -100,7 +116,9 @@ units:
     strength: $hold.strength
     quality: $hold.quality
     dug_in: $hold.dug_in
-    morale: {base_hazard: $hold.base_hazard, ammo_out_h: $hold.ammo_out_h}
+    morale: {base_hazard: $hold.base_hazard, ammo_out_h: $hold.ammo_out_h,
+             decision_h: $hold.decision_h, comms_loss: $hold.comms_loss, fog: $hold.fog,
+             night_moves: $hold.night_moves}
     arrive: {t: 0.0, zone: airfield}
   sturmregiment:
     side: DE
@@ -140,10 +158,17 @@ airlift:
   first_after_control_h: $ctx.exploit_delay
   daylight_only: true
   wreck_obstacle: $ctx.wreck_obstacle
+  contested_risk: $mech.contested_risk
 
 mechanics:
+  # resolver: lanchester | crt. The CRT is ILLUSTRATIVE, not calibrated: at 1:1 it
+  # costs the attacker ~6%/h against Lanchester's 1%/h, and its exchange ratio
+  # grows roughly linearly with odds rather than with odds squared
+  # (`battlelab resolvers`). Use it to test whether a conclusion depends on the
+  # attrition model, never for magnitudes.
   combat: {resolver: lanchester, kill_rate: $mech.kill_rate, fire_weight_defend: 1.0, fire_weight_attack: 2.0}
   morale: {ratio_coeff: $mech.ratio_coeff, casualty_coeff: $mech.casualty_coeff, ammo_hazard: $mech.ammo_hazard}
+  go_no_go: {rule: threshold, width: $mech.go_width, info_lag_h: $mech.info_lag_h}   # rule: threshold | logistic
 
 outcome: {zone: airfield, airbridge_troops: 500}
 
@@ -151,10 +176,11 @@ factors:
   AIR: [air.att.ingress_loss, air.att.approach_loss, air.att.suppression, air.att.interdiction, air.att.cas]
   MASS: [mass.aircraft, mass.capacity, mass.dz_loss, mass.reserve_aircraft, mass.reserve_capacity,
          mass.reserve_dz, mass.t_reserve]
-  HOLD: [hold.strength, hold.quality, hold.dug_in, hold.base_hazard, hold.ammo_out_h]
+  HOLD: [hold.strength, hold.quality, hold.dug_in, hold.base_hazard, hold.ammo_out_h,
+         hold.decision_h, hold.comms_loss, hold.fog, hold.night_moves]
   RESPONSE: [response.t_ca, response.strength, response.commit_h, response.withdraw_ratio]
   DENIAL: [denial.obstacles0, denial.t_fires, denial.fire_intensity, denial.crater_rate, denial.demolish_rate]
-  RISK: [risk.tolerance]
+  RISK: [risk.tolerance, risk.land_contested]
 
 anchors:
   - {id: nz_leave_field_day1, metric: t_control, op: between, value: [4.0, 24.0], source: NZH,

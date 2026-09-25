@@ -5,7 +5,7 @@ import math
 from dataclasses import dataclass, field
 
 from ..engine import Mechanic, Phase
-from ..state import World
+from ..state import Runway, World
 
 
 class Control(Mechanic):
@@ -71,6 +71,13 @@ class AirliftSpec:
     crash_survival: float = 0.5      # troops surviving a lost aircraft
     wreck_obstacle: float = 0.004    # runway blocked per wrecked aircraft
     organisation: float = 0.9        # fraction of landed troops combat-ready
+    contested_risk: float = 0.0      # extra loss prob landing on a contested field
+    go_rule: str = "threshold"       # threshold | logistic
+    go_width: float = 0.02           # logistic: scale of the acceptance curve
+    info_lag_h: float = 0.0          # risk estimate lags the true risk by this long
+
+
+GO_RULES = ("threshold", "logistic")
 
 
 class Airlift(Mechanic):
@@ -79,35 +86,90 @@ class Airlift(Mechanic):
     expected loss per aircraft
         p = own approach_loss + fire_risk * enemy fire on zone
             + runway_risk * (1 - usable runway)
-    A wave lands only if the side holds the zone, the runway is at least
-    r_min usable, p <= doctrine `risk_tolerance` and (optionally) it is day.
+    A wave (or shuttle sortie) lands only if the side holds the zone (or it
+    is contested and the side's doctrine has `land_contested`; the landing
+    then adds `contested_risk` to p), the runway is at least r_min usable,
+    the risk estimate is acceptable and (optionally) it is day. Two acceptance rules:
+
+      threshold  accept iff p_est <= risk_tolerance (deterministic cliff)
+      logistic   each wave/sortie draws its own nerve u ~ U(0,1) once and
+                 accepts iff p_est <= tolerance + go_width * logit(u), so a
+                 single decision accepts with probability
+                 1 / (1 + exp((p_est - tolerance) / go_width))
+
+    p_est is the true p from `info_lag_h` hours earlier (reports reach the
+    decision maker late); with info_lag_h = 0 it is the current p.
     """
     phase = Phase.AIRLIFT
     name = "airlift"
 
     def __init__(self, spec: AirliftSpec):
+        if spec.go_rule not in GO_RULES:
+            raise ValueError(f"unknown go_rule {spec.go_rule!r}; have {GO_RULES}")
         self.s = spec
 
+    def runway(self, w: World) -> Runway:
+        r = w.zones[self.s.zone].runway
+        if r is None:
+            raise ValueError(f"airlift zone {self.s.zone!r} has no runway")
+        return r
+
     def setup(self, w: World):
+        self.runway(w)
         w.persist["airlift"] = {"landed": 0.0, "lost": 0, "waves": [None] * len(self.s.waves),
-                                "next_slot": math.inf, "first_landing": None}
+                                "next_slot": math.inf, "first_landing": None,
+                                "p_hist": [], "nerve": {}}
         w.metrics.setdefault("landed", 0.0)
 
     def p_loss(self, w: World) -> float:
         s = self.s
         enemy = w.enemy_of(s.side)
         fire = w.scratch.get("fire", {}).get((enemy, s.zone), 0.0)
-        r = w.zones[s.zone].runway
+        r = self.runway(w)
         p = (w.sides[s.side].air.approach_loss + s.fire_risk * fire
              + s.runway_risk * (1.0 - r.usable))
+        if w.zones[s.zone].control == "contested":
+            p += s.contested_risk
         return min(max(p, 0.0), 0.95)
 
-    def conditions(self, w: World, p: float) -> bool:
+    def may_land(self, w: World) -> bool:
+        ctrl = w.zones[self.s.zone].control
+        if ctrl == self.s.side:
+            return True
+        return ctrl == "contested" and \
+            w.sides[self.s.side].doctrine.get("land_contested", 0.0) > 0.5
+
+    def p_estimate(self, w: World) -> float:
+        """The risk as the decision maker sees it (lagged by info_lag_h)."""
+        hist = w.persist["airlift"]["p_hist"]
+        if self.s.info_lag_h <= 0 or not hist:
+            return self.p_loss(w)
+        t_seen = w.t - self.s.info_lag_h
+        seen = hist[0][1]
+        for t, p in hist:
+            if t > t_seen + 1e-9:
+                break
+            seen = p
+        return seen
+
+    def tolerance(self, w: World, key: str) -> float:
+        tol = w.sides[self.s.side].doctrine.get("risk_tolerance", 1.0)
+        if self.s.go_rule == "threshold":
+            return tol
+        nerve = w.persist["airlift"]["nerve"]
+        if key not in nerve:
+            u = float(w.rng("airlift_decision").random())
+            u = min(max(u, 1e-9), 1 - 1e-9)
+            nerve[key] = self.s.go_width * math.log(u / (1 - u))
+        return tol + nerve[key]
+
+    def conditions(self, w: World, p_est: float, key: str = "") -> bool:
         s = self.s
-        z = w.zones[s.zone]
-        ok = (z.control == s.side and z.runway.usable >= s.r_min
-              and p <= w.sides[s.side].doctrine.get("risk_tolerance", 1.0))
-        return ok and (w.is_day() or not s.daylight_only)
+        if not (self.may_land(w) and self.runway(w).usable >= s.r_min):
+            return False
+        if s.daylight_only and not w.is_day():
+            return False
+        return p_est <= self.tolerance(w, key)
 
     def land(self, w: World, p: float, label: str):
         s, st = self.s, w.persist["airlift"]
@@ -120,42 +182,65 @@ class Airlift(Mechanic):
             u.strength += add
         else:
             u.strength = add
-            u.activate(s.zone, w.t, "defend")
-            u.dug_in = max(u.dug_in, w.sides[s.side].doctrine.get("hasty_defense", 1.0))
+            if w.zones[s.zone].control == s.side:
+                u.activate(s.zone, w.t, "defend")
+                u.dug_in = max(u.dug_in, w.sides[s.side].doctrine.get("hasty_defense", 1.0))
+            else:       # landing into a fight: the troops attack off the aircraft
+                u.activate(s.zone, w.t, "attack")
         u.peak = max(u.peak, u.strength)
-        r = w.zones[s.zone].runway
+        r = self.runway(w)
         r.obstacles = min(1.0, r.obstacles + s.wreck_obstacle * lost)
         st["landed"] += troops
         st["lost"] += lost
         if st["first_landing"] is None:
             st["first_landing"] = w.t
         w.emit("airlanding", wave=label, aircraft=s.aircraft, lost=lost,
-               troops=round(troops), p_loss=round(p, 3))
+               troops=round(troops), p_loss=round(p, 3), control=w.zones[s.zone].control)
+
+    def _idle(self, w: World) -> bool:
+        """Nothing to decide this turn (and no risk history to keep)."""
+        s, st = self.s, w.persist["airlift"]
+        if s.info_lag_h > 0:
+            return False
+        if s.mode == "waves":
+            return all(st["waves"][i] is not None or w.t < t0 for i, t0 in enumerate(s.waves))
+        return not math.isinf(st["next_slot"]) and w.t < st["next_slot"]
 
     def step(self, w: World):
         s, st = self.s, w.persist["airlift"]
+        if self._idle(w):
+            w.metrics["landed"] = st["landed"]
+            return
         p = self.p_loss(w)
-        go = self.conditions(w, p)
+        if s.info_lag_h > 0:
+            st["p_hist"].append((w.t, p))
+            while len(st["p_hist"]) > 2 and st["p_hist"][1][0] < w.t - s.info_lag_h - 1e-9:
+                st["p_hist"].pop(0)
+        p_est = self.p_estimate(w)
         if s.mode == "waves":
             for i, t0 in enumerate(s.waves):
                 if st["waves"][i] is not None or w.t < t0:
                     continue
-                if go:
+                if self.conditions(w, p_est, f"wave{i}"):
                     self.land(w, p, f"wave{i + 1}")
                     st["waves"][i] = "landed"
-                    go = self.conditions(w, self.p_loss(w))
+                    p = self.p_loss(w)
+                    if s.info_lag_h <= 0:
+                        p_est = p
                 elif w.t > t0 + s.loiter_h:
                     st["waves"][i] = "aborted"
                     w.emit("airlift_abort", wave=f"wave{i + 1}", p_loss=round(p, 3),
-                           control=w.zones[s.zone].control,
-                           runway=round(w.zones[s.zone].runway.usable, 2))
+                           p_est=round(p_est, 3), control=w.zones[s.zone].control,
+                           runway=round(self.runway(w).usable, 2))
         else:
             t_ctrl = w.persist.get("first_control", {}).get((s.side, s.zone))
             if math.isinf(st["next_slot"]) and t_ctrl is not None:
                 st["next_slot"] = t_ctrl + s.first_after_control_h
             if w.t >= st["next_slot"]:
-                if go:
+                key = f"sortie{int(st.get('sorties', 0))}"
+                if self.conditions(w, p_est, key):
                     self.land(w, p, "sortie")
+                    st["sorties"] = st.get("sorties", 0) + 1
                     st["next_slot"] = w.t + s.interval_h
                 else:
                     st["next_slot"] = w.t + 0.5
@@ -164,7 +249,7 @@ class Airlift(Mechanic):
 
 class FirstControlTracker(Mechanic):
     """Remembers when each side first held each zone (used by others)."""
-    phase = Phase.CONTROL + 1   # runs right after Control
+    phase = Phase.AFTER_CONTROL
     name = "first_control"
 
     def step(self, w: World):

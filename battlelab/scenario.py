@@ -13,17 +13,33 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import inspect
 import json
-from dataclasses import dataclass
+from dataclasses import MISSING, dataclass, fields
 from pathlib import Path
 from typing import Any
 
 import yaml
 
 from .engine import Engine, Mechanic
-from .mechanics import (RESOLVERS, Airlift, AirliftSpec, AirSituation, ArrivalSpec, Arrivals,
-                        Combat, Control, Fires, FireSpec, FirstControlTracker, MoraleCheck,
-                        Outcome, OutcomeSpec, RunwayEngineering)
+from .mechanics import (
+    GO_RULES,
+    RESOLVERS,
+    Airlift,
+    AirliftSpec,
+    AirSituation,
+    Arrivals,
+    ArrivalSpec,
+    Combat,
+    Control,
+    Fires,
+    FireSpec,
+    FirstControlTracker,
+    MoraleCheck,
+    Outcome,
+    OutcomeSpec,
+    RunwayEngineering,
+)
 from .params import Param, ParamSpace, parse_dist
 from .state import AirPosture, Morale, Runway, Side, Unit, World, Zone
 
@@ -34,6 +50,69 @@ KNOWN_METRICS = {
     "losses_attacker", "losses_defender",
 }
 INT_FIELDS = {"aircraft"}
+
+
+# ---------------------------------------------------------------------------
+# Schema: allowed and required keys per section, derived from the classes the
+# section is built into so that the two cannot drift apart.
+# ---------------------------------------------------------------------------
+def _keys(cls, drop=(), rename=None) -> tuple[set[str], set[str]]:
+    rename = rename or {}
+    allowed, required = set(), set()
+    for f in fields(cls):
+        if f.name in drop:
+            continue
+        name = rename.get(f.name, f.name)
+        allowed.add(name)
+        if f.default is MISSING and f.default_factory is MISSING:
+            required.add(name)
+    return allowed, required
+
+
+def _init_keys(cls) -> set[str]:
+    return {k for k in inspect.signature(cls.__init__).parameters if k != "self"}
+
+
+_GO_KEYS = {"go_rule", "go_width", "info_lag_h"}
+SCHEMA: dict[str, tuple[set[str], set[str]]] = {
+    "top": ({"id", "title", "family", "description", "clock", "sources", "parameters", "sides",
+             "zones", "units", "fires", "airlift", "mechanics", "outcome", "factors", "anchors"},
+            {"id", "sides", "zones", "units", "outcome"}),
+    "clock": ({"h_hour_local", "dt_h", "horizon_h"}, set()),
+    "source": ({"cite", "url", "note"}, {"cite"}),
+    "parameter": ({"dist", "lo", "hi", "mode", "value", "median", "gsd", "source", "note",
+                   "confidence", "assumption", "unit"}, {"dist"}),
+    "side": ({"role", "air", "doctrine"}, {"role"}),
+    "air": _keys(AirPosture),
+    "doctrine": ({"risk_tolerance", "clear_rate", "demolish_rate", "hasty_defense",
+                  "land_contested"}, set()),
+    "zone": ({"kind", "defense_mult", "runway", "control"}, set()),
+    "runway": _keys(Runway),
+    "unit": ({"side", "kind", "strength", "quality", "dug_in", "morale", "arrive", "tags"},
+             {"side"}),
+    "morale": _keys(Morale),
+    "arrive": _keys(ArrivalSpec, drop={"unit_id"}),
+    "fire": _keys(FireSpec),
+    "airlift": _keys(AirliftSpec, drop={"unit_id", *_GO_KEYS}, rename={"unit_id": "unit"}),
+    "mechanics": ({"combat", "morale", "go_no_go"}, set()),
+    "combat": ({"resolver", "kill_rate", "round_h"} | _init_keys(Combat) - {"resolver"}, set()),
+    "morale_check": (_init_keys(MoraleCheck), set()),
+    "go_no_go": ({"rule", "width", "info_lag_h"}, set()),
+    "outcome": _keys(OutcomeSpec),
+    "anchor": ({"id", "metric", "op", "value", "source", "note"}, {"id", "metric", "op", "value"}),
+}
+SCHEMA["airlift"] = (SCHEMA["airlift"][0] | {"unit"}, SCHEMA["airlift"][1] | {"unit"})
+WARN_ONLY = {"doctrine"}     # free-form by design; unknown keys are probably typos
+ENUMS = {
+    "sides.*.role": ("attacker", "defender"),
+    "units.*.arrive.mode": ("ground", "air_assault", "parachute", "glider"),
+    "units.*.morale.on_break": ("withdraw", "disperse"),
+    "airlift.mode": ("waves", "shuttle"),
+    "mechanics.combat.resolver": tuple(RESOLVERS),
+    "mechanics.go_no_go.rule": tuple(GO_RULES),
+    "anchors.*.op": ("eq", "ne", "lt", "le", "gt", "ge", "between"),
+    "parameters.*.confidence": ("low", "medium", "high"),
+}
 
 
 @dataclass
@@ -63,6 +142,107 @@ def _walk_refs(obj, path="") -> list[tuple[str, str]]:
     return out
 
 
+def _check(obj, kind: str, where: str, out: list[Issue]):
+    if not isinstance(obj, dict):
+        out.append(Issue("error", where, f"expected a mapping, got {type(obj).__name__}"))
+        return
+    allowed, required = SCHEMA[kind]
+    level = "warning" if kind in WARN_ONLY else "error"
+    for k in obj:
+        if k not in allowed:
+            out.append(Issue(level, f"{where}.{k}" if where else k,
+                             f"unknown key; allowed: {', '.join(sorted(allowed))}"))
+    for k in sorted(required - set(obj)):
+        out.append(Issue("error", where or "top level", f"missing required key {k!r}"))
+
+
+def _each(obj, where, out) -> list[tuple[str, dict]]:
+    if obj is None:
+        return []
+    if isinstance(obj, dict):
+        return [(f"{where}.{k}", v) for k, v in obj.items()]
+    if isinstance(obj, list):
+        return [(f"{where}[{i}]", v) for i, v in enumerate(obj)]
+    out.append(Issue("error", where, f"expected a mapping or list, got {type(obj).__name__}"))
+    return []
+
+
+def _enum(value, allowed, where, out):
+    if isinstance(value, str) and value.startswith("$"):
+        return
+    if value is not None and value not in allowed:
+        out.append(Issue("error", where, f"{value!r} is not one of {list(allowed)}"))
+
+
+def schema_issues(doc: dict) -> list[Issue]:
+    """Unknown keys, missing required keys and bad enum values, with paths."""
+    out: list[Issue] = []
+    if not isinstance(doc, dict):
+        return [Issue("error", "top level", "scenario must be a mapping")]
+    _check(doc, "top", "", out)
+    if "clock" in doc:
+        _check(doc["clock"], "clock", "clock", out)
+    for w, v in _each(doc.get("sources"), "sources", out):
+        if isinstance(v, dict):
+            _check(v, "source", w, out)
+    for w, v in _each(doc.get("parameters"), "parameters", out):
+        if isinstance(v, dict):
+            _check(v, "parameter", w, out)
+            _enum(v.get("confidence"), ENUMS["parameters.*.confidence"], f"{w}.confidence", out)
+    for w, v in _each(doc.get("sides"), "sides", out):
+        _check(v, "side", w, out)
+        if isinstance(v, dict):
+            _enum(v.get("role"), ENUMS["sides.*.role"], f"{w}.role", out)
+            for sub in ("air", "doctrine"):
+                if sub in v:
+                    _check(v[sub], sub, f"{w}.{sub}", out)
+    for w, v in _each(doc.get("zones"), "zones", out):
+        _check(v, "zone", w, out)
+        if isinstance(v, dict) and "runway" in v:
+            _check(v["runway"], "runway", f"{w}.runway", out)
+    for w, v in _each(doc.get("units"), "units", out):
+        _check(v, "unit", w, out)
+        if not isinstance(v, dict):
+            continue
+        if "morale" in v:
+            _check(v["morale"], "morale", f"{w}.morale", out)
+            if isinstance(v["morale"], dict):
+                _enum(v["morale"].get("on_break"), ENUMS["units.*.morale.on_break"],
+                      f"{w}.morale.on_break", out)
+        if "arrive" in v:
+            _check(v["arrive"], "arrive", f"{w}.arrive", out)
+            if isinstance(v["arrive"], dict):
+                _enum(v["arrive"].get("mode"), ENUMS["units.*.arrive.mode"],
+                      f"{w}.arrive.mode", out)
+    for w, v in _each(doc.get("fires"), "fires", out):
+        _check(v, "fire", w, out)
+    if doc.get("airlift"):
+        _check(doc["airlift"], "airlift", "airlift", out)
+        if isinstance(doc["airlift"], dict):
+            _enum(doc["airlift"].get("mode"), ENUMS["airlift.mode"], "airlift.mode", out)
+    mech = doc.get("mechanics")
+    if mech is not None:
+        _check(mech, "mechanics", "mechanics", out)
+        if isinstance(mech, dict):
+            for sub, kind in (("combat", "combat"), ("morale", "morale_check"),
+                              ("go_no_go", "go_no_go")):
+                if sub in mech:
+                    _check(mech[sub], kind, f"mechanics.{sub}", out)
+            if isinstance(mech.get("combat"), dict):
+                _enum(mech["combat"].get("resolver"), ENUMS["mechanics.combat.resolver"],
+                      "mechanics.combat.resolver", out)
+            if isinstance(mech.get("go_no_go"), dict):
+                _enum(mech["go_no_go"].get("rule"), ENUMS["mechanics.go_no_go.rule"],
+                      "mechanics.go_no_go.rule", out)
+    if "outcome" in doc:
+        _check(doc["outcome"], "outcome", "outcome", out)
+    for w, v in _each(doc.get("anchors"), "anchors", out):
+        _check(v, "anchor", w, out)
+        if isinstance(v, dict):
+            _enum(v.get("op"), ENUMS["anchors.*.op"], f"{w}.op", out)
+    return out
+
+
 class Scenario:
     SECTIONS = ("sides", "zones", "units", "fires", "airlift", "mechanics", "outcome")
 
@@ -86,7 +266,7 @@ class Scenario:
 
     # -- construction --------------------------------------------------------
     @classmethod
-    def load(cls, path: str | Path) -> "Scenario":
+    def load(cls, path: str | Path) -> Scenario:
         text = Path(path).read_text()
         return cls(yaml.safe_load(text), text, str(path))
 
@@ -95,7 +275,7 @@ class Scenario:
         h.update(json.dumps(self.variant, sort_keys=True, default=str).encode())
         return h.hexdigest()[:16]
 
-    def with_overrides(self, overrides: dict[str, Any]) -> "Scenario":
+    def with_overrides(self, overrides: dict[str, Any]) -> Scenario:
         """Override parameters: a number fixes it, a dist spec replaces it."""
         space = self.space
         for name, val in overrides.items():
@@ -107,7 +287,7 @@ class Scenario:
         v.setdefault("overrides", {}).update({k: str(x) for k, x in overrides.items()})
         return Scenario(self.doc, self._text, self.path, space, v)
 
-    def with_resolver(self, name: str, **kwargs) -> "Scenario":
+    def with_resolver(self, name: str, **kwargs) -> Scenario:
         """Same scenario, different combat resolver (structural sensitivity)."""
         if name not in RESOLVERS:
             raise ScenarioError(f"unknown resolver {name!r}; have {sorted(RESOLVERS)}")
@@ -119,7 +299,17 @@ class Scenario:
         v["resolver"] = {"name": name, **kwargs}
         return Scenario(doc, self._text, self.path, self.space, v)
 
-    def with_params_from(self, other: "Scenario", names: list[str]) -> "Scenario":
+    def with_go_rule(self, rule: str) -> Scenario:
+        """Same scenario, different air-landing acceptance rule."""
+        if rule not in GO_RULES:
+            raise ScenarioError(f"unknown go/no-go rule {rule!r}; have {list(GO_RULES)}")
+        doc = copy.deepcopy(self.doc)
+        doc.setdefault("mechanics", {}).setdefault("go_no_go", {})["rule"] = rule
+        v = dict(self.variant)
+        v["go_rule"] = rule
+        return Scenario(doc, self._text, self.path, self.space, v)
+
+    def with_params_from(self, other: Scenario, names: list[str]) -> Scenario:
         """Take the named parameters (distribution + provenance) from `other`."""
         space = self.space
         for n in names:
@@ -145,7 +335,7 @@ class Scenario:
 
     # -- lint ----------------------------------------------------------------
     def lint(self) -> list[Issue]:
-        issues: list[Issue] = []
+        issues: list[Issue] = schema_issues(self.doc)
         refs = []
         for sec in self.SECTIONS:
             refs += _walk_refs(self.doc.get(sec, {}), sec)
@@ -168,10 +358,12 @@ class Scenario:
         zones = set(self.doc.get("zones", {}))
         sides = set(self.doc.get("sides", {}))
         for uid, u in self.doc.get("units", {}).items():
+            if not isinstance(u, dict):
+                continue
             if u.get("side") not in sides:
                 issues.append(Issue("error", f"units.{uid}", f"unknown side {u.get('side')!r}"))
             arr = u.get("arrive")
-            if arr and arr.get("zone") not in zones:
+            if isinstance(arr, dict) and arr.get("zone") not in zones:
                 issues.append(Issue("error", f"units.{uid}", f"unknown zone {arr.get('zone')!r}"))
         al = self.doc.get("airlift")
         if al and al.get("unit") not in self.doc.get("units", {}):
@@ -190,7 +382,7 @@ class Scenario:
         return issues
 
     @staticmethod
-    def lint_pair(a: "Scenario", b: "Scenario") -> list[Issue]:
+    def lint_pair(a: Scenario, b: Scenario) -> list[Issue]:
         """Factor bundles must be identical so that swaps are well defined."""
         issues = []
         if a.factors.keys() != b.factors.keys():
@@ -243,6 +435,10 @@ class Scenario:
         if self.doc.get("airlift"):
             al = R(self.doc["airlift"], params)
             al["unit_id"] = al.pop("unit")
+            gng = mcfg.get("go_no_go", {})
+            al.update(go_rule=gng.get("rule", "threshold"),
+                      go_width=float(gng.get("width", 0.02)),
+                      info_lag_h=float(gng.get("info_lag_h", 0.0)))
             mechs.append(Airlift(AirliftSpec(**al)))
         return w, mechs
 
@@ -256,7 +452,7 @@ class Scenario:
 
 
 def _default_trace(w: World) -> dict:
-    row = {"t": w.t}
+    row: dict[str, Any] = {"t": w.t}
     for z in w.zones.values():
         row[f"control:{z.id}"] = z.control
         if z.runway:

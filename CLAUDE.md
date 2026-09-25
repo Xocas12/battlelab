@@ -4,26 +4,29 @@ Guidance for Claude Code working in this repository. Read `README.md`, `docs/ARC
 
 ## What this is
 
-`battlelab` is a Monte Carlo framework for comparative analysis of historical battles, currently one scenario family ("airhead": seizing an airfield and flying troops in) with two members, Hostomel 2022 and Maleme 1941. It has two engines behind one analysis layer: a native Python engine (board-game turn sequence, pluggable mechanics) and a Lua harness that runs replications inside Command: Modern Operations (public edition). Status: first draft, v0.1.0. Current results are in `results/SUMMARY.md`.
+`battlelab` is a Monte Carlo framework for comparative analysis of historical battles, currently one scenario family ("airhead": seizing an airfield and flying troops in) with three members, Hostomel 2022, Maleme 1941 and Ypenburg 1940. It has two engines behind one analysis layer: a native Python engine (board-game turn sequence, pluggable mechanics) and a Lua harness that runs replications inside Command: Modern Operations (public edition). Status: v0.2.0. Current results are in `results/SUMMARY.md`.
 
 ## Commands
 
 ```bash
 pip install -e .[dev]                 # also needs lua5.3 on PATH for the harness tests
-pytest -q                             # must pass before every commit (23 tests, ~10 s)
+python -m pytest -q                   # must pass before every commit (~35 s)
+ruff check battlelab tests && mypy battlelab   # must be clean (CI runs both)
 battlelab lint scenarios/*.yaml       # must be clean before every commit
 battlelab trace scenarios/hostomel_2022.yaml --run 3     # read one run as a log
-N=200 scripts/reproduce.sh            # smoke-run every experiment; N=1000 for the real thing (~25 min, 1 core)
-cd cmo && lua5.3 tests/test_harness.lua lua /tmp/out -  # Lua harness vs mock CMO API
+N=200 scripts/reproduce.sh            # smoke run of `battlelab report`; N=1000 for the real thing (~30 min, 4 cores)
+battlelab resolvers                   # loss rates of the two combat resolvers
+battlelab compare-backends native_runs.csv cmo_results.csv  # run-by-run backend comparison
+mkdir -p /tmp/out && cd cmo && lua5.3 tests/test_harness.lua lua /tmp/out -  # Lua harness vs mock CMO API
 ```
 
 ## Map
 
 * `battlelab/params.py` distributions (all sampled by inverse CDF), provenance, CRN sampling.
 * `battlelab/state.py` world model. `battlelab/engine.py` phases and the `Mechanic` contract.
-* `battlelab/mechanics/` movement.py (arrivals, air, fires), combat.py (resolvers, morale), airfield.py (control, engineering, airlift, outcome metrics).
-* `battlelab/scenario.py` YAML loading, `$param` references, lint, `with_overrides` / `with_params_from` / `with_resolver`, `build`.
-* `battlelab/experiment.py` batches, factor swaps, sweeps, manifests. `battlelab/analysis.py` everything statistical. `battlelab/plots.py` figures. `battlelab/cmo.py` design export and result ingest. `battlelab/cli.py` the CLI.
+* `battlelab/mechanics/` movement.py (arrivals, air, fires), combat.py (resolvers, morale with command decision cycles), airfield.py (control, engineering, airlift with go/no-go rules and contested landings, outcome metrics).
+* `battlelab/scenario.py` YAML loading, `$param` references, schema + provenance lint (`SCHEMA` is derived from the spec dataclasses), `with_overrides` / `with_params_from` / `with_resolver` / `with_go_rule`, `build`.
+* `battlelab/experiment.py` batches (one shared process pool via `run_batches`), factor swaps, sweeps, manifests. `battlelab/analysis.py` everything statistical, including `compare_backends`. `battlelab/plots.py` figures. `battlelab/report.py` the pipeline behind `battlelab report` and `results/SUMMARY.md`. `battlelab/cmo.py` design export and result ingest. `battlelab/cli.py` the CLI.
 * `scenarios/*.yaml` scenario data. `cmo/lua/battlelab/` the CMO harness. `cmo/tests/` mock CMO API and Lua test driver.
 
 ## Non-negotiable modelling rules
@@ -37,6 +40,8 @@ cd cmo && lua5.3 tests/test_harness.lua lua /tmp/out -  # Lua harness vs mock CM
 
 * Mechanics communicate only through world state, `world.scratch` (per turn) and `world.persist` (per run). No module-level mutable state.
 * Randomness only from `world.rng("<stream>")`, one named stream per component. Never use `random` or a global numpy RNG. Parameter draws only via `ParamSpace.sample` (CRN depends on it).
+* Never let iteration order over a `set` decide which draw goes where: string hashing is randomised per process (sort first; `test_runs_identical_across_hash_seeds` guards this).
+* A new spec field or mechanic option must reduce exactly to the old behaviour at its default, and the check is run-for-run identical metrics on the shipped scenarios, not similar shares.
 * Every new mechanic gets a test: an invariant, a known limit, or a scenario-level property.
 * pandas is v3 here: `to_string(float_format=...)` needs a callable (use `FMT` in `cli.py`), not a `"%.3f"` string.
 * Lua harness: plain Lua 5.3 without bit operators or `goto`; only functions listed for all editions in the CMO Lua docs (no `PRO ONLY` functions such as `VP_SetTimeCompression`). Wrap every CMO call whose failure is tolerable in `pcall`. Any new CMO API used must also be added to `cmo/tests/mock_cmo.lua` and to `BL.REQUIRED_API` if essential.
@@ -44,23 +49,27 @@ cd cmo && lua5.3 tests/test_harness.lua lua /tmp/out -  # Lua harness vs mock CM
 
 ## Known issues and quirks
 
-* **Maleme timing gap (structural).** Maleme anchors: German control between H+4 and H+24 in 51% of runs, first landing on day 2 in 42%, joint 40%. Rejection calibration moves no parameter by more than 0.16 prior SD, so no value inside the current priors fixes it. With the CRT resolver it gets worse. See backlog item 1.
-* **Hard go/no-go threshold.** `Airlift.conditions` compares expected loss to `risk_tolerance` deterministically. Consequence: Maleme's DENIAL bundle swapped alone into Hostomel gives P(airbridge) = 0.000, because any fire on the field exceeds Russian tolerance. This may be right, but it is a property of the rule, not a finding about 1941 or 2022.
+* **Ypenburg: the Germans rarely take the field.** Anchor `germans_take_field` holds in about 12% of runs, joint about 0.04. A company-sized airborne force breaks fast against a larger defender under the family's morale model (ratio hazard), and a single zone cannot represent defenders dispersed around a perimeter. Probably a missing mechanism (surprise or shock on landing, or multiple zones), not a parameter problem. See backlog item 1.
+* **Maleme under CRT.** The command cycle fixed Maleme under Lanchester (joint about 0.68) but not under CRT (about 0.13): the CRT bleeds an attacker at near parity about 6 times faster (`battlelab resolvers`), so the Germans rarely hold on long enough.
+* **Maleme timing is spiky.** With `night_moves`, the NZ withdrawal lands at nightfall (H+12) in most runs, because orders taken by day wait for darkness. Plausible, but it gives t_control a much narrower distribution than the history supports.
+* **Hard go/no-go threshold** is still the default. The logistic and lagged variants exist (`mechanics.go_no_go`, `--go-rule`, `--set mech.info_lag_h=...`); `results/SUMMARY.md` section 4 compares them. The zero single-swap of Maleme's DENIAL into Hostomel is a property of the threshold rule.
 * Arrival order for simultaneous arrivals is the YAML order of `units`.
 * Empty zones keep their last controller.
 * `losses_*` metrics are peak minus final strength of units; strength that withdrew is not a loss.
-* Unknown keys in YAML sections (e.g. a typo inside `arrive`) surface as a `TypeError` at build time, not as a lint error.
-* Parallel execution (`-w`) is implemented with `ProcessPoolExecutor` but was only exercised on a single-core sandbox.
-* The CMO harness has only run against the mock. See `cmo/SETUP.md` "Known gaps".
+* Scenario sourcing for Ypenburg comes from search excerpts, not full texts (the build sandbox could not reach the sources). Check against War over Holland and Brongers before trusting any Ypenburg number.
+* The CMO harness, probe and scenario builder have only run against the mock (`cmo/tests/`). See `cmo/SETUP.md` "Known gaps". Any CMO API added to the Lua side must be added to `cmo/tests/mock_cmo.lua` with the documented signature.
+* In CMO the heliborne troops are scripted (`RU_VDV_` squads unloaded by helicopters reaching the airfield), not CMO cargo: respawned aircraft carry no cargo.
+
+## Done in 0.2.0 (see CHANGELOG)
+
+Old backlog items 1 (command decision cycles for Maleme), 2 (selectable go/no-go rule), 3 (schema lint), 5 (third scenario: Ypenburg), 6 (report generator), 7 (performance, `-w` verified on 4 cores), 8 (CI, ruff, mypy), 9 (CRT documented as illustrative, with a quantitative comparison), and the offline half of 4 (`compare-backends`).
 
 ## Backlog (in priority order, with acceptance criteria)
 
-1. **Fix the Maleme timing gap with a mechanism, not a parameter.** Candidate: command decision cycles. Withdrawal decisions evaluated at discrete command times with communication loss (22nd Bn lost contact with forward companies and pulled back overnight), and the attacker's commitment of the air-landing force gated by a similar decision. Done when: Maleme joint anchor share >= 0.5 under Lanchester, Hostomel anchors not worse by more than 0.05, new parameters sourced or flagged, tests added, swap results re-run and diffed.
-2. **Soften or justify the go/no-go rule.** Options: logistic acceptance around the tolerance, or an estimate that lags true risk (information delay). Done when: both variants selectable from YAML, Shapley tables compared in SUMMARY.
-3. **Scenario schema validation.** Make `lint` report unknown and missing keys per section with the offending path. Done when: a test feeds a typo in `arrive` and gets a lint error, not a TypeError.
-4. **CMO live verification.** Run `BL.selftest(BL_HOSTOMEL)` and a 3-run pilot in a real build; fix field names (`base`, `damage`, `group`, `loadoutdbid`, `course`) as needed; keep the mock in sync. Then add `battlelab compare-backends native.csv cmo.csv` comparing outcomes run-by-run on shared `p.*` columns.
-5. **Third airhead scenario.** Best candidate: the German air-landing at The Hague airfields, 10 May 1940 (Ypenburg, Valkenburg, Ockenburg): fields seized, landings blocked by wrecks and soft ground, Dutch counterattacks retook them; a failure case with heavy transport losses that stresses the airlift and runway mechanics. Heraklion and Rethymno (Crete, 1941) are within-campaign controls. Done when: lint clean, anchors reported, three-way swaps run.
-6. **Report generator.** `battlelab report` that runs the reproduce pipeline and writes `results/SUMMARY.md` and figures automatically.
-7. **Performance.** Profile (currently ~3.5 ms per 48 h run); vectorise hot paths or batch runs; verify `-w` on multi-core.
-8. **Engineering hygiene.** CI (pytest + lua5.3 harness tests), ruff, mypy on `battlelab/`.
-9. **CRT.** Either calibrate the table against the Lanchester resolver on reference engagements or document it as purely illustrative in the scenario files.
+1. **Airborne shock / perimeter defence (Ypenburg).** A mechanism for the first hours of an airborne assault: a temporary morale or effectiveness penalty on defenders hit by a surprise landing, and/or splitting the airfield into perimeter sectors so defenders cannot all engage at once. Done when: the Ypenburg joint anchor share is at least 0.3 under Lanchester, Hostomel and Maleme anchors are not worse by more than 0.05, new parameters are sourced or flagged, and tests are added.
+2. **CMO live verification.** Kit ready in `cmo/pilot/` (README there). Order: `bl_probe.lua` output -> fix field names (`base`, `damage`, `group`, `loadoutdbid`, `course`) and keep the mock in sync; `bl_build_hostomel.lua` output -> fix any construction call that FAILs (event wiring and `ScenEdit_SetTime` are the least certain); overnight pilot -> `battlelab compare-backends cmo/pilot/native_hostomel_runs0-19.csv battlelab_results.csv`. Done when: a pilot batch completes live and the comparison table is in results/.
+3. **Ypenburg sourcing pass.** Replace the search-excerpt sourcing with page-level citations from War over Holland and Brongers (2004); revisit every `confidence: low` entry. Done when: under 30 of 49 parameters are flagged assumptions, or each remaining flag says why no source exists.
+4. **Within-campaign controls.** Heraklion and Rethymno (Crete, 1941) as extra members, plus Valkenburg and Ockenburg (The Hague, 1940). Soft ground at Valkenburg needs a runway-bearing mechanic (aircraft bog down and become obstacles without being shot down).
+5. **Timing distribution for Maleme.** Replace the day/night step in `night_moves` with a withdrawal window that has its own uncertainty, and add an anchor on the *time* of the first landing that is stricter than day 2.
+6. **Report narrative.** `battlelab report` writes mechanical statements only. Add an optional hand-written `results/NOTES.md` that the report embeds, so interpretation stays versioned next to the numbers.
+7. **Performance.** Batch-sample parameters (`param_uniform` builds a generator per parameter per run, about 20% of run time). This changes the draws, so do it together with a deliberate full re-run.

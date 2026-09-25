@@ -48,13 +48,15 @@ P.cfg = {
                                             -- artillery warhead DBID from your DB
   max_shells_per_hour = 24,                 -- at fire_intensity = 1
   max_demolitions_per_hour = 12,            -- at demolish_rate = 1
+  delivery_radius_nm = 1.5,                 -- a transport helicopter this close to the
+                                            -- airfield centre unloads its RU_VDV_ squad(s)
 }
 
 P.metric_fields = {
   "landed", "airbridge", "t_airbridge", "t_first_landing", "transports_lost",
   "t_control", "attacker_ever_controls", "attacker_lost_control", "attacker_holds_end",
   "defender_retakes", "runway_end", "released", "t_release", "helos_lost",
-  "sams_kept", "garrison_kept", "counterattack_kept",
+  "sams_kept", "garrison_kept", "counterattack_kept", "vdv_delivered",
 }
 
 local function pv(ctx, name, fallback)
@@ -80,12 +82,17 @@ end
 function P.on_batch_start(template)
   P.roles = {}
   for _, r in ipairs(template) do
-    for _, pre in ipairs({"RU_HELO_T_", "UA_NG_", "UA_CA_", "UA_SAM_", "RU_IL76_", "BL_RWY"}) do
+    for _, pre in ipairs({"RU_HELO_T_", "UA_NG_", "UA_CA_", "UA_SAM_", "RU_IL76_", "BL_RWY",
+                          "RU_VDV_"}) do
       if BL.starts_with(r.name, pre) then
         P.roles[pre] = P.roles[pre] or {}
         table.insert(P.roles[pre], r.name)
       end
     end
+  end
+  P.vdv_tpl = {}
+  for _, r in ipairs(template) do
+    if BL.starts_with(r.name, "RU_VDV_") then P.vdv_tpl[r.name] = r end
   end
   for _, list in pairs(P.roles) do table.sort(list) end
   P.rank = {}
@@ -108,6 +115,10 @@ function P.mutate(rec, ctx)
   local n = r.name
   local s = ctx.state
   s.kept = s.kept or {sam = 0, ng = 0, ca = 0}
+
+  if BL.starts_with(n, "RU_VDV_") then                     -- delivered by helicopter, below
+    return nil
+  end
 
   if BL.starts_with(n, "UA_SAM_") then                     -- AIR: SEAD survivors
     if ctx.rng:bernoulli(pv(ctx, "air.att.suppression", 0)) then return nil end
@@ -161,6 +172,48 @@ function P.on_run_start(ctx)
   s.released, s.t_release = false, nil
   s.obstructed_until = nil
   s.shell_debt = 0
+  s.delivered_helo, s.vdv_next, s.vdv_delivered = {}, 1, 0
+end
+
+-- ---------------------------------------------------------------------------
+-- Heliborne insertion. CMO respawns the helicopters without cargo, so the
+-- troops are scripted: each RU_HELO_T_ that gets within delivery_radius_nm of
+-- the airfield unloads its share of the RU_VDV_ template squads there, each
+-- surviving the landing with probability 1 - mass.dz_loss. Helicopters shot
+-- down on the way (by CMO's own air defence) deliver nothing, which is the
+-- ingress loss. Without RU_VDV_ units in the scenario nothing is scripted.
+-- ---------------------------------------------------------------------------
+local function deliver_vdv(ctx)
+  local s = ctx.state
+  local squads = P.roles["RU_VDV_"] or {}
+  local helos = P.roles["RU_HELO_T_"] or {}
+  if #squads == 0 or #helos == 0 then return end
+  local per_helo = math.max(1, math.floor(#squads / #helos + 0.5))
+  for _, hname in ipairs(helos) do
+    local g = ctx.spawned[hname]
+    if g and not s.delivered_helo[hname] then
+      local u = BL.get(g)
+      local ok, d = pcall(Tool_Range, {latitude = P.center_lat, longitude = P.center_lon}, g)
+      if u and ok and tonumber(d) and tonumber(d) <= P.cfg.delivery_radius_nm then
+        s.delivered_helo[hname] = true
+        for _ = 1, per_helo do
+          local sq = squads[s.vdv_next]
+          if not sq then break end
+          s.vdv_next = s.vdv_next + 1
+          if not ctx.rng:bernoulli(pv(ctx, "mass.dz_loss", 0)) then
+            local r = {}
+            for k, v in pairs(P.vdv_tpl[sq]) do r[k] = v end
+            r.latitude = tonumber(u.latitude) + ctx.rng:range(-0.002, 0.002)
+            r.longitude = tonumber(u.longitude) + ctx.rng:range(-0.003, 0.003)
+            r.altitude, r.base, r.mission = nil, nil, nil
+            BL.spawn_record(ctx, r)
+            s.vdv_delivered = s.vdv_delivered + 1
+          end
+        end
+        pcall(ScenEdit_SetUnit, {guid = g, RTB = true})
+      end
+    end
+  end
 end
 
 -- ---------------------------------------------------------------------------
@@ -282,6 +335,9 @@ function P.on_tick(ctx)
   local dt_h = s.last_t and (t - s.last_t) or 0
   s.last_t = t
 
+  -- 0. heliborne insertion ---------------------------------------------------
+  deliver_vdv(ctx)
+
   -- 1. airfield control ------------------------------------------------------
   local att, def = ground_counts(ctx)
   local cand = (att > 0 and def == 0) and "attacker" or (def > 0 and att == 0) and "defender"
@@ -378,7 +434,7 @@ function P.evaluate(ctx)
     defender_retakes = s.retakes, runway_end = P.runway_usable(ctx),
     released = s.released, t_release = s.t_release, helos_lost = helos_lost,
     sams_kept = s.kept and s.kept.sam, garrison_kept = s.kept and s.kept.ng,
-    counterattack_kept = s.kept and s.kept.ca,
+    counterattack_kept = s.kept and s.kept.ca, vdv_delivered = s.vdv_delivered,
   }
 end
 
@@ -396,12 +452,16 @@ function P.selftest(template)
   for _, pre in ipairs({"RU_HELO_T_", "RU_IL76_", "UA_NG_", "UA_CA_", "BL_RWY"}) do
     out[#out + 1] = {"units named " .. pre .. "*", (by[pre] or 0) > 0, "(" .. (by[pre] or 0) .. ")"}
   end
+  local vdv = 0
+  for _, r in ipairs(template) do if BL.starts_with(r.name, "RU_VDV_") then vdv = vdv + 1 end end
+  out[#out + 1] = {"units named RU_VDV_* (scripted heliborne squads)", vdv > 0, "(" .. vdv .. ")"}
   local ok = pcall(BL.polygon, P.cfg.attacker, P.cfg.airfield_rps)
   out[#out + 1] = {"airfield reference points", ok}
   local okm, m = pcall(ScenEdit_GetMission, P.cfg.attacker, P.cfg.airlift_mission)
   out[#out + 1] = {"mission '" .. P.cfg.airlift_mission .. "'", okm and m ~= nil}
-  local oku, u = pcall(ScenEdit_GetUnit, {side = P.cfg.defender, name = P.cfg.airbase_name})
-  out[#out + 1] = {"airbase '" .. P.cfg.airbase_name .. "'", oku and u ~= nil}
+  local found = false
+  for _, r in ipairs(template) do if r.name == P.cfg.airbase_name then found = true end end
+  out[#out + 1] = {"airbase '" .. P.cfg.airbase_name .. "'", found}
   out[#out + 1] = {"shell_warhead_dbid configured", P.cfg.shell_warhead_dbid ~= nil,
                    "(needed for scripted runway fires)"}
   return out

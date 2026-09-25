@@ -53,7 +53,9 @@ class LanchesterPoisson(Resolver):
 # fraction of strength lost per round by (attacker, defender) and whether the
 # defender must take an immediate retreat check. Generic table in the style of
 # classic hex-and-counter games; it is a structural alternative, not a
-# calibrated model, and is flagged as such in the docs.
+# calibrated model. Against the Lanchester resolver at the family's kill rate
+# it is 2-6x bloodier per hour and much kinder to defenders at low odds (see
+# `expected_loss_rates` and `battlelab resolvers`). Purely illustrative.
 CRT_COLUMNS = (0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0)
 _AE, _AR, _EX, _DR, _DE = ((0.12, 0.00, False), (0.06, 0.01, False),
                            (0.05, 0.05, False), (0.02, 0.04, True),
@@ -128,7 +130,7 @@ class Combat(Mechanic):
         w.scratch["side_strength"] = {}
         for zid in w.zones:
             present = w.units_in(zid)
-            sides = {u.side for u in present}
+            sides = sorted({u.side for u in present})   # sorted: set order varies by process
             if len(sides) < 2:
                 continue
             eff = {s: 0.0 for s in sides}
@@ -154,7 +156,7 @@ class Combat(Mechanic):
     def _attacking_side(w, present):
         att = [u for u in present if u.posture == "attack"]
         if att:
-            return max({u.side for u in att},
+            return max(sorted({u.side for u in att}),
                        key=lambda s: sum(u.strength for u in att if u.side == s))
         return w.attacker()
 
@@ -168,6 +170,18 @@ class MoraleCheck(Mechanic):
            + ammo_hazard    * [ammo exhausted]
     plus immediate departure when the ratio exceeds `withdraw_ratio`, a
     commitment timeout for counterattacks and forced CRT retreats.
+
+    Command decision cycle (`Morale.decision_h > 0`): the base, ratio and
+    casualty terms are not applied every turn. Instead the commander evaluates
+    them at decision points every `decision_h` hours and orders a withdrawal
+    with probability 1 - exp(-hazard * decision_h). With probability
+    `comms_loss` a decision is taken without reports from the forward
+    elements, and the commander then assumes at least `fog` casualties. With
+    `night_moves` an order is only executed in darkness. Immediate exits
+    (collapse, outmatched, commitment, ammunition, forced retreat) are
+    unaffected: they are the troops' own reaction, not the commander's. With
+    decision_h <= dt, no comms loss and no night rule this reduces exactly to
+    the continuous hazard.
     """
     phase = Phase.MORALE
     name = "morale"
@@ -178,9 +192,17 @@ class MoraleCheck(Mechanic):
         self.retreat_hz = retreat_check_hazard
         self.collapse = collapse_fraction
 
+    @staticmethod
+    def commanded(m, dt: float) -> bool:
+        return m.decision_h > dt + 1e-9 or m.comms_loss > 0 or bool(m.night_moves)
+
+    def judged_hazard(self, m, ratio: float, casualties: float) -> float:
+        return m.base_hazard + self.B0 * max(ratio - 1.0, 0.0) + self.HC * casualties
+
     def step(self, w: World):
         engaged = w.scratch.get("engaged", {})
         forced = w.scratch.get("forced_retreat", set())
+        orders = w.persist.setdefault("withdraw_orders", {})
         g = w.rng("morale")
         for uid, (own, enemy) in engaged.items():
             u = w.units[uid]
@@ -188,6 +210,7 @@ class MoraleCheck(Mechanic):
                 continue
             m = u.morale
             ratio = enemy / max(own, 1e-9)
+            casualties = 1.0 - u.strength / max(u.peak, 1e-9)
             reason = None
             if u.strength <= self.collapse * max(u.peak, 1e-9):
                 reason = "collapse"
@@ -196,9 +219,19 @@ class MoraleCheck(Mechanic):
             elif u.posture == "attack" and u.arrived_at is not None \
                     and w.t - u.arrived_at > m.commit_h:
                 reason = "commitment_expired"
+            elif self.commanded(m, w.dt):
+                self._command(w, u, ratio, casualties)
+                hz = 0.0
+                if u.first_contact is not None and w.t - u.first_contact >= m.ammo_out_h:
+                    hz += self.AMMO
+                if (u.zone, u.side) in forced:
+                    hz += self.retreat_hz
+                if hz > 0 and g.random() < 1.0 - math.exp(-hz * w.dt):
+                    reason = "morale"
+                elif uid in orders and (not m.night_moves or not w.is_day()):
+                    reason = "ordered_withdrawal"
             else:
-                hz = (m.base_hazard + self.B0 * max(ratio - 1.0, 0.0)
-                      + self.HC * (1.0 - u.strength / max(u.peak, 1e-9)))
+                hz = self.judged_hazard(m, ratio, casualties)
                 if u.first_contact is not None and w.t - u.first_contact >= m.ammo_out_h:
                     hz += self.AMMO
                 if (u.zone, u.side) in forced:
@@ -210,3 +243,47 @@ class MoraleCheck(Mechanic):
                 w.emit("leaves_fight", unit=u.id, reason=reason, status=u.status,
                        strength=round(u.strength, 1), ratio=round(ratio, 2))
                 u.zone = None
+                orders.pop(uid, None)
+
+    def _command(self, w: World, u, ratio: float, casualties: float):
+        """One commander decision if a decision point falls in this turn."""
+        m = u.morale
+        nxt = w.persist.setdefault("next_decision", {})
+        cycle = max(m.decision_h, w.dt)
+        if w.t + 1e-9 < nxt.get(u.id, cycle) or u.id in w.persist["withdraw_orders"]:
+            return
+        nxt[u.id] = (math.floor(w.t / cycle + 1e-9) + 1) * cycle
+        g = w.rng("command")
+        blind = g.random() < m.comms_loss
+        seen = max(casualties, m.fog) if blind else casualties
+        hz = self.judged_hazard(m, ratio, seen)
+        order = g.random() < 1.0 - math.exp(-hz * cycle)
+        w.emit("command_decision", unit=u.id, blind=blind, perceived_casualties=round(seen, 2),
+               ratio=round(ratio, 2), order="withdraw" if order else "hold")
+        if order:
+            w.persist["withdraw_orders"][u.id] = w.t
+
+
+def expected_loss_rates(odds: list[float], kill_rate: float = 0.01,
+                        round_h: float = 1.0) -> list[dict]:
+    """Expected hourly loss fractions per side under each resolver.
+
+    Reference engagement: both sides at quality 1, no posture or fire
+    modifiers, so effective strength equals strength and odds = A / D.
+    Lanchester: attacker loses kill_rate * D per hour, i.e. a fraction
+    kill_rate / odds; the defender a fraction kill_rate * odds. CRT: the d6
+    expectation of the odds column, per round of `round_h` hours. The
+    retreat result is not included (it acts through morale, not attrition).
+    """
+    rows = []
+    for o in odds:
+        col = sum(o >= c for c in CRT_COLUMNS[1:])
+        cells = CRT_TABLE[col]
+        crt_a = sum(c[0] for c in cells) / 6 / round_h
+        crt_d = sum(c[1] for c in cells) / 6 / round_h
+        p_dr = sum(c[2] for c in cells) / 6
+        rows.append({"odds": o, "lan_att": kill_rate / o, "lan_def": kill_rate * o,
+                     "crt_att": crt_a, "crt_def": crt_d, "crt_p_retreat": p_dr,
+                     "lan_exchange": (kill_rate * o) / (kill_rate / o) if o else float("nan"),
+                     "crt_exchange": crt_d / crt_a if crt_a else float("inf")})
+    return rows

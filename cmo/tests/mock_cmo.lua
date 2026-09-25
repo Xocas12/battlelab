@@ -53,8 +53,10 @@ end
 function ScenEdit_AddUnit(d)
   assert(d.type and d.side and d.dbid and d.name, "AddUnit: type/side/dbid/name required")
   if d.base then assert(find(d.base), "AddUnit: unknown base " .. d.base) end
+  local b = d.base and find(d.base)
   local u = {guid = guid(), name = d.name, side = d.side, type = d.type, dbid = d.dbid,
-             latitude = d.latitude or d.lat, longitude = d.longitude or d.lon,
+             latitude = d.latitude or d.lat or (b and b.latitude),
+             longitude = d.longitude or d.lon or (b and b.longitude),
              altitude = d.altitude or 0, heading = d.heading or 0,
              proficiency = d.proficiency or "Regular", base = d.base, loadoutid = d.loadoutid,
              group = d.group, dp = 100, startdp = 100}
@@ -176,6 +178,33 @@ function ScenEdit_EndScenario() MOCK.ended = true end
 function GetBuildNumber() return "mock-1.0" end
 function Tool_EmulateNoConsole() return true end
 function ScenEdit_RunScript(path) dofile(MOCK.lua_dir .. "/" .. path) end
+
+-- scenario construction (used by bl_build_hostomel.lua) --------------------------
+MOCK.events, MOCK.triggers, MOCK.actions, MOCK.postures = {}, {}, {}, {}
+function ScenEdit_AddSide(t) assert(t.side, "AddSide: side required"); return true end
+function ScenEdit_SetSidePosture(a, b, p) MOCK.postures[a .. ">" .. b] = p; return true end
+function ScenEdit_AddReferencePoint(t)
+  assert(t.side and t.name and t.lat and t.lon, "AddReferencePoint: side/name/lat/lon required")
+  MOCK.rps[t.name] = {side = t.side, lat = t.lat, lon = t.lon}
+  return {name = t.name}
+end
+function ScenEdit_AddMission(side, name, mtype, opts)
+  assert(side and name and mtype, "AddMission: side/name/type required")
+  MOCK.missions[name] = {name = name, side = side, type = mtype, isactive = true, opts = opts}
+  return MOCK.missions[name]
+end
+function ScenEdit_SetEvent(name, t) MOCK.events[name] = {opts = t, triggers = {}, actions = {}}; return true end
+function ScenEdit_SetTrigger(t) assert(t.name and t.type); MOCK.triggers[t.name] = t; return true end
+function ScenEdit_SetAction(t) assert(t.name and t.type); MOCK.actions[t.name] = t; return true end
+function ScenEdit_SetEventTrigger(ev, t)
+  assert(MOCK.events[ev] and MOCK.triggers[t.name], "SetEventTrigger: unknown event/trigger")
+  table.insert(MOCK.events[ev].triggers, t.name); return true
+end
+function ScenEdit_SetEventAction(ev, t)
+  assert(MOCK.events[ev] and MOCK.actions[t.name], "SetEventAction: unknown event/action")
+  table.insert(MOCK.events[ev].actions, t.name); return true
+end
+function ScenEdit_SetTime(t) MOCK.time = t; return true end
 
 -- helpers for tests ----------------------------------------------------------
 function MOCK.add_rp(side, name, lat, lon) MOCK.rps[name] = {side = side, lat = lat, lon = lon} end

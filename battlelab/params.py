@@ -11,9 +11,10 @@ from __future__ import annotations
 
 import math
 import zlib
+from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from statistics import NormalDist
-from typing import Any, Mapping
+from typing import Any
 
 import numpy as np
 
@@ -181,7 +182,7 @@ class Param:
     unit: str = ""
 
     @classmethod
-    def from_spec(cls, name: str, spec: Any) -> "Param":
+    def from_spec(cls, name: str, spec: Any) -> Param:
         if isinstance(spec, Mapping):
             dist = parse_dist(spec)
             prov = Provenance(source=spec.get("source"), note=spec.get("note", ""),
@@ -208,7 +209,7 @@ class ParamSpace:
         self._p = dict(params)
 
     @classmethod
-    def from_specs(cls, specs: Mapping[str, Any]) -> "ParamSpace":
+    def from_specs(cls, specs: Mapping[str, Any]) -> ParamSpace:
         return cls({k: Param.from_spec(k, v) for k, v in specs.items()})
 
     def __contains__(self, name):
@@ -226,12 +227,12 @@ class ParamSpace:
     def items(self):
         return self._p.items()
 
-    def with_param(self, name: str, param: Param) -> "ParamSpace":
+    def with_param(self, name: str, param: Param) -> ParamSpace:
         new = dict(self._p)
         new[name] = replace(param, name=name)
         return ParamSpace(new)
 
-    def with_value(self, name: str, value: float) -> "ParamSpace":
+    def with_value(self, name: str, value: float) -> ParamSpace:
         if name not in self._p:
             raise ParamError(f"unknown parameter {name!r}")
         old = self._p[name]

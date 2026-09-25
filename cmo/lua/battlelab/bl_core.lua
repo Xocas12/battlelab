@@ -283,6 +283,8 @@ local function spawn_record(ctx, rec)
   end
 end
 
+BL.spawn_record = spawn_record   -- plugins spawn scripted units through this
+
 function BL.begin_run()
   local st = BL.state
   st.index = st.index + 1
@@ -371,9 +373,13 @@ function BL.selftest(plugin)
   check("file output (else KeyStore fallback)", true, f and "file" or "keystore")
   ScenEdit_SetKeyValue("bl_selftest", "42")
   check("KeyStore round trip", ScenEdit_GetKeyValue("bl_selftest") == "42")
+  -- After "scenario loaded" has started a batch the map is empty between and
+  -- during replications, so check the template the batch captured instead.
+  local started = type(BL.template) == "table" and #BL.template > 0
   local units = BL.all_units()
-  check("units visible", #units > 0, "(" .. #units .. ")")
-  local tpl = BL.snapshot()
+  check("units visible", #units > 0 or started,
+        started and ("(batch template: " .. #BL.template .. ")") or ("(" .. #units .. ")"))
+  local tpl = started and BL.template or BL.snapshot()
   local with_dbid = 0
   for _, r in ipairs(tpl) do if r.dbid then with_dbid = with_dbid + 1 end end
   check("snapshot has DBIDs", with_dbid == #tpl, ("(%d/%d)"):format(with_dbid, #tpl))
