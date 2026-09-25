@@ -293,6 +293,27 @@ def fill_notes(text: str, values: dict[str, float]) -> str:
     return "\n".join(lines).strip()
 
 
+def apply_notes(out_dir: str | Path) -> Path:
+    """Re-embed results/NOTES.md into an existing SUMMARY.md using the saved
+    report_values.csv, without re-running any experiment."""
+    out = Path(out_dir)
+    path = out / "SUMMARY.md"
+    text = path.read_text()
+    vals = pd.read_csv(out / "report_values.csv")
+    values = dict(zip(vals["key"], vals["value"].astype(float)))
+    start = text.find("## Reading these results")
+    if start >= 0:
+        end = text.find("\n## ", start + 3)
+        text = text[:start] + text[end + 1:]
+    first = text.find("\n## ")
+    notes = out / "NOTES.md"
+    if notes.exists() and first >= 0:
+        block = "## Reading these results\n\n" + fill_notes(notes.read_text(), values) + "\n\n"
+        text = text[:first + 1] + block + text[first + 1:]
+    path.write_text(text)
+    return path
+
+
 def _in_box(values: pd.Series, bounds: tuple[float, float]) -> list[float]:
     """Grid values inside [lo, hi]; the one nearest the midpoint if none are."""
     grid = sorted(set(values))

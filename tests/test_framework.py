@@ -452,6 +452,11 @@ def test_report_smoke(tmp_path):
         "# Notes\nMaleme joint {{anchor.maleme_1941.lanchester.joint}}.")
     text = run_report(cfg).read_text()
     assert "## Reading these results\n\nMaleme joint 0." in text
+    from battlelab.report import apply_notes
+    (tmp_path / "NOTES.md").write_text("Edited: {{anchor.maleme_1941.crt.joint|pct}}.")
+    text = apply_notes(tmp_path).read_text()
+    assert text.count("## Reading these results") == 1 and "Edited: " in text
+    assert text.index("## Reading these results") < text.index("## 1.")
 
 
 @pytest.mark.skipif(LUA is None, reason="needs a Lua 5.3 interpreter")
