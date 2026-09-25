@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.3.0 (2026-09-25)
+
+Model changes. Each is exactly the 0.2.0 model at its default; Hostomel and Maleme were checked run-for-run over 400 runs before Maleme adopted the commitment gate.
+
+* **Surprise shock** (`arrive.shock`, `shock_decay_h`; MASS parameters `mass.shock`, `mass.shock_decay_h`). An air arrival into a zone its side does not hold cuts enemy effectiveness there by shock0·exp(−t/decay). Ypenburg only (0.3–0.7, 1–4 h).
+* **No line of retreat** (`Morale.ratio_scale`; MASS parameter `mass.cornered`). This scales the force-ratio term of the morale hazard. Ypenburg's airborne units only (0.2–0.6).
+* **Withdrawal move delay** (`Morale.move_delay_h`; HOLD parameter `hold.move_delay_h`). Tried on Maleme and not adopted: it spreads t_control but lowers the joint anchor share from 0.68 to 0.54 (see the parameter note).
+* **Attacker commitment gate** (`airlift.commit_lag_h`, `commit_cycle_h`; RISK parameters `risk.commit_lag_h`, `risk.commit_cycle_h`). In shuttle mode the air-landing force is committed only at the HQ's next decision point after the report of control arrives. Maleme only (2–6 h, 6–12 h). First landing p50 moves from H+22.2 (dawn) to H+26.5.
+* New metric `attacker_hours_on_field`.
+
+Anchor revisions. Both are recorded in the anchor notes, and the effect of each is reported separately:
+
+* Ypenburg `germans_take_field` (sole control of the one-zone field) becomes `germans_hold_on_field` (German troops on the field for at least 3 h), which is what the source says. Joint share (Lanchester): 0.04 → 0.38 from the anchor alone, 0.54 with both mechanisms. Under the old anchor it is still 0.04.
+* Maleme `landings_begin_day2` ([20, 40] h) becomes `landings_begin_day2_afternoon` ([28, 34] h), which is what the source says. Joint share (Lanchester): 0.68 → 0.003 from the anchor alone, 0.20 with the commitment gate.
+
+Report: `results/NOTES.md` holds the hand-written interpretation, with numbers filled in from each run by placeholders. `battlelab report --notes-only` refreshes it; all values are in `results/report_values.csv`.
+
+Results (N = 1000, seed 1; `results/SUMMARY.md`):
+
+| | 0.2.0 | 0.3.0 |
+|---|---|---|
+| Hostomel joint anchors, Lanchester / CRT | 0.60 / 0.50 | 0.60 / 0.50 |
+| Maleme joint anchors, Lanchester / CRT | 0.68 / 0.13 | 0.20 / 0.03 (stricter anchor) |
+| Ypenburg joint anchors, Lanchester / CRT | 0.04 / 0.04 | 0.54 / 0.56 (revised anchor) |
+| Hostomel with Maleme's factors, Lanchester | 0.33 → 0.74 | 0.33 → 0.74 |
+| Maleme with Hostomel's factors, Lanchester | 0.67 → 0.00 | 0.66 → 0.00 |
+| Hostomel with Ypenburg's factors, Lanchester | 0.33 → 0.36 | 0.33 → 0.58 |
+
+Changed conclusion: for Maleme with Hostomel's factors, RISK falls from the largest contribution (−0.28) to −0.18, and DENIAL (−0.28) is now the largest. The cause is bundling: the commitment-gate parameters sit in the RISK bundle, so swapping Hostomel's RISK also removes Maleme's commitment delay. Hostomel with Maleme's factors is unchanged (HOLD −0.49, RISK +0.42).
+
 ## 0.2.0 (2026-09-24)
 
 Model changes (each reduces exactly to 0.1.0 behaviour at its default; checked run-for-run):
