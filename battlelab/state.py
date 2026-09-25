@@ -40,6 +40,8 @@ class Morale:
     comms_loss: float = 0.0
     fog: float = 0.0
     night_moves: bool = False
+    move_delay_h: float = 0.0       # mean (exponential) delay between an order becoming
+                                    # executable and the unit actually pulling out
 
 
 @dataclass
