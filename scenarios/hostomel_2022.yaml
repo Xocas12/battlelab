@@ -82,6 +82,8 @@ parameters:
     note: "Il-76 wave aborted mid-air; cause unclear. Encodes the 'feared losses' hypothesis"}
   risk.land_contested: {dist: fixed, value: 0, source: WOTR2023, assumption: true,
     note: "Il-76s were to land only on a secured airfield"}
+  risk.commit_lag_h: {dist: fixed, value: 0.0, assumption: true, note: "0 = no commitment delay (only used in shuttle mode)"}
+  risk.commit_cycle_h: {dist: fixed, value: 0.0, assumption: true, note: "0 = no decision cycle (only used in shuttle mode)"}
   # CONTEXT (not swapped) ---------------------------------------------------
   ctx.aircraft: {dist: fixed, value: 18, source: WOTR2023, confidence: high, note: "18 Il-76 from Pskov"}
   ctx.troops_per_aircraft: {dist: fixed, value: 55, source: WOTR2023, note: "~1,000 troops on 18 Il-76"}
@@ -180,6 +182,8 @@ airlift:
   loiter_h: $ctx.loiter_h
   wreck_obstacle: $ctx.wreck_obstacle
   contested_risk: $mech.contested_risk
+  commit_lag_h: $risk.commit_lag_h
+  commit_cycle_h: $risk.commit_cycle_h
 
 mechanics:
   # resolver: lanchester | crt. The CRT is ILLUSTRATIVE, not calibrated: at 1:1 it
@@ -203,7 +207,7 @@ factors:
          hold.move_delay_h]
   RESPONSE: [response.t_ca, response.strength, response.commit_h, response.withdraw_ratio]
   DENIAL: [denial.obstacles0, denial.t_fires, denial.fire_intensity, denial.crater_rate, denial.demolish_rate]
-  RISK: [risk.tolerance, risk.land_contested]
+  RISK: [risk.tolerance, risk.land_contested, risk.commit_lag_h, risk.commit_cycle_h]
 
 # Historical facts the model should reproduce as a *typical* outcome.
 anchors:
