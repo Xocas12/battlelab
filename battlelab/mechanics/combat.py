@@ -184,7 +184,9 @@ class MoraleCheck(Mechanic):
     with probability 1 - exp(-hazard * decision_h). With probability
     `comms_loss` a decision is taken without reports from the forward
     elements, and the commander then assumes at least `fog` casualties. With
-    `night_moves` an order is only executed in darkness. Immediate exits
+    `night_moves` an order is only executed in darkness, and with
+    `move_delay_h` > 0 only after an exponential delay from the moment it
+    becomes executable. Immediate exits
     (collapse, outmatched, commitment, ammunition, forced retreat) are
     unaffected: they are the troops' own reaction, not the commander's. With
     decision_h <= dt, no comms loss and no night rule this reduces exactly to
@@ -236,7 +238,8 @@ class MoraleCheck(Mechanic):
                     hz += self.retreat_hz
                 if hz > 0 and g.random() < 1.0 - math.exp(-hz * w.dt):
                     reason = "morale"
-                elif uid in orders and (not m.night_moves or not w.is_day()):
+                elif uid in orders and (not m.night_moves or not w.is_day()) \
+                        and self._ready(w, uid, m):
                     reason = "ordered_withdrawal"
             else:
                 hz = self.judged_hazard(m, ratio, casualties)
@@ -252,6 +255,17 @@ class MoraleCheck(Mechanic):
                        strength=round(u.strength, 1), ratio=round(ratio, 2))
                 u.zone = None
                 orders.pop(uid, None)
+
+    @staticmethod
+    def _ready(w: World, uid: str, m) -> bool:
+        """An executable order is carried out after an exponential delay
+        (mean move_delay_h: orders reach the companies, the move is organised)."""
+        if m.move_delay_h <= 0:
+            return True
+        ready = w.persist.setdefault("order_ready", {})
+        if uid not in ready:
+            ready[uid] = w.t + float(w.rng("command").exponential(m.move_delay_h))
+        return w.t + 1e-9 >= ready[uid]
 
     def _command(self, w: World, u, ratio: float, casualties: float):
         """One commander decision if a decision point falls in this turn."""

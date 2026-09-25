@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import pytest
 import yaml
 
@@ -515,3 +516,12 @@ def test_attacker_hours_metric(path):
     h = df["m.attacker_hours_on_field"]
     assert (h >= 0).all() and (h <= s.horizon + s.dt).all()
     assert (h[df["m.attacker_ever_controls"]] > 0).all()
+
+
+def test_move_delay_spreads_withdrawal():
+    mal = Scenario.load(MAL)
+    a = experiment.run_batch(mal, 300, seed=4)
+    b = experiment.run_batch(mal.with_overrides({"hold.move_delay_h": 3.0}), 300, seed=4)
+    ta = pd.to_numeric(a["m.t_control"], errors="coerce").dropna()
+    tb = pd.to_numeric(b["m.t_control"], errors="coerce").dropna()
+    assert tb.std() > ta.std() and tb.median() >= ta.median()
