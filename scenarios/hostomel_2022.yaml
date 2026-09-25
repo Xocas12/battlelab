@@ -38,6 +38,11 @@ parameters:
   mass.reserve_capacity: {dist: fixed, value: 12, assumption: true}
   mass.reserve_dz: {dist: fixed, value: 0.0, assumption: true}
   mass.t_reserve: {dist: fixed, value: 30.0, assumption: true}
+  mass.shock: {dist: fixed, value: 0, assumption: true,
+    note: "not estimated: 0 keeps 0.2.0 behaviour, and Hostomel anchors are reproduced without it"}
+  mass.shock_decay_h: {dist: fixed, value: 2.0, assumption: true, note: "inactive while mass.shock = 0"}
+  mass.cornered: {dist: fixed, value: 1.0, assumption: true,
+    note: "1 = ordinary force-ratio morale; not estimated, keeps 0.2.0 behaviour"}
   # HOLD --------------------------------------------------------------------
   hold.strength: {dist: uniform, lo: 150, hi: 220, source: WOTR2023, confidence: medium,
     note: "approximately 200 National Guard soldiers left to defend the airport"}
@@ -132,15 +137,17 @@ units:          # arrival order matters for simultaneous arrivals
   vdv_assault:
     side: RU
     kind: air_assault_infantry
-    morale: {on_break: disperse}
+    morale: {on_break: disperse, ratio_scale: $mass.cornered}
     arrive: {t: 0.0, zone: airfield, mode: air_assault, aircraft: $mass.aircraft,
-             capacity: $mass.capacity, dz_loss: $mass.dz_loss}
+             capacity: $mass.capacity, dz_loss: $mass.dz_loss,
+             shock: $mass.shock, shock_decay_h: $mass.shock_decay_h}
   airborne_reserve:
     side: RU
     kind: parachute_infantry
-    morale: {on_break: disperse}
+    morale: {on_break: disperse, ratio_scale: $mass.cornered}
     arrive: {t: $mass.t_reserve, zone: airfield, mode: parachute, aircraft: $mass.reserve_aircraft,
-             capacity: $mass.reserve_capacity, dz_loss: $mass.reserve_dz, only_if_present: true}
+             capacity: $mass.reserve_capacity, dz_loss: $mass.reserve_dz,
+             shock: $mass.shock, shock_decay_h: $mass.shock_decay_h, only_if_present: true}
   ua_counterattack:
     side: UA
     kind: mixed_infantry
@@ -155,7 +162,7 @@ units:          # arrival order matters for simultaneous arrivals
   vdv_airlanded:
     side: RU
     kind: airlanded_infantry
-    morale: {on_break: disperse}
+    morale: {on_break: disperse, ratio_scale: $mass.cornered}
 
 fires:
   - {id: ua_artillery_and_air, side: UA, zone: airfield, active_from: $denial.t_fires,
@@ -188,7 +195,8 @@ outcome: {zone: airfield, airbridge_troops: 500}
 factors:
   AIR: [air.att.ingress_loss, air.att.approach_loss, air.att.suppression, air.att.interdiction, air.att.cas]
   MASS: [mass.aircraft, mass.capacity, mass.dz_loss, mass.reserve_aircraft, mass.reserve_capacity,
-         mass.reserve_dz, mass.t_reserve]
+         mass.reserve_dz, mass.t_reserve, mass.shock, mass.shock_decay_h,
+         mass.cornered]
   HOLD: [hold.strength, hold.quality, hold.dug_in, hold.base_hazard, hold.ammo_out_h,
          hold.decision_h, hold.comms_loss, hold.fog, hold.night_moves]
   RESPONSE: [response.t_ca, response.strength, response.commit_h, response.withdraw_ratio]

@@ -28,6 +28,8 @@ class Morale:
     withdraw_ratio: float = INF     # leave at once if enemy/own effective > this
     commit_h: float = INF           # counterattacks give up after this long
     on_break: str = "withdraw"      # "withdraw" (retreats off-map) or "disperse"
+    ratio_scale: float = 1.0        # multiplies the force-ratio term of the hazard;
+                                    # < 1 for troops with no line of retreat
     # Command decision cycle. decision_h = 0: the unit leaves the fight on its
     # own continuous hazard. decision_h > 0: the fight-or-leave hazard is only
     # evaluated by the commander at decision points every decision_h hours,

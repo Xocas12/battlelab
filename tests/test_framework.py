@@ -474,3 +474,44 @@ def test_cmo_build_script_end_to_end(tmp_path):
     assert "BUILD END-TO-END PASSED" in r.stdout
     df = ingest(tmp_path / "battlelab_results.csv")
     assert len(df) == 3 and (df["m.vdv_delivered"] > 0).any()
+
+
+# --------------------------------------------------- shock and no-retreat ---
+def test_shock_scales_enemy_effectiveness_and_decays():
+    ypb = Scenario.load(YPB).with_overrides({"mass.shock": 0.5, "mass.shock_decay_h": 2.0})
+    w, mechs = ypb.build(ypb.space.sample(1, 0), 1, 0)
+    from battlelab.engine import Engine
+    eng = Engine(mechs)
+    for m in eng.mechanics:
+        m.setup(w)
+    w.t = 0.0
+    w.scratch = {}
+    for m in eng.mechanics:
+        if m.name in ("arrivals", "air", "fires"):
+            m.step(w)
+    combat = next(m for m in eng.mechanics if m.name == "combat")
+    nl = w.units["grenadiers_iii_bn"]
+    base = nl.strength * nl.quality * w.scratch["cas"]["NL"] * nl.dug_in
+    assert combat.unit_eff(w, nl) == pytest.approx(base * 0.5)
+    w.t = 2.0
+    assert combat.unit_eff(w, nl) == pytest.approx(base * (1 - 0.5 * math.exp(-1)))
+    de = w.units["fallschirmjaeger"]
+    assert ("airfield", "NL") not in w.persist["shock"]      # only the landing side shocks
+    assert combat.unit_eff(w, de) > 0
+
+
+def test_cornered_troops_hold_longer():
+    """A smaller force-ratio morale term keeps the airborne troops on the field longer."""
+    ypb = Scenario.load(YPB)
+    a = experiment.run_batch(ypb.with_overrides({"mass.cornered": 1.0}), 300, seed=3)
+    b = experiment.run_batch(ypb.with_overrides({"mass.cornered": 0.2}), 300, seed=3)
+    assert b["m.attacker_hours_on_field"].mean() > a["m.attacker_hours_on_field"].mean() + 0.5
+
+
+@pytest.mark.parametrize("path", [HOST, MAL, YPB])
+def test_attacker_hours_metric(path):
+    s = Scenario.load(path)
+    df = experiment.run_batch(s, 80, seed=5)
+    h = df["m.attacker_hours_on_field"]
+    assert (h >= 0).all() and (h <= s.horizon + s.dt).all()
+    assert (h[df["m.attacker_ever_controls"]] > 0).all()

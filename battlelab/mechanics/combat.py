@@ -15,6 +15,8 @@ Effective strength of a unit =
     * (1 - enemy interdiction if attacking)      air attack on the move
     * own CAS multiplier                         close air support
     * (1 + w_posture * own fire intensity here)  artillery / bombardment
+    * (1 - shock(t))                             surprise of an enemy air landing
+                                                 in this zone: shock0 * exp(-dt/decay)
 """
 from __future__ import annotations
 
@@ -123,7 +125,12 @@ class Combat(Mechanic):
         else:
             e *= 1.0 - s["interdict"][enemy]
         fire = s.get("fire", {}).get((u.side, u.zone), 0.0)
-        return e * (1.0 + self.fw[u.posture] * fire)
+        e *= 1.0 + self.fw[u.posture] * fire
+        shock = w.persist.get("shock", {}).get((u.zone, enemy))
+        if shock is not None:
+            t0, mag, decay = shock
+            e *= 1.0 - mag * math.exp(-(w.t - t0) / decay)
+        return e
 
     def step(self, w: World):
         w.scratch["engaged"] = {}
@@ -165,7 +172,7 @@ class MoraleCheck(Mechanic):
     """Per-hour hazard of leaving the fight, for every engaged unit.
 
     hazard = base
-           + ratio_coeff    * max(enemy_eff / own_eff - 1, 0)
+           + ratio_coeff    * ratio_scale * max(enemy_eff / own_eff - 1, 0)
            + casualty_coeff * (1 - strength / peak)
            + ammo_hazard    * [ammo exhausted]
     plus immediate departure when the ratio exceeds `withdraw_ratio`, a
@@ -197,7 +204,8 @@ class MoraleCheck(Mechanic):
         return m.decision_h > dt + 1e-9 or m.comms_loss > 0 or bool(m.night_moves)
 
     def judged_hazard(self, m, ratio: float, casualties: float) -> float:
-        return m.base_hazard + self.B0 * max(ratio - 1.0, 0.0) + self.HC * casualties
+        return (m.base_hazard + self.B0 * m.ratio_scale * max(ratio - 1.0, 0.0)
+                + self.HC * casualties)
 
     def step(self, w: World):
         engaged = w.scratch.get("engaged", {})
