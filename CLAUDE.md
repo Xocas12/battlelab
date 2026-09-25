@@ -4,7 +4,7 @@ Guidance for Claude Code working in this repository. Read `README.md`, `docs/ARC
 
 ## What this is
 
-`battlelab` is a Monte Carlo framework for comparative analysis of historical battles, currently one scenario family ("airhead": seizing an airfield and flying troops in) with three members, Hostomel 2022, Maleme 1941 and Ypenburg 1940. It has two engines behind one analysis layer: a native Python engine (board-game turn sequence, pluggable mechanics) and a Lua harness that runs replications inside Command: Modern Operations (public edition). Status: v0.2.0. Current results are in `results/SUMMARY.md`.
+`battlelab` is a Monte Carlo framework for comparative analysis of historical battles, currently one scenario family ("airhead": seizing an airfield and flying troops in) with three members, Hostomel 2022, Maleme 1941 and Ypenburg 1940. It has two engines behind one analysis layer: a native Python engine (board-game turn sequence, pluggable mechanics) and a Lua harness that runs replications inside Command: Modern Operations (public edition). Status: v0.3.0. Current results are in `results/SUMMARY.md`.
 
 ## Commands
 
@@ -49,9 +49,9 @@ mkdir -p /tmp/out && cd cmo && lua5.3 tests/test_harness.lua lua /tmp/out -  # L
 
 ## Known issues and quirks
 
-* **Ypenburg: the Germans rarely take the field.** Anchor `germans_take_field` holds in about 12% of runs, joint about 0.04. A company-sized airborne force breaks fast against a larger defender under the family's morale model (ratio hazard), and a single zone cannot represent defenders dispersed around a perimeter. Probably a missing mechanism (surprise or shock on landing, or multiple zones), not a parameter problem. See backlog item 1.
+* **Ypenburg anchors depend on how "holding the field" is read.** With the 0.3.0 shock and no-retreat mechanisms and the anchor `germans_hold_on_field` (German troops on the field for at least 3 h), the joint share is about 0.54. Under the old sole-control reading (`attacker_ever_controls`), it is still about 0.04: in a one-zone model the Dutch never all leave while the Germans hold the buildings. Multiple perimeter zones would settle it (issue #3 follow-up).
 * **Maleme under CRT.** The command cycle fixed Maleme under Lanchester (joint about 0.68) but not under CRT (about 0.13): the CRT bleeds an attacker at near parity about 6 times faster (`battlelab resolvers`), so the Germans rarely hold on long enough.
-* **Maleme timing is spiky.** With `night_moves`, the NZ withdrawal lands at nightfall (H+12) in most runs, because orders taken by day wait for darkness. Plausible, but it gives t_control a much narrower distribution than the history supports.
+* **Maleme timing.** The New Zealand withdrawal still lands at nightfall (H+12) in most runs; `hold.move_delay_h` spreads it but was not adopted (it costs anchor fit, see the parameter note). The commitment gate (`risk.commit_lag_h`, `risk.commit_cycle_h`) moves the first landings from dawn toward the afternoon of day 2, but the tightened anchor `landings_begin_day2_afternoon` still holds in only about 30% of runs, so the Maleme joint share is about 0.2 (Lanchester). This is the known gap now.
 * **Hard go/no-go threshold** is still the default. The logistic and lagged variants exist (`mechanics.go_no_go`, `--go-rule`, `--set mech.info_lag_h=...`); `results/SUMMARY.md` section 4 compares them. The zero single-swap of Maleme's DENIAL into Hostomel is a property of the threshold rule.
 * Arrival order for simultaneous arrivals is the YAML order of `units`.
 * Empty zones keep their last controller.
@@ -60,16 +60,12 @@ mkdir -p /tmp/out && cd cmo && lua5.3 tests/test_harness.lua lua /tmp/out -  # L
 * The CMO harness, probe and scenario builder have only run against the mock (`cmo/tests/`). See `cmo/SETUP.md` "Known gaps". Any CMO API added to the Lua side must be added to `cmo/tests/mock_cmo.lua` with the documented signature.
 * In CMO the heliborne troops are scripted (`RU_VDV_` squads unloaded by helicopters reaching the airfield), not CMO cargo: respawned aircraft carry no cargo.
 
-## Done in 0.2.0 (see CHANGELOG)
+## Done (see CHANGELOG)
 
-Old backlog items 1 (command decision cycles for Maleme), 2 (selectable go/no-go rule), 3 (schema lint), 5 (third scenario: Ypenburg), 6 (report generator), 7 (performance, `-w` verified on 4 cores), 8 (CI, ruff, mypy), 9 (CRT documented as illustrative, with a quantitative comparison), and the offline half of 4 (`compare-backends`).
+0.3.0: airborne shock and no-retreat morale (issue #3), withdrawal move delay and attacker commitment gate (#5, partly), NOTES.md embedding in the report (#7).
 
-## Backlog (in priority order, with acceptance criteria)
+0.2.0: old backlog items 1 (command decision cycles for Maleme), 2 (selectable go/no-go rule), 3 (schema lint), 5 (third scenario: Ypenburg), 6 (report generator), 7 (performance, `-w` verified on 4 cores), 8 (CI, ruff, mypy), 9 (CRT documented as illustrative, with a quantitative comparison), and the offline half of 4 (`compare-backends`).
 
-1. **Airborne shock / perimeter defence (Ypenburg).** A mechanism for the first hours of an airborne assault: a temporary morale or effectiveness penalty on defenders hit by a surprise landing, and/or splitting the airfield into perimeter sectors so defenders cannot all engage at once. Done when: the Ypenburg joint anchor share is at least 0.3 under Lanchester, Hostomel and Maleme anchors are not worse by more than 0.05, new parameters are sourced or flagged, and tests are added.
-2. **CMO live verification.** Kit ready in `cmo/pilot/` (README there). Order: `bl_probe.lua` output -> fix field names (`base`, `damage`, `group`, `loadoutdbid`, `course`) and keep the mock in sync; `bl_build_hostomel.lua` output -> fix any construction call that FAILs (event wiring and `ScenEdit_SetTime` are the least certain); overnight pilot -> `battlelab compare-backends cmo/pilot/native_hostomel_runs0-19.csv battlelab_results.csv`. Done when: a pilot batch completes live and the comparison table is in results/.
-3. **Ypenburg sourcing pass.** Replace the search-excerpt sourcing with page-level citations from War over Holland and Brongers (2004); revisit every `confidence: low` entry. Done when: under 30 of 49 parameters are flagged assumptions, or each remaining flag says why no source exists.
-4. **Within-campaign controls.** Heraklion and Rethymno (Crete, 1941) as extra members, plus Valkenburg and Ockenburg (The Hague, 1940). Soft ground at Valkenburg needs a runway-bearing mechanic (aircraft bog down and become obstacles without being shot down).
-5. **Timing distribution for Maleme.** Replace the day/night step in `night_moves` with a withdrawal window that has its own uncertainty, and add an anchor on the *time* of the first landing that is stricter than day 2.
-6. **Report narrative.** `battlelab report` writes mechanical statements only. Add an optional hand-written `results/NOTES.md` that the report embeds, so interpretation stays versioned next to the numbers.
-7. **Performance.** Batch-sample parameters (`param_uniform` builds a generator per parameter per run, about 20% of run time). This changes the draws, so do it together with a deliberate full re-run.
+## Backlog
+
+Tracked as GitHub issues, in priority order: #2 CMO live pilot; #4 Ypenburg sourcing pass; #5 Maleme first-landing timing (remaining gap after the commitment gate) and more airhead members (Heraklion, Rethymno, Valkenburg with a soft-ground mechanic); #3 follow-up: perimeter zones for Ypenburg; #8 batched parameter sampling (after #2, it changes every draw). Each issue has a "done when".
