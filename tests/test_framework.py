@@ -525,3 +525,14 @@ def test_move_delay_spreads_withdrawal():
     ta = pd.to_numeric(a["m.t_control"], errors="coerce").dropna()
     tb = pd.to_numeric(b["m.t_control"], errors="coerce").dropna()
     assert tb.std() > ta.std() and tb.median() >= ta.median()
+
+
+def test_commit_time():
+    from battlelab.mechanics.airfield import Airlift, AirliftSpec
+    def at(lag, cycle, t):
+        return Airlift(AirliftSpec("DE", "airfield", "x", 10, 10, mode="shuttle",
+                                   commit_lag_h=lag, commit_cycle_h=cycle)).commit_time(t)
+    assert at(0, 0, 13.25) == 13.25                   # defaults: no gate
+    assert at(3, 0, 13.25) == 16.25                   # lag only
+    assert at(3, 8, 13.25) == 24.0                    # next decision point after the report
+    assert at(3, 8, 13.0) == 16.0 + 8 - 8 or at(3, 8, 13.0) == 16.0   # exactly on a point

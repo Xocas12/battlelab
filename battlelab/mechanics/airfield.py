@@ -64,6 +64,9 @@ class AirliftSpec:
     loiter_h: float = 1.5            # waves: how long a wave waits before aborting
     interval_h: float = 3.0          # shuttle: time between sorties
     first_after_control_h: float = 0.0   # shuttle: delay after first control
+    commit_lag_h: float = 0.0        # shuttle: reports of control reach the HQ this late
+    commit_cycle_h: float = 0.0      # shuttle: HQ decides only every this many hours
+                                     #   (0 = at once); first sortie after the decision
     daylight_only: bool = False
     r_min: float = 0.6               # usable runway fraction needed
     fire_risk: float = 0.25          # loss prob per unit of enemy fire intensity
@@ -197,6 +200,16 @@ class Airlift(Mechanic):
         w.emit("airlanding", wave=label, aircraft=s.aircraft, lost=lost,
                troops=round(troops), p_loss=round(p, 3), control=w.zones[s.zone].control)
 
+    def commit_time(self, t_ctrl: float) -> float:
+        """When the HQ commits the air-landing force: the first decision point
+        (every commit_cycle_h hours from H-hour) after the report of control
+        arrives commit_lag_h later. Defaults (0, 0) give t_ctrl."""
+        known = t_ctrl + self.s.commit_lag_h
+        c = self.s.commit_cycle_h
+        if c <= 0:
+            return known
+        return math.ceil(known / c - 1e-9) * c
+
     def _idle(self, w: World) -> bool:
         """Nothing to decide this turn (and no risk history to keep)."""
         s, st = self.s, w.persist["airlift"]
@@ -235,7 +248,7 @@ class Airlift(Mechanic):
         else:
             t_ctrl = w.persist.get("first_control", {}).get((s.side, s.zone))
             if math.isinf(st["next_slot"]) and t_ctrl is not None:
-                st["next_slot"] = t_ctrl + s.first_after_control_h
+                st["next_slot"] = self.commit_time(t_ctrl) + s.first_after_control_h
             if w.t >= st["next_slot"]:
                 key = f"sortie{int(st.get('sorties', 0))}"
                 if self.conditions(w, p_est, key):
