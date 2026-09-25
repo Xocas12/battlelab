@@ -31,7 +31,7 @@ Anchors used for calibration cannot then be cited as independent validation. Hol
 
 ## 4. Structural uncertainty is tested, not ignored
 
-At minimum, re-run key results with the alternative combat resolver (`mechanics.combat.resolver: crt`) and with the `mech.*` constants varied (`--set mech.kill_rate=...`). A conclusion that flips when the attrition model changes is a finding about the model, not the battle. The shipped CRT is a generic board-game table: useful for structural comparison, not a calibrated alternative.
+At minimum, re-run key results with the alternative combat resolver (`--resolver crt`), the alternative go/no-go rules (`--go-rule logistic`, `--set mech.info_lag_h=1`) and with the `mech.*` constants varied (`--set mech.kill_rate=...`). `battlelab report` does the first two automatically. A conclusion that flips when the attrition model changes is a finding about the model, not the battle. The shipped CRT is a generic board-game table: useful for structural comparison, not a calibrated alternative.
 
 ## 5. Reading factor swaps and Shapley values
 
@@ -52,7 +52,11 @@ For any result that leaves the repository:
 4. Whether the result survives the alternative resolver.
 5. For CMO results: CMO build number (in the CSV), database version, and which plugin mappings were active.
 
-## 7. Engine code
+## 7. New mechanisms
+
+A mechanism added to fix one scenario must (a) have a default that reproduces the old model run-for-run, (b) be switched on by parameters that sit in a factor bundle or are flagged `mech.*` constants shared across the family, and (c) be reported with before/after anchor tables for *every* member of the family, not just the one it was built for. If fixing one battle breaks another, that is a finding.
+
+## 8. Engine code
 
 * Mechanics communicate only through world state, `scratch` and `persist`. No hidden globals.
 * Each mechanic draws from its own named RNG stream.

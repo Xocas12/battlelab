@@ -36,6 +36,7 @@ for i = 1, 18 do
   local u = add({type = "Aircraft", name = string.format("RU_IL76_%02d", i), side = "Russia", dbid = 31, latitude = 57.78, longitude = 28.4, base = "Pskov", loadoutid = 310})
   ScenEdit_AssignUnitToMission(u.guid, "BL Airlift")
 end
+for i = 1, 20 do add({type = "Facility", name = string.format("RU_VDV_%02d", i), side = "Russia", dbid = 50, latitude = 51.5, longitude = 29.9}) end
 for i = 1, 5 do add({type = "Facility", name = "RU_COL_" .. i, side = "Russia", dbid = 40, latitude = 51.0, longitude = 30.0}) end
 local d = 0.012
 MOCK.add_rp("Russia", "BL_AF_1", AF_LAT - d, AF_LON - d)
@@ -92,13 +93,13 @@ local function physics()
   if not seen_run[ctx.run.id] then
     seen_run[ctx.run.id] = true
     spawn_counts[ctx.run.id] = {ng = #MOCK.live("UA_NG_"), helo = #MOCK.live("RU_HELO_T_"),
-                                ca = #MOCK.live("UA_CA_"), all = MOCK.count_all()}
+                                ca = #MOCK.live("UA_CA_"), vdv = #MOCK.live("RU_VDV_"),
+                                all = MOCK.count_all()}
   end
-  if t >= 1.0 and not s._vdv then            -- heliborne troops unload
+  if t >= 1.0 and not s._vdv then            -- helicopters reach the airfield
     s._vdv = true
-    for k = 1, math.max(1, #MOCK.live("RU_HELO_T_") // 2) do
-      add({type = "Facility", name = "VDV group " .. k, side = "Russia", dbid = 50,
-           latitude = AF_LAT + 0.001, longitude = AF_LON - 0.001})
+    for _, u in ipairs(MOCK.live("RU_HELO_T_")) do
+      u.latitude, u.longitude = AF_LAT + 0.002, AF_LON - 0.002
     end
   end
   if t >= 2.0 and not s._ng_gone then         -- garrison out of ammunition
@@ -112,7 +113,7 @@ local function physics()
   end
   if t >= tca + 3 and not s._ca_win and ctx.p["response.strength"] >= 700 then
     s._ca_win = true                          -- strong counterattack destroys the VDV
-    for _, u in ipairs(MOCK.live("VDV")) do MOCK.units[u.guid] = nil end
+    for _, u in ipairs(MOCK.live("RU_VDV_")) do MOCK.units[u.guid] = nil end
   end
   local m = MOCK.missions["BL Airlift"]
   local base = MOCK.units[(function() for g, u in pairs(MOCK.units) do if u.name == "Hostomel Airport" then return g end end end)() or ""]
@@ -123,7 +124,8 @@ local function physics()
 end
 
 local guard = 0
-while BL.state.phase ~= "done" and guard < 20000 do
+local max_ticks = 3000 * (#BL_DESIGN.runs + 1)   -- 48 game hours = 2880 one-minute ticks per run
+while BL.state.phase ~= "done" and guard < max_ticks do
   MOCK.now = MOCK.now + 60
   physics()
   BL.tick()
@@ -175,6 +177,10 @@ if not design_file or design_file == "-" then
   check(spawn_counts[0].ca == 0, "counterattack is deferred, not spawned at H-hour")
   check(tonumber(rows[1]["m.counterattack_kept"]) == 6 and tonumber(rows[0]["m.counterattack_kept"]) == 3,
         "counterattack size follows response.strength")
+  check(tonumber(rows[0]["m.vdv_delivered"]) > 10, "helicopters at the airfield deliver VDV squads ("
+        .. tostring(rows[0]["m.vdv_delivered"]) .. ")")
+  check(tonumber(rows[2]["m.vdv_delivered"]) <= 10, "a 10-helicopter lift delivers at most 10 squads")
+  check(spawn_counts[0].vdv == 0, "VDV squads are not spawned at H-hour")
   check(tonumber(rows[1]["m.runway_end"]) < 1.0, "scripted demolition damages the runway after a retake")
 end
 

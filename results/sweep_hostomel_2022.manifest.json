@@ -1,9 +1,10 @@
 {
   "framework": "battlelab",
-  "version": "0.1.0",
-  "created": "2026-09-24T20:01:10",
-  "python": "3.12.3",
-  "numpy": "2.4.4",
+  "version": "0.2.0",
+  "created": "2026-09-24T21:29:43",
+  "python": "3.11.15",
+  "numpy": "2.4.6",
+  "scenario": "9508ed52a5868558",
   "grid": {
     "risk.tolerance": [
       0.0,

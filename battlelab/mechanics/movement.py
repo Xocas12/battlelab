@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ..engine import Mechanic, Phase
-from ..state import ACTIVE, PENDING, World
+from ..state import PENDING, World
 
 AIR_MODES = ("air_assault", "parachute", "glider")
 

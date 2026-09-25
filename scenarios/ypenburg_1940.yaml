@@ -1,0 +1,205 @@
+id: ypenburg_1940
+title: "Ypenburg airfield, The Hague, 10-11 May 1940"
+family: airhead
+description: >
+  German air-landing at Ypenburg on the first day of the invasion of the
+  Netherlands. The field was bombed at dawn, paratroops dropped around it and
+  Ju 52s landed troops of Infanterie-Regiment 65 (22. Luftlande-Division) into
+  the fire of the Grenadiers and their Landsverk armoured cars. Burning wrecks
+  closed the runway to later waves, and Dutch counterattacks retook the field
+  in the afternoon. A failure case for the airhead family: it stresses the
+  runway, landing-under-fire and airlift mechanics.
+  Sourcing is thin (search excerpts of the sources below, not full texts), so
+  most values are flagged assumptions with low confidence.
+clock:
+  h_hour_local: 4.25        # bombing of the field ~04:15, drops immediately after
+  dt_h: 0.25
+  horizon_h: 48
+
+sources:
+  WOH:
+    cite: "War over Holland - May 1940: the Dutch struggle, 'Ypenburg' (airlandings around The Hague)"
+    url: "https://waroverholland.nl/10-may/airlanding/ypenburg"
+  BRONGERS:
+    cite: "E.H. Brongers, 'The Battle for The Hague 1940: The First Great Airborne Operation in History', Aspekt, 2004"
+    note: "cited via WOH and secondary summaries, not read directly"
+
+parameters:
+  # AIR ---------------------------------------------------------------------
+  air.att.ingress_loss: {dist: uniform, lo: 0.03, hi: 0.10, source: WOH, assumption: true, confidence: low,
+    note: "Dutch fighters and AA engaged the transport stream; losses on the approach reported but not quantified here"}
+  air.att.approach_loss: {dist: uniform, lo: 0.05, hi: 0.15, source: WOH, assumption: true, confidence: low,
+    note: "Landsverk armoured cars (Bofors 3.7 cm, Lewis MGs) and AA MGs covered the field"}
+  air.att.suppression: {dist: uniform, lo: 0.2, hi: 0.5, source: WOH, assumption: true,
+    note: "dawn bombing of the defences; several positions survived and fired on the first wave"}
+  air.att.interdiction: {dist: uniform, lo: 0.1, hi: 0.3, assumption: true}
+  air.att.cas: {dist: uniform, lo: 1.1, hi: 1.3, assumption: true}
+  # MASS --------------------------------------------------------------------
+  mass.aircraft: {dist: uniform, lo: 13, hi: 26, source: WOH, assumption: true, confidence: low,
+    note: "paratroop drop of one to two companies around the field. REVISED once after the first anchor run: the draft value (fixed 13) left paratroops breaking within the hour in most runs, contradicting WOH (Germans held the base buildings until the afternoon)"}
+  mass.capacity: {dist: fixed, value: 12, assumption: true}
+  mass.dz_loss: {dist: uniform, lo: 0.30, hi: 0.60, source: WOH, confidence: low,
+    note: "Dutch machine-gun fire inflicted casualties and scattered the landings"}
+  mass.reserve_aircraft: {dist: fixed, value: 0, assumption: true, note: "no second drop at Ypenburg modelled"}
+  mass.reserve_capacity: {dist: fixed, value: 12, assumption: true}
+  mass.reserve_dz: {dist: fixed, value: 0.0, assumption: true}
+  mass.t_reserve: {dist: fixed, value: 30.0, assumption: true}
+  # HOLD --------------------------------------------------------------------
+  hold.strength: {dist: uniform, lo: 300, hi: 700, source: WOH, assumption: true, confidence: low,
+    note: "III Bn Regiment Grenadiers plus armoured cars and AA, counting only what could engage the landing area. REVISED once with mass.aircraft (draft 500-800, the whole battalion)"}
+  hold.quality: {dist: uniform, lo: 0.8, hi: 1.0, assumption: true,
+    note: "conscript army without combat experience, but well sited and alert"}
+  hold.dug_in: {dist: fixed, value: 1.3, assumption: true}
+  hold.base_hazard: {dist: uniform, lo: 0.01, hi: 0.04, assumption: true}
+  hold.ammo_out_h: {dist: fixed, value: 1000.0, assumption: true, note: "no ammunition crisis reported"}
+  hold.decision_h: {dist: fixed, value: 0.0, assumption: true, note: "0 = continuous; no command-cycle evidence"}
+  hold.comms_loss: {dist: fixed, value: 0.0, assumption: true}
+  hold.fog: {dist: fixed, value: 0.0, assumption: true}
+  hold.night_moves: {dist: fixed, value: 0, assumption: true}
+  # RESPONSE ----------------------------------------------------------------
+  response.t_ca: {dist: uniform, lo: 5.0, hi: 9.0, source: WOH, confidence: low,
+    note: "counterattack launched 'several hours later'; field retaken in the afternoon"}
+  response.strength: {dist: uniform, lo: 400, hi: 900, source: WOH, assumption: true,
+    note: "Grenadier companies and supporting units; one company alone took 123 prisoners"}
+  response.commit_h: {dist: uniform, lo: 8, hi: 14, assumption: true}
+  response.withdraw_ratio: {dist: fixed, value: 2.0, assumption: true}
+  # DENIAL ------------------------------------------------------------------
+  denial.obstacles0: {dist: fixed, value: 0.0, assumption: true, note: "no deliberate obstruction reported"}
+  denial.t_fires: {dist: uniform, lo: 4.0, hi: 9.0, source: WOH, confidence: low,
+    note: "Dutch artillery shelled the airfield in support of the counterattack"}
+  denial.fire_intensity: {dist: uniform, lo: 0.3, hi: 0.6, assumption: true}
+  denial.crater_rate: {dist: uniform, lo: 0.0, hi: 0.03, assumption: true}
+  denial.demolish_rate: {dist: uniform, lo: 0.0, hi: 0.05, assumption: true}
+  # RISK --------------------------------------------------------------------
+  risk.tolerance: {dist: uniform, lo: 0.40, hi: 0.70, source: WOH, assumption: true,
+    note: "first wave landed into the defenders' fire on schedule; later waves turned away only when wrecks blocked the strip"}
+  risk.land_contested: {dist: fixed, value: 1, source: WOH, confidence: medium,
+    note: "air-landing timed to follow the drop, not the capture of the field"}
+  # CONTEXT (not swapped) ---------------------------------------------------
+  ctx.aircraft: {dist: fixed, value: 12, source: WOH, confidence: medium,
+    note: "first twelve Ju 52 with the first air-landing infantry"}
+  ctx.troops_per_aircraft: {dist: uniform, lo: 12, hi: 16, source: WOH, confidence: medium,
+    note: "about 150-200 men on board the first wave"}
+  ctx.wave1_t: {dist: uniform, lo: 0.5, hi: 1.0, source: WOH, assumption: true,
+    note: "shortly after the drop"}
+  ctx.wave2_t: {dist: uniform, lo: 1.5, hi: 2.5, assumption: true}
+  ctx.wave3_t: {dist: uniform, lo: 3.0, hi: 4.5, source: WOH, assumption: true,
+    note: "burning planes on the strip prevented many third-wave Ju 52 from landing"}
+  ctx.loiter_h: {dist: fixed, value: 0.5, assumption: true, note: "Ju 52 diverted to other fields and beaches"}
+  ctx.night_limited_air: {dist: fixed, value: 1, assumption: true, note: "1940 air power is essentially day-only"}
+  ctx.wreck_obstacle: {dist: uniform, lo: 0.03, hi: 0.06, source: WOH, assumption: true,
+    note: "fourteen burning aircraft closed the strip; a Ju 52 wreck on a grass field blocks a lot of it"}
+  # MECHANIC CONSTANTS (identical across the family) ------------------------
+  mech.kill_rate: {dist: fixed, value: 0.01, assumption: true, note: "casualties per effective shooter-hour"}
+  mech.ratio_coeff: {dist: fixed, value: 0.10, assumption: true}
+  mech.casualty_coeff: {dist: fixed, value: 0.30, assumption: true}
+  mech.ammo_hazard: {dist: fixed, value: 2.0, assumption: true}
+  mech.go_width: {dist: fixed, value: 0.02, assumption: true,
+    note: "logistic go/no-go rule only: spread of accepted risk around the tolerance, per wave or sortie"}
+  mech.info_lag_h: {dist: fixed, value: 0.0, assumption: true,
+    note: "delay between the true landing risk and the decision maker's estimate; 0 = perfect information"}
+  mech.contested_risk: {dist: fixed, value: 0.35, source: WOH, assumption: true,
+    note: "of the 150-200 men of the first wave only few came out unscathed; value shared across the family"}
+  doctrine.hasty_defense: {dist: fixed, value: 1.2, assumption: true}
+  doctrine.clear_rate: {dist: fixed, value: 0.15, assumption: true}
+
+sides:
+  DE:
+    role: attacker
+    air: {cas: $air.att.cas, suppress_enemy_fires: $air.att.suppression, interdiction: $air.att.interdiction,
+          ingress_loss: $air.att.ingress_loss, approach_loss: $air.att.approach_loss,
+          night_limited: $ctx.night_limited_air}
+    doctrine: {risk_tolerance: $risk.tolerance, clear_rate: $doctrine.clear_rate,
+               hasty_defense: $doctrine.hasty_defense, land_contested: $risk.land_contested}
+  NL:
+    role: defender
+    air: {night_limited: $ctx.night_limited_air}
+    doctrine: {demolish_rate: $denial.demolish_rate}
+
+zones:
+  airfield: {kind: airfield, control: NL, runway: {obstacles: $denial.obstacles0}}
+
+units:
+  grenadiers_iii_bn:
+    side: NL
+    kind: infantry
+    strength: $hold.strength
+    quality: $hold.quality
+    dug_in: $hold.dug_in
+    morale: {base_hazard: $hold.base_hazard, ammo_out_h: $hold.ammo_out_h,
+             decision_h: $hold.decision_h, comms_loss: $hold.comms_loss, fog: $hold.fog,
+             night_moves: $hold.night_moves}
+    arrive: {t: 0.0, zone: airfield}
+  fallschirmjaeger:
+    side: DE
+    kind: parachute_infantry
+    morale: {on_break: disperse}
+    arrive: {t: 0.0, zone: airfield, mode: parachute, aircraft: $mass.aircraft,
+             capacity: $mass.capacity, dz_loss: $mass.dz_loss}
+  airborne_reserve:
+    side: DE
+    kind: parachute_infantry
+    morale: {on_break: disperse}
+    arrive: {t: $mass.t_reserve, zone: airfield, mode: parachute, aircraft: $mass.reserve_aircraft,
+             capacity: $mass.reserve_capacity, dz_loss: $mass.reserve_dz, only_if_present: true}
+  nl_counterattack:
+    side: NL
+    kind: infantry
+    strength: $response.strength
+    morale: {commit_h: $response.commit_h, withdraw_ratio: $response.withdraw_ratio}
+    arrive: {t: $response.t_ca, zone: airfield}
+  ir_65:
+    side: DE
+    kind: airlanded_infantry
+    morale: {on_break: disperse}
+
+fires:
+  - {id: nl_artillery, side: NL, zone: airfield, active_from: $denial.t_fires,
+     intensity: $denial.fire_intensity, crater_rate: $denial.crater_rate}
+
+airlift:
+  side: DE
+  zone: airfield
+  unit: ir_65
+  aircraft: $ctx.aircraft
+  troops_per_aircraft: $ctx.troops_per_aircraft
+  mode: waves
+  waves: [$ctx.wave1_t, $ctx.wave2_t, $ctx.wave3_t]
+  loiter_h: $ctx.loiter_h
+  wreck_obstacle: $ctx.wreck_obstacle
+  contested_risk: $mech.contested_risk
+
+mechanics:
+  # resolver: lanchester | crt. The CRT is ILLUSTRATIVE, not calibrated: at 1:1 it
+  # costs the attacker ~6%/h against Lanchester's 1%/h, and its exchange ratio
+  # grows roughly linearly with odds rather than with odds squared
+  # (`battlelab resolvers`). Use it to test whether a conclusion depends on the
+  # attrition model, never for magnitudes.
+  combat: {resolver: lanchester, kill_rate: $mech.kill_rate, fire_weight_defend: 1.0, fire_weight_attack: 2.0}
+  morale: {ratio_coeff: $mech.ratio_coeff, casualty_coeff: $mech.casualty_coeff, ammo_hazard: $mech.ammo_hazard}
+  go_no_go: {rule: threshold, width: $mech.go_width, info_lag_h: $mech.info_lag_h}   # rule: threshold | logistic
+
+outcome: {zone: airfield, airbridge_troops: 500}
+
+factors:
+  AIR: [air.att.ingress_loss, air.att.approach_loss, air.att.suppression, air.att.interdiction, air.att.cas]
+  MASS: [mass.aircraft, mass.capacity, mass.dz_loss, mass.reserve_aircraft, mass.reserve_capacity,
+         mass.reserve_dz, mass.t_reserve]
+  HOLD: [hold.strength, hold.quality, hold.dug_in, hold.base_hazard, hold.ammo_out_h,
+         hold.decision_h, hold.comms_loss, hold.fog, hold.night_moves]
+  RESPONSE: [response.t_ca, response.strength, response.commit_h, response.withdraw_ratio]
+  DENIAL: [denial.obstacles0, denial.t_fires, denial.fire_intensity, denial.crater_rate, denial.demolish_rate]
+  RISK: [risk.tolerance, risk.land_contested]
+
+anchors:
+  - {id: germans_take_field, metric: attacker_ever_controls, op: eq, value: true, source: WOH,
+     note: "German troops held the airbase buildings until the counterattack forced them out"}
+  - {id: first_wave_lands_under_fire, metric: t_first_landing, op: le, value: 1.5, source: WOH,
+     note: "the first twelve Ju 52 landed straight into the defenders' fire"}
+  - {id: heavy_transport_losses, metric: transports_lost, op: ge, value: 8, source: WOH,
+     note: "fourteen burning aircraft on the landing strip"}
+  - {id: runway_blocked, metric: runway_end, op: lt, value: 0.6, source: WOH,
+     note: "Ypenburg rendered unusable by the many wrecks"}
+  - {id: no_airbridge, metric: airbridge, op: eq, value: false, source: WOH}
+  - {id: germans_lose_field, metric: attacker_holds_end, op: eq, value: false, source: WOH,
+     note: "by evening every German near Ypenburg had been killed or captured"}
