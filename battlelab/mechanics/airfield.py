@@ -274,6 +274,9 @@ class Outcome(Mechanic):
         self.s = spec
 
     def step(self, w: World):
+        att = w.attacker()
+        if w.units_in(self.s.zone, att):
+            w.persist["attacker_hours"] = w.persist.get("attacker_hours", 0.0) + w.dt
         st = w.persist.get("airlift", {})
         if w.metrics.get("t_airbridge") is None and \
                 st.get("landed", 0.0) >= self.s.airbridge_troops:
@@ -297,6 +300,7 @@ class Outcome(Mechanic):
             transports_lost=st.get("lost", 0),
             t_control=t_att,
             attacker_ever_controls=t_att is not None,
+            attacker_hours_on_field=w.persist.get("attacker_hours", 0.0),
             attacker_lost_control=lost_after,
             attacker_holds_end=z.control == att,
             defender_retakes=t_att is not None and any(
