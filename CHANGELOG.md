@@ -1,15 +1,5 @@
 # Changelog
 
-## Unreleased
-
-CMO backend (still untested in a live build; everything below passes against the mock CMO API):
-
-* `bl_probe.lua`: checks every API assumption in a live build from any scenario, without running the clock.
-* `bl_build_hostomel.lua` + `bl_build_db.lua`: builds the whole Hostomel scenario from an empty one; the user only supplies DBIDs.
-* Fix: Russian air-assault troops were never put on the ground in CMO (respawned helicopters carry no cargo). They are now scripted RU_VDV_ squads unloaded by each helicopter that reaches the airfield; new metric `vdv_delivered`.
-* Fix: `BL.selftest` failed in the documented flow (after the scenario-loaded event had started a batch and emptied the map).
-* `cmo-export --start`, a 20-run pilot kit in `cmo/pilot/`, and an end-to-end mock test (build, selftest, replications through `bl_run.lua`).
-
 ## 0.2.0 (2026-09-24)
 
 Model changes (each reduces exactly to 0.1.0 behaviour at its default; checked run-for-run):
@@ -21,7 +11,19 @@ Model changes (each reduces exactly to 0.1.0 behaviour at its default; checked r
 
 New scenario: **Ypenburg 1940** (third member of the airhead family; thinly sourced, see CLAUDE.md).
 
-Tooling: schema lint with paths; `battlelab report` (writes results/SUMMARY.md), `resolvers`, `compare-backends`; `--go-rule`, `--set` and `--tag` on every experiment command; one process pool per swap or sweep (3.6x faster on 4 cores); CI with ruff, mypy, pytest and the Lua harness.
+### CMO backend
+
+Not yet run in a live CMO build; everything below passes against the mock CMO API.
+
+* `bl_probe.lua`: checks every API assumption in a live build from any scenario, without running the clock.
+* `bl_build_hostomel.lua` + `bl_build_db.lua`: builds the whole Hostomel scenario from an empty one; the user only supplies DBIDs.
+* Fix: Russian air-assault troops were never put on the ground in CMO (respawned helicopters carry no cargo). They are now scripted RU_VDV_ squads unloaded by each helicopter that reaches the airfield; new metric `vdv_delivered`.
+* Fix: `BL.selftest` failed in the documented flow (after the scenario-loaded event had started a batch and emptied the map).
+* `cmo-export --start`, a 20-run pilot kit in `cmo/pilot/`, and an end-to-end mock test (build, selftest, replications through `bl_run.lua`).
+
+### Tooling
+
+Schema lint with paths; `battlelab report` (writes results/SUMMARY.md), `resolvers`, `compare-backends`; `--go-rule`, `--set` and `--tag` on every experiment command; one process pool per swap or sweep (3.6x faster on 4 cores); CI with ruff, mypy, pytest and the Lua harness.
 
 Results (all in results/, regenerated with `scripts/reproduce.sh`, N = 1000, seed 1):
 

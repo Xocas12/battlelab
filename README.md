@@ -81,7 +81,7 @@ cmo/SETUP.md       how to wire the harness into a CMO scenario
 
 ## CMO in one paragraph
 
-Build the scenario in the CMO editor using the naming conventions in `cmo/SETUP.md`, add two events (scenario-loaded runs `bl_run.lua`, a one-minute regular-time event calls `BL.tick()`), and run `BL.selftest(BL_HOSTOMEL)` in the Lua console. Generate a design with `battlelab cmo-export scenarios/hostomel_2022.yaml -n 200 --out "<CMO>/Lua/battlelab/bl_design.lua"`, load the scenario, set maximum time compression and let it run. Each 48-game-hour cycle is one replication. Feed the resulting CSV (or a pasted console log) to `battlelab cmo-ingest`.
+Nothing has to be placed by hand. Copy `cmo/lua/battlelab/` into `<CMO>/Lua/`, run `bl_probe.lua` in any scenario to check your build's Lua API, fill in the database IDs in `bl_build_db.lua`, and run `bl_build_hostomel.lua` in a new, empty scenario: it builds the whole Hostomel scenario, including the two harness events. Save it, copy a design from `battlelab cmo-export` (or the ready-made 20-run pilot in `cmo/pilot/`) to `<CMO>/Lua/battlelab/bl_design.lua`, load the scenario, run `BL.selftest(BL_HOSTOMEL)`, set maximum time compression and let it run. Each 48-game-hour cycle is one replication. Feed the resulting CSV (or a pasted console log) to `battlelab cmo-ingest` or `battlelab compare-backends`. Step-by-step: `cmo/pilot/README.md`; reference: `cmo/SETUP.md`. The CMO side has so far only run against a mock of the CMO Lua API; live verification is tracked in issue #2.
 
 ## Current results and handoff
 
