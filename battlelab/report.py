@@ -9,6 +9,7 @@ the changelog and in the reader's head.
 from __future__ import annotations
 
 import itertools
+import re
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -90,6 +91,7 @@ def run_report(cfg: ReportConfig) -> Path:
     by_id = {s.id: s for s in scen}
     N, seed, W = cfg.n, cfg.seed, cfg.workers
     sec: list[str] = []
+    values: dict[str, float] = {}      # {{key}} placeholders for results/NOTES.md
     t0 = time.time()
 
     # 1. anchors ----------------------------------------------------------------
@@ -101,6 +103,9 @@ def run_report(cfg: ReportConfig) -> Path:
             df = experiment.run_batch(v, 2 * N, seed, W)
             t = analysis.check_anchors(df, s.anchors)
             anchor_tabs[(s.id, r)] = t
+            for _, row in t.iterrows():
+                key = "joint" if row["anchor"] == "ALL (joint)" else row["anchor"]
+                values[f"anchor.{s.id}.{r}.{key}"] = float(row["share"])
             experiment.save(t, out, f"anchors_{s.id}_{r}",
                             {"scenario": v.fingerprint(), "n": 2 * N, "seed": seed,
                              "variant": v.variant})
@@ -174,6 +179,13 @@ def run_report(cfg: ReportConfig) -> Path:
                                          factors=cfg.factors, workers=W)
             t = analysis.shapley_table(res)
             res_by_r[r] = (res, t)
+            k = len(res.factors)
+            pair = f"{h.id}__{w.id}.{r}"
+            values[f"swap.{pair}.base"] = res.value((0,) * k)
+            values[f"swap.{pair}.full"] = res.value((1,) * k)
+            for row in t.itertuples():
+                values[f"shapley.{pair}.{row.factor}"] = float(row.shapley)
+                values[f"single.{pair}.{row.factor}"] = float(row.single_swap_p)
             meta = {"home": h.fingerprint(), "away": w.fingerprint(), "n": n, "seed": seed,
                     "resolver": r}
             experiment.save(res.table(), out, f"swap_{h.id}__{w.id}_{r}", meta)
@@ -238,10 +250,47 @@ def run_report(cfg: ReportConfig) -> Path:
             "and every interval covers Monte Carlo noise only.\n\n"
             "Scenario fingerprints: "
             + ", ".join(f"`{s.id}` {s.fingerprint()}" for s in scen) + ".")
+    notes = out / "NOTES.md"
+    if notes.exists():
+        sec.insert(0, "## Reading these results\n\n" + fill_notes(notes.read_text(), values))
+    experiment.save(pd.DataFrame(sorted(values.items()), columns=["key", "value"]), out,
+                    "report_values", {"seed": seed, "n": N})
     path = out / "SUMMARY.md"
     path.write_text(head + "\n\n" + "\n\n".join(sec) + "\n")
     _say(cfg, f"wrote {path}")
     return path
+
+
+NOTE_KEY = re.compile(r"\{\{\s*([^}|\s]+)\s*(?:\|\s*(\w+)\s*)?\}\}")
+
+
+def fill_notes(text: str, values: dict[str, float]) -> str:
+    """Replace {{key}} (or {{key|pct}}, {{key|signed}}) in hand-written notes with
+    numbers from this run, so interpretation cannot drift from the tables.
+    Unknown keys are an error: the list of valid keys is in report_values.csv."""
+    missing = []
+
+    def sub(m: re.Match) -> str:
+        key, fmt = m.group(1), m.group(2)
+        if key not in values:
+            missing.append(key)
+            return m.group(0)
+        v = values[key]
+        if fmt == "pct":
+            return f"{100 * v:.0f}%"
+        if fmt == "signed":
+            return f"{v:+.2f}"
+        return f"{v:.2f}"
+
+    out = NOTE_KEY.sub(sub, text)
+    if missing:
+        keys = ", ".join(sorted(set(missing)))
+        raise SystemExit(f"NOTES.md refers to unknown result keys: {keys} "
+                         "(valid keys: results/report_values.csv)")
+    lines = out.strip().splitlines()
+    if lines and lines[0].startswith("# "):   # the notes' own title is replaced by the section's
+        lines = lines[1:]
+    return "\n".join(lines).strip()
 
 
 def _in_box(values: pd.Series, bounds: tuple[float, float]) -> list[float]:
