@@ -94,3 +94,7 @@ Results, with every number traced to a file, are in `results/SUMMARY.md`, writte
 * The combat, morale and landing-risk constants are flagged assumptions. The CRT table is a structural alternative, not a calibrated one (`battlelab resolvers` shows how far apart the two are).
 * Ypenburg 1940 was sourced from search excerpts only; its parameters are mostly low-confidence assumptions and the model reproduces its history poorly (see `CLAUDE.md`).
 * See `docs/MODELING_STANDARDS.md` for how results should and should not be read.
+
+## Licence
+
+MIT, see `LICENSE`. This covers battlelab's own code and data. Command: Modern Operations is a separate commercial product under its own licence (see `cmo/SETUP.md`).
