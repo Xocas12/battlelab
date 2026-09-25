@@ -232,7 +232,10 @@ def cmd_resolvers(a):
 def cmd_report(a):
     import glob
 
-    from .report import ReportConfig, run_report
+    from .report import ReportConfig, apply_notes, run_report
+    if a.notes_only:
+        print(f"updated {apply_notes(a.out)}")
+        return
     files = a.scenarios or sorted(glob.glob("scenarios/*.yaml"))
     cfg = ReportConfig(scenarios=files, n=a.n, seed=a.seed, workers=a.workers, out=a.out,
                        sweep_scenario=a.sweep, go_rule_pair=tuple(a.go_pair.split(","))
@@ -354,6 +357,8 @@ def main(argv=None):
     p.add_argument("--sweep", default="hostomel_2022", help="scenario id to sweep")
     p.add_argument("--go-pair", default="hostomel_2022,maleme_1941",
                    help="scenario ids for the go/no-go rule comparison")
+    p.add_argument("--notes-only", action="store_true",
+                   help="only re-embed results/NOTES.md into the existing SUMMARY.md")
     p.set_defaults(fn=cmd_report)
 
     p = sub.add_parser("resolvers", help="loss rates of the combat resolvers side by side")
