@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import pytest
 import yaml
 
@@ -446,6 +447,16 @@ def test_report_smoke(tmp_path):
     assert "hostomel_2022 given maleme_1941's factors" in text
     assert (tmp_path / "anchors_maleme_1941_crt.manifest.json").exists()
     assert (tmp_path / "shapley_hostomel_2022__maleme_1941_lanchester.csv").exists()
+    assert "## Reading these results" not in text                  # no NOTES.md: no section
+    (tmp_path / "NOTES.md").write_text(
+        "# Notes\nMaleme joint {{anchor.maleme_1941.lanchester.joint}}.")
+    text = run_report(cfg).read_text()
+    assert "## Reading these results\n\nMaleme joint 0." in text
+    from battlelab.report import apply_notes
+    (tmp_path / "NOTES.md").write_text("Edited: {{anchor.maleme_1941.crt.joint|pct}}.")
+    text = apply_notes(tmp_path).read_text()
+    assert text.count("## Reading these results") == 1 and "Edited: " in text
+    assert text.index("## Reading these results") < text.index("## 1.")
 
 
 @pytest.mark.skipif(LUA is None, reason="needs a Lua 5.3 interpreter")
@@ -474,3 +485,75 @@ def test_cmo_build_script_end_to_end(tmp_path):
     assert "BUILD END-TO-END PASSED" in r.stdout
     df = ingest(tmp_path / "battlelab_results.csv")
     assert len(df) == 3 and (df["m.vdv_delivered"] > 0).any()
+
+
+# --------------------------------------------------- shock and no-retreat ---
+def test_shock_scales_enemy_effectiveness_and_decays():
+    ypb = Scenario.load(YPB).with_overrides({"mass.shock": 0.5, "mass.shock_decay_h": 2.0})
+    w, mechs = ypb.build(ypb.space.sample(1, 0), 1, 0)
+    from battlelab.engine import Engine
+    eng = Engine(mechs)
+    for m in eng.mechanics:
+        m.setup(w)
+    w.t = 0.0
+    w.scratch = {}
+    for m in eng.mechanics:
+        if m.name in ("arrivals", "air", "fires"):
+            m.step(w)
+    combat = next(m for m in eng.mechanics if m.name == "combat")
+    nl = w.units["grenadiers_iii_bn"]
+    base = nl.strength * nl.quality * w.scratch["cas"]["NL"] * nl.dug_in
+    assert combat.unit_eff(w, nl) == pytest.approx(base * 0.5)
+    w.t = 2.0
+    assert combat.unit_eff(w, nl) == pytest.approx(base * (1 - 0.5 * math.exp(-1)))
+    de = w.units["fallschirmjaeger"]
+    assert ("airfield", "NL") not in w.persist["shock"]      # only the landing side shocks
+    assert combat.unit_eff(w, de) > 0
+
+
+def test_cornered_troops_hold_longer():
+    """A smaller force-ratio morale term keeps the airborne troops on the field longer."""
+    ypb = Scenario.load(YPB)
+    a = experiment.run_batch(ypb.with_overrides({"mass.cornered": 1.0}), 300, seed=3)
+    b = experiment.run_batch(ypb.with_overrides({"mass.cornered": 0.2}), 300, seed=3)
+    assert b["m.attacker_hours_on_field"].mean() > a["m.attacker_hours_on_field"].mean() + 0.5
+
+
+@pytest.mark.parametrize("path", [HOST, MAL, YPB])
+def test_attacker_hours_metric(path):
+    s = Scenario.load(path)
+    df = experiment.run_batch(s, 80, seed=5)
+    h = df["m.attacker_hours_on_field"]
+    assert (h >= 0).all() and (h <= s.horizon + s.dt).all()
+    assert (h[df["m.attacker_ever_controls"]] > 0).all()
+
+
+def test_move_delay_spreads_withdrawal():
+    mal = Scenario.load(MAL)
+    a = experiment.run_batch(mal, 300, seed=4)
+    b = experiment.run_batch(mal.with_overrides({"hold.move_delay_h": 3.0}), 300, seed=4)
+    ta = pd.to_numeric(a["m.t_control"], errors="coerce").dropna()
+    tb = pd.to_numeric(b["m.t_control"], errors="coerce").dropna()
+    assert tb.std() > ta.std() and tb.median() >= ta.median()
+
+
+def test_commit_time():
+    from battlelab.mechanics.airfield import Airlift, AirliftSpec
+    def at(lag, cycle, t):
+        return Airlift(AirliftSpec("DE", "airfield", "x", 10, 10, mode="shuttle",
+                                   commit_lag_h=lag, commit_cycle_h=cycle)).commit_time(t)
+    assert at(0, 0, 13.25) == 13.25                   # defaults: no gate
+    assert at(3, 0, 13.25) == 16.25                   # lag only
+    assert at(3, 8, 13.25) == 24.0                    # next decision point after the report
+    assert at(3, 8, 13.0) == 16.0                     # report lands exactly on a point
+
+
+def test_notes_placeholders():
+    from battlelab.report import fill_notes
+    vals = {"anchor.x.lanchester.joint": 0.6789, "shapley.a__b.crt.RISK": -0.25}
+    out = fill_notes("# Title\nJoint {{anchor.x.lanchester.joint}}"
+                     " ({{ anchor.x.lanchester.joint|pct }}),"
+                     " RISK {{shapley.a__b.crt.RISK|signed}}.", vals)
+    assert out == "Joint 0.68 (68%), RISK -0.25."
+    with pytest.raises(SystemExit, match="unknown result keys: nope"):
+        fill_notes("{{nope}}", vals)
