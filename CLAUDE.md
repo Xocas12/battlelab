@@ -4,7 +4,7 @@ Guidance for Claude Code working in this repository. Read `README.md`, `docs/ARC
 
 ## What this is
 
-`battlelab` is a Monte Carlo framework for comparative analysis of historical battles, currently one scenario family ("airhead": seizing an airfield and flying troops in) with five members: Hostomel 2022, Maleme 1941, Ypenburg 1940, and Heraklion and Rethymno 1941 (within-campaign controls for Maleme). It has two engines behind one analysis layer: a native Python engine (board-game turn sequence, pluggable mechanics) and a Lua harness that runs replications inside Command: Modern Operations (public edition). Status: v0.3.0. Current results are in `results/SUMMARY.md`.
+`battlelab` is a Monte Carlo framework for comparative analysis of historical battles, currently one scenario family ("airhead": seizing an airfield and flying troops in) with six members: Hostomel 2022, Maleme 1941, Ypenburg 1940, Valkenburg 1940 (soft ground), and Heraklion and Rethymno 1941 (within-campaign controls for Maleme). It has two engines behind one analysis layer: a native Python engine (board-game turn sequence, pluggable mechanics) and a Lua harness that runs replications inside Command: Modern Operations (public edition). Status: v0.3.0. Current results are in `results/SUMMARY.md`.
 
 ## Commands
 
@@ -14,7 +14,7 @@ python -m pytest -q                   # must pass before every commit (~35 s)
 ruff check battlelab tests && mypy battlelab   # must be clean (CI runs both)
 battlelab lint scenarios/*.yaml       # must be clean before every commit
 battlelab trace scenarios/hostomel_2022.yaml --run 3     # read one run as a log
-N=200 scripts/reproduce.sh            # smoke run of `battlelab report`; N=1000 for the real thing (~30 min, 4 cores)
+N=200 scripts/reproduce.sh            # smoke run of `battlelab report`; N=1000 for the real thing (~47 min, 4 cores; PAIRS="" for every pair)
 battlelab resolvers                   # loss rates of the two combat resolvers
 battlelab compare-backends native_runs.csv cmo_results.csv  # run-by-run backend comparison
 mkdir -p /tmp/out && cd cmo && lua5.3 tests/test_harness.lua lua /tmp/out -  # Lua harness vs mock CMO API
