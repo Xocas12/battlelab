@@ -38,6 +38,7 @@ class ReportConfig:
         "denial.t_fires": list(np.linspace(1, 12, 12))})
     go_rule_pair: tuple[str, str] | None = None  # ids for the go/no-go comparison
     factors: list[str] | None = None             # swap only these bundles (default: all)
+    pairs: list[tuple[str, str]] | None = None   # swap only these (both directions); None = all
     # one-parameter sweeps: (tag, scenario id, parameter, values, fixed overrides)
     line_sweeps: list[tuple[str, str, str, list[float], dict]] = field(default_factory=list)
     log: bool = True
@@ -172,6 +173,9 @@ def run_report(cfg: ReportConfig) -> Path:
     _say(cfg, "factor swaps")
     swap_parts = []
     pairs = [(a, b) for a, b in itertools.permutations(scen, 2) if a.family == b.family]
+    if cfg.pairs is not None:
+        wanted = {frozenset(p) for p in cfg.pairs}
+        pairs = [(a, b) for a, b in pairs if frozenset((a.id, b.id)) in wanted]
     n_crt = max(50, int(N * 0.4))
     for h, w in pairs:
         res_by_r = {}
