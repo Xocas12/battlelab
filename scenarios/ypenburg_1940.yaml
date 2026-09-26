@@ -214,8 +214,8 @@ factors:
          mass.reserve_dz, mass.t_reserve, mass.shock, mass.shock_decay_h,
          mass.cornered]
   HOLD: [hold.strength, hold.quality, hold.dug_in, hold.base_hazard, hold.ammo_out_h,
-         hold.decision_h, hold.comms_loss, hold.fog, hold.night_moves,
-         hold.move_delay_h, hold.perimeter_frac, hold.perimeter_fire]
+         hold.perimeter_frac, hold.perimeter_fire]
+  COMMAND: [hold.decision_h, hold.comms_loss, hold.fog, hold.night_moves, hold.move_delay_h]
   RESPONSE: [response.t_ca, response.strength, response.commit_h, response.withdraw_ratio]
   DENIAL: [denial.obstacles0, denial.t_fires, denial.fire_intensity, denial.crater_rate, denial.demolish_rate]
   RISK: [risk.tolerance, risk.land_contested, risk.commit_lag_h, risk.commit_cycle_h]
