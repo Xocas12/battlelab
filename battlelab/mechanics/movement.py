@@ -20,6 +20,9 @@ class ArrivalSpec:
     dz_loss: float = 0.0            # fraction lost on landing / in the drop zone
     only_if_present: bool = False   # e.g. airborne reserves: only drop if own
                                     # troops still hold or contest the zone
+    shock: float = 0.0              # surprise: initial fractional loss of enemy
+                                    # effectiveness in the zone (air arrivals only)
+    shock_decay_h: float = 2.0      # e-folding time of that shock
 
 
 class Arrivals(Mechanic):
@@ -59,6 +62,10 @@ class Arrivals(Mechanic):
                 u.status = "cancelled"
                 w.emit("arrival_cancelled", unit=u.id, reason="zero strength")
                 continue
+            if a.mode in AIR_MODES and a.shock > 0 and zone.control != u.side:
+                shocks = w.persist.setdefault("shock", {})
+                shocks[(a.zone, u.side)] = (w.t, a.shock, max(a.shock_decay_h, 1e-6))
+                w.emit("shock", zone=a.zone, by=u.side, magnitude=round(a.shock, 2))
             enemy_here = any(x.side != u.side for x in w.units_in(a.zone))
             held_by_enemy = zone.control not in (None, u.side)
             posture = "attack" if (held_by_enemy or (enemy_here and zone.control != u.side)) \

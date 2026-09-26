@@ -1,8 +1,8 @@
 anchor,metric,op,target,share,lo95,hi95,source
-germans_take_field,attacker_ever_controls,eq,True,0.1145,0.10127759234159714,0.12920050532839836,WOH
-first_wave_lands_under_fire,t_first_landing,le,1.5,0.5385,0.5165986120792132,0.5602537698655472,WOH
-heavy_transport_losses,transports_lost,ge,8,0.434,0.41242527529003753,0.45582778423323017,WOH
-runway_blocked,runway_end,lt,0.6,0.848,0.831598997753605,0.8630666883964381,WOH
-no_airbridge,airbridge,eq,False,0.9885,0.9828021470402394,0.9923248290640597,WOH
-germans_lose_field,attacker_holds_end,eq,False,0.952,0.9417337026074779,0.9605332230816583,WOH
-ALL (joint),,,,0.039,0.03136130698332722,0.04840627544434571,
+germans_hold_on_field,attacker_hours_on_field,ge,3.0,0.8775,0.8624026344653455,0.8911499417462672,WOH
+first_wave_lands_under_fire,t_first_landing,le,1.5,0.7595,0.7402827932429171,0.7777222227224166,WOH
+heavy_transport_losses,transports_lost,ge,8,0.65,0.6288263855998415,0.6705984791200046,WOH
+runway_blocked,runway_end,lt,0.6,0.8175,0.799968181254557,0.8338144490691174,WOH
+no_airbridge,airbridge,eq,False,0.9855,0.9792530898098751,0.9898853890000269,WOH
+germans_lose_field,attacker_holds_end,eq,False,0.8685,0.8529797387932422,0.8826073455351798,WOH
+ALL (joint),,,,0.5395,0.5176001140349584,0.5612484336746011,

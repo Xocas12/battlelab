@@ -36,6 +36,11 @@ parameters:
   mass.reserve_dz: {dist: uniform, lo: 0.1, hi: 0.3, assumption: true}
   mass.t_reserve: {dist: uniform, lo: 29.0, hi: 32.0, source: NZH, assumption: true,
     note: "21 May, afternoon"}
+  mass.shock: {dist: fixed, value: 0, assumption: true,
+    note: "not estimated: 0 keeps 0.2.0 behaviour; NZ positions were alert after the preceding bombing"}
+  mass.shock_decay_h: {dist: fixed, value: 2.0, assumption: true, note: "inactive while mass.shock = 0"}
+  mass.cornered: {dist: fixed, value: 1.0, assumption: true,
+    note: "1 = ordinary force-ratio morale; not estimated, keeps 0.2.0 behaviour"}
   # HOLD --------------------------------------------------------------------
   hold.strength: {dist: uniform, lo: 500, hi: 650, assumption: true,
     note: "22nd NZ Battalion plus attached elements around the airfield and Point 107"}
@@ -52,6 +57,8 @@ parameters:
     note: "without reports the commander assumed the forward companies were lost; they were largely intact"}
   hold.night_moves: {dist: fixed, value: 1, source: NZH, assumption: true,
     note: "withdrawal from Point 107 carried out overnight 20/21 May, under daytime Luftwaffe air superiority"}
+  hold.move_delay_h: {dist: fixed, value: 0.0, assumption: true,
+    note: "0 = the 22nd Bn pulls out as soon as it is dark. Tried 1-5 h (issue #5): t_control spreads out (p10/50/90 12.5/14.1/19.5 h instead of 12/12/14.8) but the joint anchor share falls 0.68 -> 0.54, because delayed orders that run past dawn wait a whole day. Not adopted without evidence on how long the withdrawal took"}
   # RESPONSE ----------------------------------------------------------------
   response.t_ca: {dist: uniform, lo: 38.0, hi: 46.0, source: NZH, confidence: medium,
     note: "night 21/22 May, delayed four hours; reached the airfield edge at dawn"}
@@ -71,6 +78,10 @@ parameters:
     note: "airfield littered with wrecked aircraft, but enough troops landed to tip the balance"}
   risk.land_contested: {dist: fixed, value: 0, source: NZH, assumption: true,
     note: "Student waited for the field: transports landed only after the NZ withdrawal"}
+  risk.commit_lag_h: {dist: uniform, lo: 2.0, hi: 6.0, source: NZH, assumption: true, confidence: low,
+    note: "reports from Maleme reached Student's HQ in Athens late and incompletely. Added for issue #5 (first landings at dawn instead of the afternoon of 21 May); prior set before the anchor run"}
+  risk.commit_cycle_h: {dist: uniform, lo: 6.0, hi: 12.0, assumption: true, confidence: low,
+    note: "HQ commits the air-landing force only at its decision points (a test landing on the morning of 21 May preceded the commitment)"}
   # CONTEXT (not swapped) ---------------------------------------------------
   ctx.aircraft: {dist: uniform, lo: 25, hi: 40, assumption: true, note: "Ju 52 per shuttle sortie"}
   ctx.troops_per_aircraft: {dist: fixed, value: 13, assumption: true}
@@ -118,20 +129,22 @@ units:
     dug_in: $hold.dug_in
     morale: {base_hazard: $hold.base_hazard, ammo_out_h: $hold.ammo_out_h,
              decision_h: $hold.decision_h, comms_loss: $hold.comms_loss, fog: $hold.fog,
-             night_moves: $hold.night_moves}
+             night_moves: $hold.night_moves, move_delay_h: $hold.move_delay_h}
     arrive: {t: 0.0, zone: airfield}
   sturmregiment:
     side: DE
     kind: airborne_infantry
-    morale: {on_break: disperse}
+    morale: {on_break: disperse, ratio_scale: $mass.cornered}
     arrive: {t: 0.0, zone: airfield, mode: parachute, aircraft: $mass.aircraft,
-             capacity: $mass.capacity, dz_loss: $mass.dz_loss}
+             capacity: $mass.capacity, dz_loss: $mass.dz_loss,
+             shock: $mass.shock, shock_decay_h: $mass.shock_decay_h}
   airborne_reserve:
     side: DE
     kind: parachute_infantry
-    morale: {on_break: disperse}
+    morale: {on_break: disperse, ratio_scale: $mass.cornered}
     arrive: {t: $mass.t_reserve, zone: airfield, mode: parachute, aircraft: $mass.reserve_aircraft,
-             capacity: $mass.reserve_capacity, dz_loss: $mass.reserve_dz, only_if_present: true}
+             capacity: $mass.reserve_capacity, dz_loss: $mass.reserve_dz,
+             shock: $mass.shock, shock_decay_h: $mass.shock_decay_h, only_if_present: true}
   nz_counterattack:
     side: NZ
     kind: infantry
@@ -141,7 +154,7 @@ units:
   gebirgsjaeger:
     side: DE
     kind: airlanded_infantry
-    morale: {on_break: disperse}
+    morale: {on_break: disperse, ratio_scale: $mass.cornered}
 
 fires:
   - {id: nz_artillery, side: NZ, zone: airfield, active_from: $denial.t_fires,
@@ -159,6 +172,8 @@ airlift:
   daylight_only: true
   wreck_obstacle: $ctx.wreck_obstacle
   contested_risk: $mech.contested_risk
+  commit_lag_h: $risk.commit_lag_h
+  commit_cycle_h: $risk.commit_cycle_h
 
 mechanics:
   # resolver: lanchester | crt. The CRT is ILLUSTRATIVE, not calibrated: at 1:1 it
@@ -175,17 +190,19 @@ outcome: {zone: airfield, airbridge_troops: 500}
 factors:
   AIR: [air.att.ingress_loss, air.att.approach_loss, air.att.suppression, air.att.interdiction, air.att.cas]
   MASS: [mass.aircraft, mass.capacity, mass.dz_loss, mass.reserve_aircraft, mass.reserve_capacity,
-         mass.reserve_dz, mass.t_reserve]
+         mass.reserve_dz, mass.t_reserve, mass.shock, mass.shock_decay_h,
+         mass.cornered]
   HOLD: [hold.strength, hold.quality, hold.dug_in, hold.base_hazard, hold.ammo_out_h,
-         hold.decision_h, hold.comms_loss, hold.fog, hold.night_moves]
+         hold.decision_h, hold.comms_loss, hold.fog, hold.night_moves,
+         hold.move_delay_h]
   RESPONSE: [response.t_ca, response.strength, response.commit_h, response.withdraw_ratio]
   DENIAL: [denial.obstacles0, denial.t_fires, denial.fire_intensity, denial.crater_rate, denial.demolish_rate]
-  RISK: [risk.tolerance, risk.land_contested]
+  RISK: [risk.tolerance, risk.land_contested, risk.commit_lag_h, risk.commit_cycle_h]
 
 anchors:
   - {id: nz_leave_field_day1, metric: t_control, op: between, value: [4.0, 24.0], source: NZH,
      note: "22nd Bn pulled back from Point 107 during the night of 20/21 May"}
-  - {id: landings_begin_day2, metric: t_first_landing, op: between, value: [20.0, 40.0], source: NZH,
-     note: "first transports landed on the afternoon of 21 May"}
+  - {id: landings_begin_day2_afternoon, metric: t_first_landing, op: between, value: [28.0, 34.0], source: NZH,
+     note: "first transports landed on the afternoon of 21 May (12:00-18:00 = H+28 to H+34). TIGHTENED in 0.3.0 from [20, 40] (any time on day 2), see CHANGELOG and issue #5"}
   - {id: airbridge, metric: airbridge, op: eq, value: true, source: NZH}
   - {id: counterattack_fails, metric: defender_retakes, op: eq, value: false, source: NZH}

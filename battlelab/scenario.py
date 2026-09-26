@@ -45,7 +45,7 @@ from .state import AirPosture, Morale, Runway, Side, Unit, World, Zone
 
 KNOWN_METRICS = {
     "landed", "airbridge", "t_airbridge", "t_first_landing", "transports_lost",
-    "t_control", "attacker_ever_controls", "attacker_lost_control",
+    "t_control", "attacker_ever_controls", "attacker_hours_on_field", "attacker_lost_control",
     "attacker_holds_end", "defender_retakes", "runway_end",
     "losses_attacker", "losses_defender",
 }

@@ -15,6 +15,8 @@ Effective strength of a unit =
     * (1 - enemy interdiction if attacking)      air attack on the move
     * own CAS multiplier                         close air support
     * (1 + w_posture * own fire intensity here)  artillery / bombardment
+    * (1 - shock(t))                             surprise of an enemy air landing
+                                                 in this zone: shock0 * exp(-dt/decay)
 """
 from __future__ import annotations
 
@@ -123,7 +125,12 @@ class Combat(Mechanic):
         else:
             e *= 1.0 - s["interdict"][enemy]
         fire = s.get("fire", {}).get((u.side, u.zone), 0.0)
-        return e * (1.0 + self.fw[u.posture] * fire)
+        e *= 1.0 + self.fw[u.posture] * fire
+        shock = w.persist.get("shock", {}).get((u.zone, enemy))
+        if shock is not None:
+            t0, mag, decay = shock
+            e *= 1.0 - mag * math.exp(-(w.t - t0) / decay)
+        return e
 
     def step(self, w: World):
         w.scratch["engaged"] = {}
@@ -165,7 +172,7 @@ class MoraleCheck(Mechanic):
     """Per-hour hazard of leaving the fight, for every engaged unit.
 
     hazard = base
-           + ratio_coeff    * max(enemy_eff / own_eff - 1, 0)
+           + ratio_coeff    * ratio_scale * max(enemy_eff / own_eff - 1, 0)
            + casualty_coeff * (1 - strength / peak)
            + ammo_hazard    * [ammo exhausted]
     plus immediate departure when the ratio exceeds `withdraw_ratio`, a
@@ -177,7 +184,9 @@ class MoraleCheck(Mechanic):
     with probability 1 - exp(-hazard * decision_h). With probability
     `comms_loss` a decision is taken without reports from the forward
     elements, and the commander then assumes at least `fog` casualties. With
-    `night_moves` an order is only executed in darkness. Immediate exits
+    `night_moves` an order is only executed in darkness, and with
+    `move_delay_h` > 0 only after an exponential delay from the moment it
+    becomes executable. Immediate exits
     (collapse, outmatched, commitment, ammunition, forced retreat) are
     unaffected: they are the troops' own reaction, not the commander's. With
     decision_h <= dt, no comms loss and no night rule this reduces exactly to
@@ -197,7 +206,8 @@ class MoraleCheck(Mechanic):
         return m.decision_h > dt + 1e-9 or m.comms_loss > 0 or bool(m.night_moves)
 
     def judged_hazard(self, m, ratio: float, casualties: float) -> float:
-        return m.base_hazard + self.B0 * max(ratio - 1.0, 0.0) + self.HC * casualties
+        return (m.base_hazard + self.B0 * m.ratio_scale * max(ratio - 1.0, 0.0)
+                + self.HC * casualties)
 
     def step(self, w: World):
         engaged = w.scratch.get("engaged", {})
@@ -228,7 +238,8 @@ class MoraleCheck(Mechanic):
                     hz += self.retreat_hz
                 if hz > 0 and g.random() < 1.0 - math.exp(-hz * w.dt):
                     reason = "morale"
-                elif uid in orders and (not m.night_moves or not w.is_day()):
+                elif uid in orders and (not m.night_moves or not w.is_day()) \
+                        and self._ready(w, uid, m):
                     reason = "ordered_withdrawal"
             else:
                 hz = self.judged_hazard(m, ratio, casualties)
@@ -244,6 +255,17 @@ class MoraleCheck(Mechanic):
                        strength=round(u.strength, 1), ratio=round(ratio, 2))
                 u.zone = None
                 orders.pop(uid, None)
+
+    @staticmethod
+    def _ready(w: World, uid: str, m) -> bool:
+        """An executable order is carried out after an exponential delay
+        (mean move_delay_h: orders reach the companies, the move is organised)."""
+        if m.move_delay_h <= 0:
+            return True
+        ready = w.persist.setdefault("order_ready", {})
+        if uid not in ready:
+            ready[uid] = w.t + float(w.rng("command").exponential(m.move_delay_h))
+        return w.t + 1e-9 >= ready[uid]
 
     def _command(self, w: World, u, ratio: float, casualties: float):
         """One commander decision if a decision point falls in this turn."""

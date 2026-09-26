@@ -44,6 +44,12 @@ parameters:
   mass.reserve_capacity: {dist: fixed, value: 12, assumption: true}
   mass.reserve_dz: {dist: fixed, value: 0.0, assumption: true}
   mass.t_reserve: {dist: fixed, value: 30.0, assumption: true}
+  mass.shock: {dist: uniform, lo: 0.3, hi: 0.7, source: WOH, assumption: true, confidence: low,
+    note: "the first large airborne assault in history, after dawn bombing; defenders' effectiveness in the landing zone drops at first. Added for issue #3 (missing mechanism), prior set before the anchor run"}
+  mass.shock_decay_h: {dist: uniform, lo: 1.0, hi: 4.0, assumption: true,
+    note: "e-folding time of the surprise; the Dutch had reorganised and counterattacked within hours"}
+  mass.cornered: {dist: uniform, lo: 0.2, hi: 0.6, source: WOH, assumption: true, confidence: low,
+    note: "scales the force-ratio morale term of the airborne units: surrounded, with nowhere to withdraw to, they held out in pockets until killed or captured (WOH). Added for issue #3 after traces showed the paratroops 'withdrawing' at 5:1 within hours; prior set before the anchor run with it"}
   # HOLD --------------------------------------------------------------------
   hold.strength: {dist: uniform, lo: 300, hi: 700, source: WOH, assumption: true, confidence: low,
     note: "III Bn Regiment Grenadiers plus armoured cars and AA, counting only what could engage the landing area. REVISED once with mass.aircraft (draft 500-800, the whole battalion)"}
@@ -56,6 +62,7 @@ parameters:
   hold.comms_loss: {dist: fixed, value: 0.0, assumption: true}
   hold.fog: {dist: fixed, value: 0.0, assumption: true}
   hold.night_moves: {dist: fixed, value: 0, assumption: true}
+  hold.move_delay_h: {dist: fixed, value: 0.0, assumption: true, note: "0 = orders executed at once (inactive without a command cycle)"}
   # RESPONSE ----------------------------------------------------------------
   response.t_ca: {dist: uniform, lo: 5.0, hi: 9.0, source: WOH, confidence: low,
     note: "counterattack launched 'several hours later'; field retaken in the afternoon"}
@@ -75,6 +82,8 @@ parameters:
     note: "first wave landed into the defenders' fire on schedule; later waves turned away only when wrecks blocked the strip"}
   risk.land_contested: {dist: fixed, value: 1, source: WOH, confidence: medium,
     note: "air-landing timed to follow the drop, not the capture of the field"}
+  risk.commit_lag_h: {dist: fixed, value: 0.0, assumption: true, note: "0 = no commitment delay (only used in shuttle mode)"}
+  risk.commit_cycle_h: {dist: fixed, value: 0.0, assumption: true, note: "0 = no decision cycle (only used in shuttle mode)"}
   # CONTEXT (not swapped) ---------------------------------------------------
   ctx.aircraft: {dist: fixed, value: 12, source: WOH, confidence: medium,
     note: "first twelve Ju 52 with the first air-landing infantry"}
@@ -128,20 +137,22 @@ units:
     dug_in: $hold.dug_in
     morale: {base_hazard: $hold.base_hazard, ammo_out_h: $hold.ammo_out_h,
              decision_h: $hold.decision_h, comms_loss: $hold.comms_loss, fog: $hold.fog,
-             night_moves: $hold.night_moves}
+             night_moves: $hold.night_moves, move_delay_h: $hold.move_delay_h}
     arrive: {t: 0.0, zone: airfield}
   fallschirmjaeger:
     side: DE
     kind: parachute_infantry
-    morale: {on_break: disperse}
+    morale: {on_break: disperse, ratio_scale: $mass.cornered}
     arrive: {t: 0.0, zone: airfield, mode: parachute, aircraft: $mass.aircraft,
-             capacity: $mass.capacity, dz_loss: $mass.dz_loss}
+             capacity: $mass.capacity, dz_loss: $mass.dz_loss,
+             shock: $mass.shock, shock_decay_h: $mass.shock_decay_h}
   airborne_reserve:
     side: DE
     kind: parachute_infantry
-    morale: {on_break: disperse}
+    morale: {on_break: disperse, ratio_scale: $mass.cornered}
     arrive: {t: $mass.t_reserve, zone: airfield, mode: parachute, aircraft: $mass.reserve_aircraft,
-             capacity: $mass.reserve_capacity, dz_loss: $mass.reserve_dz, only_if_present: true}
+             capacity: $mass.reserve_capacity, dz_loss: $mass.reserve_dz,
+             shock: $mass.shock, shock_decay_h: $mass.shock_decay_h, only_if_present: true}
   nl_counterattack:
     side: NL
     kind: infantry
@@ -151,7 +162,7 @@ units:
   ir_65:
     side: DE
     kind: airlanded_infantry
-    morale: {on_break: disperse}
+    morale: {on_break: disperse, ratio_scale: $mass.cornered}
 
 fires:
   - {id: nl_artillery, side: NL, zone: airfield, active_from: $denial.t_fires,
@@ -168,6 +179,8 @@ airlift:
   loiter_h: $ctx.loiter_h
   wreck_obstacle: $ctx.wreck_obstacle
   contested_risk: $mech.contested_risk
+  commit_lag_h: $risk.commit_lag_h
+  commit_cycle_h: $risk.commit_cycle_h
 
 mechanics:
   # resolver: lanchester | crt. The CRT is ILLUSTRATIVE, not calibrated: at 1:1 it
@@ -184,16 +197,18 @@ outcome: {zone: airfield, airbridge_troops: 500}
 factors:
   AIR: [air.att.ingress_loss, air.att.approach_loss, air.att.suppression, air.att.interdiction, air.att.cas]
   MASS: [mass.aircraft, mass.capacity, mass.dz_loss, mass.reserve_aircraft, mass.reserve_capacity,
-         mass.reserve_dz, mass.t_reserve]
+         mass.reserve_dz, mass.t_reserve, mass.shock, mass.shock_decay_h,
+         mass.cornered]
   HOLD: [hold.strength, hold.quality, hold.dug_in, hold.base_hazard, hold.ammo_out_h,
-         hold.decision_h, hold.comms_loss, hold.fog, hold.night_moves]
+         hold.decision_h, hold.comms_loss, hold.fog, hold.night_moves,
+         hold.move_delay_h]
   RESPONSE: [response.t_ca, response.strength, response.commit_h, response.withdraw_ratio]
   DENIAL: [denial.obstacles0, denial.t_fires, denial.fire_intensity, denial.crater_rate, denial.demolish_rate]
-  RISK: [risk.tolerance, risk.land_contested]
+  RISK: [risk.tolerance, risk.land_contested, risk.commit_lag_h, risk.commit_cycle_h]
 
 anchors:
-  - {id: germans_take_field, metric: attacker_ever_controls, op: eq, value: true, source: WOH,
-     note: "German troops held the airbase buildings until the counterattack forced them out"}
+  - {id: germans_hold_on_field, metric: attacker_hours_on_field, op: ge, value: 3.0, source: WOH,
+     note: "German troops held the airbase buildings for hours until the counterattack forced them out, while Dutch positions kept firing. REVISED in 0.3.0 from `attacker_ever_controls eq true` (sole control of the one-zone field), which the source does not claim; see CHANGELOG"}
   - {id: first_wave_lands_under_fire, metric: t_first_landing, op: le, value: 1.5, source: WOH,
      note: "the first twelve Ju 52 landed straight into the defenders' fire"}
   - {id: heavy_transport_losses, metric: transports_lost, op: ge, value: 8, source: WOH,
