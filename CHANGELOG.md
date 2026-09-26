@@ -6,7 +6,7 @@
 * Parameter expressions in scenario values (`"$hold.strength * (1 - $hold.perimeter_frac)"`: + - * / and parentheses, whitelisted); lint checks references inside them.
 * `fires[].from_zone`: a fire acts only while the firing side holds that zone.
 * Ypenburg perimeter zone (new HOLD parameters `hold.perimeter_frac`, `hold.perimeter_fire`). Tried and not adopted: sole German control of the field rose only from 0.21 to 0.26, while the joint anchor share fell from 0.54 to 0.46. It is inactive (0) in every scenario.
-* The five pre-existing results are unchanged run-for-run; the full results were regenerated (20 swap pairs, 1962 s on 4 workers).
+* Hostomel, Maleme and Ypenburg are unchanged run-for-run; the full results were regenerated (20 swap pairs, 1962 s on 4 workers).
 
 ## 0.3.0 (2026-09-25)
 
