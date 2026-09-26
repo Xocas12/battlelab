@@ -62,7 +62,8 @@ battlelab/
   report.py        the `battlelab report` pipeline that writes results/SUMMARY.md
   cmo.py           export designs to Lua, ingest CMO results
   cli.py           the `battlelab` command
-scenarios/         hostomel_2022.yaml, maleme_1941.yaml, ypenburg_1940.yaml (the "airhead" family)
+scenarios/         the "airhead" family: hostomel_2022, maleme_1941, heraklion_1941,
+                   rethymno_1941, ypenburg_1940 (.yaml)
 cmo/lua/battlelab/ bl_core.lua (replication engine), bl_hostomel.lua (plugin), bl_run.lua
 cmo/tests/         mock_cmo.lua + test_harness.lua (offline tests of the harness)
 docs/              ARCHITECTURE.md, MODELING_STANDARDS.md
@@ -92,7 +93,7 @@ Results, with every number traced to a file, are in `results/SUMMARY.md`, writte
 * The native engine is tested (determinism across processes, CRN independence, resolver expectations, invariants over hundreds of runs, lint and schema, Shapley identities, reductions of every new mechanism to the old behaviour). CI runs the tests, ruff, mypy and the Lua harness on every push.
 * The CMO harness is tested only against a mock of the CMO Lua API built from the published documentation. Some unit-wrapper fields it reads (`base`, `damage`, `loadoutdbid`, `group`) and the `course` field of `ScenEdit_SetUnit` are used defensively but have not been verified in a live CMO build. Run the self-test first.
 * The combat, morale and landing-risk constants are flagged assumptions. The CRT table is a structural alternative, not a calibrated one (`battlelab resolvers` shows how far apart the two are).
-* Ypenburg 1940 was sourced from search excerpts only; its parameters are mostly low-confidence assumptions and the model reproduces its history poorly (see `CLAUDE.md`).
+* Ypenburg 1940, Heraklion 1941 and Rethymno 1941 were sourced from search excerpts only; their parameters are mostly low-confidence assumptions (see `CLAUDE.md` and `results/NOTES.md`).
 * See `docs/MODELING_STANDARDS.md` for how results should and should not be read.
 
 ## Licence

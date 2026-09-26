@@ -1,0 +1,5 @@
+anchor,metric,op,target,share,lo95,hi95,source
+no_airbridge,airbridge,eq,False,0.986,0.9798402800868613,0.9902962816054401,WPR
+germans_do_not_hold_field,attacker_holds_end,eq,False,0.986,0.9798402800868613,0.9902962816054401,WPR
+no_landings,transports_lost,eq,0,0.986,0.9798402800868613,0.9902962816054401,WPR
+ALL (joint),,,,0.986,0.9798402800868613,0.9902962816054401,

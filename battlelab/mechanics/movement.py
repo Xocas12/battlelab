@@ -98,6 +98,7 @@ class FireSpec:
     active_from: float
     intensity: float           # 0..1 nominal fire intensity
     crater_rate: float = 0.0   # runway crater fraction per hour at intensity 1
+    from_zone: str | None = None   # fire only while the firing side has units here
 
 
 class Fires(Mechanic):
@@ -117,6 +118,8 @@ class Fires(Mechanic):
         eff: dict[tuple[str, str], float] = {}
         for f in self.fires:
             if w.t < f.active_from:
+                continue
+            if f.from_zone is not None and not w.units_in(f.from_zone, f.side):
                 continue
             enemy = w.enemy_of(f.side)
             e = f.intensity * (1.0 - w.scratch["suppress"][enemy])

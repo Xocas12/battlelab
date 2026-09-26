@@ -1,0 +1,197 @@
+id: heraklion_1941
+title: "Heraklion airfield, Crete, 20-22 May 1941"
+family: airhead
+description: >
+  Within-campaign control for Maleme. Fallschirmjaeger-Regiment 1 dropped on
+  Heraklion airfield from about 16:00 on 20 May, in staggered waves and
+  without direct air support, onto a strong, alert British, Australian and
+  Greek garrison (14th Infantry Brigade). The Germans never took the
+  airfield. Sourced from search excerpts only (Wikipedia, Warfare History
+  Network): most values are flagged assumptions.
+clock:
+  h_hour_local: 16.5        # drops from ~16:00, the bulk after ~17:00
+  dt_h: 0.25
+  horizon_h: 48
+
+sources:
+  NZH:
+    cite: "NZHistory, 'The Battle for Crete - The battle: days 1-3', Manatu Taonga (updated 3 Nov 2020); used for values shared with Maleme (same Luftwaffe, HQ and airlift)"
+    url: "https://nzhistory.govt.nz/war/the-battle-for-crete/the-battle-day-1-3"
+  WPH:
+    cite: "Wikipedia, 'Battle of Heraklion' (search excerpt only)"
+    url: "https://en.wikipedia.org/wiki/Battle_of_Heraklion"
+  WHN:
+    cite: "Warfare History Network, 'A Pyrrhic Parachute Victory in Crete' (search excerpt only)"
+    url: "https://warfarehistorynetwork.com/article/a-pyrrhic-parachute-victory-in-crete/"
+
+parameters:
+  # AIR ---------------------------------------------------------------------
+  air.att.ingress_loss: {dist: uniform, lo: 0.03, hi: 0.08, source: WPH, assumption: true, confidence: low, note: "drops over an alert garrison with Bofors AA, after the preparatory raids had ended"}
+  air.att.approach_loss: {dist: uniform, lo: 0.005, hi: 0.015, assumption: true}
+  air.att.suppression: {dist: uniform, lo: 0.0, hi: 0.2, source: WPH, confidence: medium, note: "launched without direct air support, nearly an hour after the Luftwaffe raids had ended"}
+  air.att.interdiction: {dist: uniform, lo: 0.1, hi: 0.3, assumption: true, note: "Luftwaffe over Crete by day, but not supporting this drop"}
+  air.att.cas: {dist: uniform, lo: 1.0, hi: 1.1, source: WPH, assumption: true, note: "no direct air support"}
+  # MASS --------------------------------------------------------------------
+  mass.aircraft: {dist: uniform, lo: 120, hi: 180, assumption: true, confidence: low, note: "Fallschirmjaeger-Regiment 1 and attachments, roughly 1,500-2,000 men; not in the excerpts"}
+  mass.capacity: {dist: fixed, value: 12, assumption: true}
+  mass.dz_loss: {dist: uniform, lo: 0.45, hi: 0.70, source: WPH, assumption: true, confidence: low, note: "staggered drops over several hours onto defended positions"}
+  mass.reserve_aircraft: {dist: fixed, value: 0, assumption: true, note: "all airborne reserves went to Maleme"}
+  mass.reserve_capacity: {dist: fixed, value: 12, assumption: true}
+  mass.reserve_dz: {dist: fixed, value: 0.0, assumption: true}
+  mass.t_reserve: {dist: fixed, value: 30.0, assumption: true, note: "inactive (no reserve)"}
+  mass.shock: {dist: fixed, value: 0, assumption: true, note: "0 as at Maleme: no surprise shock modelled for the Crete drops"}
+  mass.shock_decay_h: {dist: fixed, value: 2.0, assumption: true, note: "inactive while mass.shock = 0"}
+  mass.cornered: {dist: fixed, value: 1.0, assumption: true,
+    note: "1 = ordinary force-ratio morale; not estimated, keeps 0.2.0 behaviour"}
+  # HOLD --------------------------------------------------------------------
+  hold.strength: {dist: uniform, lo: 1500, hi: 3000, source: WPH, assumption: true, confidence: low, note: "8,024 defenders in the Heraklion sector (WPH); the share able to fight at the airfield is a judgement"}
+  hold.quality: {dist: uniform, lo: 1.0, hi: 1.2, assumption: true, note: "regular British and Australian battalions plus Greek units"}
+  hold.dug_in: {dist: fixed, value: 1.5, assumption: true}
+  hold.base_hazard: {dist: uniform, lo: 0.0, hi: 0.01, assumption: true, note: "no withdrawal from the airfield sector"}
+  hold.ammo_out_h: {dist: fixed, value: 1000.0, assumption: true, note: "no ammunition crisis reported"}
+  hold.decision_h: {dist: fixed, value: 0.0, assumption: true, note: "0 = continuous: no evidence of a command-cycle withdrawal"}
+  hold.comms_loss: {dist: fixed, value: 0.0, assumption: true}
+  hold.fog: {dist: fixed, value: 0.0, assumption: true}
+  hold.night_moves: {dist: fixed, value: 0, assumption: true}
+  hold.move_delay_h: {dist: fixed, value: 0.0, assumption: true, note: "inactive without a command cycle"}
+  hold.perimeter_frac: {dist: fixed, value: 0.0, assumption: true, note: "0 = no separate perimeter; all defenders on the field"}
+  hold.perimeter_fire: {dist: fixed, value: 0.0, assumption: true, note: "0 = no perimeter fire"}
+  # RESPONSE ----------------------------------------------------------------
+  response.t_ca: {dist: uniform, lo: 14.0, hi: 20.0, assumption: true, confidence: low, note: "local counterattacks with tanks from the morning of 21 May"}
+  response.strength: {dist: uniform, lo: 500, hi: 1000, assumption: true}
+  response.commit_h: {dist: uniform, lo: 8, hi: 14, assumption: true}
+  response.withdraw_ratio: {dist: fixed, value: 2.0, assumption: true}
+  # DENIAL ------------------------------------------------------------------
+  denial.obstacles0: {dist: fixed, value: 0.0, assumption: true}
+  denial.t_fires: {dist: uniform, lo: 0.0, hi: 1.0, assumption: true, note: "defending artillery engaged the drop from the start (as at Maleme)"}
+  denial.fire_intensity: {dist: uniform, lo: 0.4, hi: 0.8, assumption: true, note: "artillery and Bofors covering the airfield"}
+  denial.crater_rate: {dist: uniform, lo: 0.0, hi: 0.02, assumption: true}
+  denial.demolish_rate: {dist: uniform, lo: 0.05, hi: 0.15, assumption: true}
+  # RISK --------------------------------------------------------------------
+  risk.tolerance: {dist: uniform, lo: 0.25, hi: 0.40, source: NZH, assumption: true, note: "same value as Maleme: the same HQ (Student) decided the air-landings on Crete"}
+  risk.land_contested: {dist: fixed, value: 0, source: NZH, assumption: true, note: "same as Maleme: transports landed only on a field in German hands"}
+  risk.commit_lag_h: {dist: uniform, lo: 2.0, hi: 6.0, source: NZH, assumption: true, confidence: low, note: "same value as Maleme (same HQ in Athens)"}
+  risk.commit_cycle_h: {dist: uniform, lo: 6.0, hi: 12.0, assumption: true, confidence: low, note: "same value as Maleme (same HQ)"}
+  # CONTEXT (not swapped) ---------------------------------------------------
+  ctx.aircraft: {dist: uniform, lo: 25, hi: 40, assumption: true, note: "Ju 52 per shuttle sortie"}
+  ctx.troops_per_aircraft: {dist: fixed, value: 13, assumption: true}
+  ctx.exploit_delay: {dist: uniform, lo: 3.0, hi: 8.0, source: NZH, assumption: true, note: "same value as Maleme (same airlift organisation)"}
+  ctx.interval_h: {dist: fixed, value: 3.0, assumption: true}
+  ctx.night_limited_air: {dist: fixed, value: 1, assumption: true, note: "1941 air power is essentially day-only"}
+  ctx.wreck_obstacle: {dist: fixed, value: 0.004, assumption: true}
+  # MECHANIC CONSTANTS (identical across the family) ------------------------
+  mech.kill_rate: {dist: fixed, value: 0.01, assumption: true, note: "casualties per effective shooter-hour"}
+  mech.ratio_coeff: {dist: fixed, value: 0.10, assumption: true}
+  mech.casualty_coeff: {dist: fixed, value: 0.30, assumption: true}
+  mech.ammo_hazard: {dist: fixed, value: 2.0, assumption: true}
+  mech.go_width: {dist: fixed, value: 0.02, assumption: true,
+    note: "logistic go/no-go rule only: spread of accepted risk around the tolerance, per wave or sortie"}
+  mech.info_lag_h: {dist: fixed, value: 0.0, assumption: true,
+    note: "delay between the true landing risk and the decision maker's estimate; 0 = perfect information"}
+  mech.contested_risk: {dist: fixed, value: 0.35, assumption: true,
+    note: "extra per-aircraft loss when landing on a contested field (only with risk.land_contested); set from Ypenburg 1940 accounts (WOH): of 12 Ju 52 in the first wave few crews or troops came out unscathed"}
+  doctrine.hasty_defense: {dist: fixed, value: 1.2, assumption: true}
+  doctrine.clear_rate: {dist: fixed, value: 0.15, assumption: true}
+
+sides:
+  DE:
+    role: attacker
+    air: {cas: $air.att.cas, suppress_enemy_fires: $air.att.suppression, interdiction: $air.att.interdiction,
+          ingress_loss: $air.att.ingress_loss, approach_loss: $air.att.approach_loss,
+          night_limited: $ctx.night_limited_air}
+    doctrine: {risk_tolerance: $risk.tolerance, clear_rate: $doctrine.clear_rate,
+               hasty_defense: $doctrine.hasty_defense, land_contested: $risk.land_contested}
+  GB:
+    role: defender
+    air: {night_limited: $ctx.night_limited_air}
+    doctrine: {demolish_rate: $denial.demolish_rate}
+
+zones:
+  airfield: {kind: airfield, control: GB, runway: {obstacles: $denial.obstacles0}}
+
+units:
+  heraklion_garrison:
+    side: GB
+    kind: infantry
+    strength: "$hold.strength * (1 - $hold.perimeter_frac)"
+    quality: $hold.quality
+    dug_in: $hold.dug_in
+    morale: {base_hazard: $hold.base_hazard, ammo_out_h: $hold.ammo_out_h,
+             decision_h: $hold.decision_h, comms_loss: $hold.comms_loss, fog: $hold.fog,
+             night_moves: $hold.night_moves, move_delay_h: $hold.move_delay_h}
+    arrive: {t: 0.0, zone: airfield}
+  fjr_1:
+    side: DE
+    kind: airborne_infantry
+    morale: {on_break: disperse, ratio_scale: $mass.cornered}
+    arrive: {t: 0.0, zone: airfield, mode: parachute, aircraft: $mass.aircraft,
+             capacity: $mass.capacity, dz_loss: $mass.dz_loss,
+             shock: $mass.shock, shock_decay_h: $mass.shock_decay_h}
+  airborne_reserve:
+    side: DE
+    kind: parachute_infantry
+    morale: {on_break: disperse, ratio_scale: $mass.cornered}
+    arrive: {t: $mass.t_reserve, zone: airfield, mode: parachute, aircraft: $mass.reserve_aircraft,
+             capacity: $mass.reserve_capacity, dz_loss: $mass.reserve_dz,
+             shock: $mass.shock, shock_decay_h: $mass.shock_decay_h, only_if_present: true}
+  gb_counterattack:
+    side: GB
+    kind: infantry
+    strength: $response.strength
+    morale: {commit_h: $response.commit_h, withdraw_ratio: $response.withdraw_ratio}
+    arrive: {t: $response.t_ca, zone: airfield}
+  gebirgsjaeger:
+    side: DE
+    kind: airlanded_infantry
+    morale: {on_break: disperse, ratio_scale: $mass.cornered}
+
+fires:
+  - {id: perimeter_fire, side: GB, zone: airfield, active_from: 0.0, intensity: $hold.perimeter_fire}   # 0: no separate perimeter
+  - {id: gb_artillery, side: GB, zone: airfield, active_from: $denial.t_fires,
+     intensity: $denial.fire_intensity, crater_rate: $denial.crater_rate}
+
+airlift:
+  side: DE
+  zone: airfield
+  unit: gebirgsjaeger
+  aircraft: $ctx.aircraft
+  troops_per_aircraft: $ctx.troops_per_aircraft
+  mode: shuttle
+  interval_h: $ctx.interval_h
+  first_after_control_h: $ctx.exploit_delay
+  daylight_only: true
+  wreck_obstacle: $ctx.wreck_obstacle
+  contested_risk: $mech.contested_risk
+  commit_lag_h: $risk.commit_lag_h
+  commit_cycle_h: $risk.commit_cycle_h
+
+mechanics:
+  # resolver: lanchester | crt. The CRT is ILLUSTRATIVE, not calibrated: at 1:1 it
+  # costs the attacker ~6%/h against Lanchester's 1%/h, and its exchange ratio
+  # grows roughly linearly with odds rather than with odds squared
+  # (`battlelab resolvers`). Use it to test whether a conclusion depends on the
+  # attrition model, never for magnitudes.
+  combat: {resolver: lanchester, kill_rate: $mech.kill_rate, fire_weight_defend: 1.0, fire_weight_attack: 2.0}
+  morale: {ratio_coeff: $mech.ratio_coeff, casualty_coeff: $mech.casualty_coeff, ammo_hazard: $mech.ammo_hazard}
+  go_no_go: {rule: threshold, width: $mech.go_width, info_lag_h: $mech.info_lag_h}   # rule: threshold | logistic
+
+outcome: {zone: airfield, airbridge_troops: 500}
+
+factors:
+  AIR: [air.att.ingress_loss, air.att.approach_loss, air.att.suppression, air.att.interdiction, air.att.cas]
+  MASS: [mass.aircraft, mass.capacity, mass.dz_loss, mass.reserve_aircraft, mass.reserve_capacity,
+         mass.reserve_dz, mass.t_reserve, mass.shock, mass.shock_decay_h,
+         mass.cornered]
+  HOLD: [hold.strength, hold.quality, hold.dug_in, hold.base_hazard, hold.ammo_out_h,
+         hold.decision_h, hold.comms_loss, hold.fog, hold.night_moves,
+         hold.move_delay_h, hold.perimeter_frac, hold.perimeter_fire]
+  RESPONSE: [response.t_ca, response.strength, response.commit_h, response.withdraw_ratio]
+  DENIAL: [denial.obstacles0, denial.t_fires, denial.fire_intensity, denial.crater_rate, denial.demolish_rate]
+  RISK: [risk.tolerance, risk.land_contested, risk.commit_lag_h, risk.commit_cycle_h]
+
+anchors:
+  - {id: germans_never_take_field, metric: attacker_ever_controls, op: eq, value: false, source: WPH,
+     note: "the Germans never took Heraklion airfield before the garrison was evacuated on 28/29 May"}
+  - {id: no_airbridge, metric: airbridge, op: eq, value: false, source: WPH}
+  - {id: no_landings, metric: transports_lost, op: eq, value: 0, source: WPH,
+     note: "no transports landed at Heraklion"}

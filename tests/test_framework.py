@@ -22,6 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 HOST = ROOT / "scenarios" / "hostomel_2022.yaml"
 MAL = ROOT / "scenarios" / "maleme_1941.yaml"
 YPB = ROOT / "scenarios" / "ypenburg_1940.yaml"
+ALL_SCENARIOS = sorted((ROOT / "scenarios").glob("*.yaml"))
 LUA = shutil.which("lua5.3") or shutil.which("lua")
 
 
@@ -103,7 +104,7 @@ def test_crt_resolver_runs_and_differs(tmp_path):
 
 
 # ------------------------------------------------------------ invariants ---
-@pytest.mark.parametrize("path", [HOST, MAL, YPB])
+@pytest.mark.parametrize("path", ALL_SCENARIOS, ids=lambda p: p.stem)
 def test_invariants(path):
     s = Scenario.load(path)
     lift = 0
@@ -129,14 +130,16 @@ def test_invariants(path):
 
 
 # ------------------------------------------------------------------ lint ---
-def test_shipped_scenarios_lint_clean(host, mal):
-    ypb = Scenario.load(YPB)
-    for s in (host, mal, ypb):
-        assert [i for i in s.lint() if i.level == "error"] == []
-    for a, b in ((host, mal), (host, ypb), (mal, ypb)):
+def test_shipped_scenarios_lint_clean(host):
+    import itertools
+    scen = [Scenario.load(p) for p in ALL_SCENARIOS]
+    assert len(scen) >= 5
+    for s in scen:
+        assert s.lint() == [], s.id                       # no errors and no warnings
+    for a, b in itertools.combinations(scen, 2):
         assert Scenario.lint_pair(a, b) == []
     mech = {n for n in host.space.names() if n.startswith(("mech.", "doctrine."))}
-    for s in (mal, ypb):                              # family constants identical
+    for s in scen:                                    # family constants identical
         assert {n for n in s.space.names() if n.startswith(("mech.", "doctrine."))} == mech
         assert all(s.space[n].dist == host.space[n].dist for n in mech)
 
@@ -557,3 +560,32 @@ def test_notes_placeholders():
     assert out == "Joint 0.68 (68%), RISK -0.25."
     with pytest.raises(SystemExit, match="unknown result keys: nope"):
         fill_notes("{{nope}}", vals)
+
+
+# -------------------------------------------------- expressions, from_zone ---
+def test_param_expressions():
+    from battlelab.scenario import ScenarioError, eval_expr, is_expr
+    p = {"a.b": 10.0, "c": 0.25}
+    assert eval_expr("$a.b * (1 - $c)", p) == 7.5
+    assert eval_expr("-$c + 2 / 4", p) == 0.25
+    assert not is_expr("$a.b") and is_expr("$a.b*2")
+    with pytest.raises(ScenarioError):
+        eval_expr("__import__('os')", p)
+    with pytest.raises(ScenarioError):
+        eval_expr("$c ** 2", p)
+    doc = yaml.safe_load(HOST.read_text())
+    doc["units"]["ngu_garrison"]["strength"] = "$hold.strength * $nope"
+    assert any("$nope is not a parameter" in str(i) for i in Scenario(doc).lint())
+
+
+def test_perimeter_split_and_fire_from_zone():
+    ypb = Scenario.load(YPB).with_overrides({"hold.perimeter_frac": 0.4,
+                                             "hold.perimeter_fire": 0.2})
+    p = ypb.space.sample(1, 0)
+    w, _ = ypb.run(p, 1, 0)
+    field, edge = w.units["grenadiers_iii_bn"], w.units["grenadiers_perimeter"]
+    assert edge.initial == pytest.approx(0.4 * p["hold.strength"])
+    assert field.initial == pytest.approx(0.6 * p["hold.strength"])
+    doc = yaml.safe_load(YPB.read_text())
+    doc["fires"][0]["from_zone"] = "nowhere"
+    assert any(i.where == "fires[0].from_zone" for i in Scenario(doc).lint())
