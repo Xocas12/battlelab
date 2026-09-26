@@ -11,10 +11,13 @@ factor bundles must line up across the scenarios they will be swapped between.
 """
 from __future__ import annotations
 
+import ast
 import copy
 import hashlib
 import inspect
 import json
+import operator
+import re
 from dataclasses import MISSING, dataclass, fields
 from pathlib import Path
 from typing import Any
@@ -129,9 +132,47 @@ class ScenarioError(ValueError):
     pass
 
 
+REF = re.compile(r"\$([A-Za-z_][\w.]*)")
+_OPS = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul,
+        ast.Div: operator.truediv}
+
+
+def is_expr(s: str) -> bool:
+    """'$a' is a plain reference; anything else containing '$' is an expression."""
+    return "$" in s and not (s.startswith("$") and REF.fullmatch(s))
+
+
+def eval_expr(expr: str, p: dict[str, float]) -> float:
+    """Arithmetic over parameter references: + - * / and parentheses only,
+    e.g. "$hold.strength * (1 - $hold.perimeter_frac)"."""
+    names: dict[str, str] = {}
+
+    def repl(m: re.Match) -> str:
+        return names.setdefault(m.group(1), f"_p{len(names)}")
+
+    tree = ast.parse(REF.sub(repl, expr), mode="eval")
+    env = {v: float(p[k]) for k, v in names.items()}
+
+    def ev(n: ast.AST) -> float:
+        if isinstance(n, ast.Expression):
+            return ev(n.body)
+        if isinstance(n, ast.BinOp) and type(n.op) in _OPS:
+            return _OPS[type(n.op)](ev(n.left), ev(n.right))
+        if isinstance(n, ast.UnaryOp) and isinstance(n.op, ast.USub):
+            return -ev(n.operand)
+        if isinstance(n, ast.Constant) and isinstance(n.value, (int, float)):
+            return float(n.value)
+        if isinstance(n, ast.Name) and n.id in env:
+            return env[n.id]
+        raise ScenarioError(f"unsupported expression {expr!r}")
+    return ev(tree)
+
+
 def _walk_refs(obj, path="") -> list[tuple[str, str]]:
     out = []
-    if isinstance(obj, str) and obj.startswith("$"):
+    if isinstance(obj, str) and is_expr(obj):
+        out += [(path, name) for name in REF.findall(obj)]
+    elif isinstance(obj, str) and obj.startswith("$"):
         out.append((path, obj[1:]))
     elif isinstance(obj, dict):
         for k, v in obj.items():
@@ -322,6 +363,9 @@ class Scenario:
 
     # -- references ----------------------------------------------------------
     def resolve(self, obj, p: dict[str, float], key: str = ""):
+        if isinstance(obj, str) and is_expr(obj):
+            val = eval_expr(obj, p)
+            return int(round(val)) if key in INT_FIELDS else val
         if isinstance(obj, str) and obj.startswith("$"):
             val = p[obj[1:]]
             return int(round(val)) if key in INT_FIELDS else val
@@ -365,6 +409,12 @@ class Scenario:
             arr = u.get("arrive")
             if isinstance(arr, dict) and arr.get("zone") not in zones:
                 issues.append(Issue("error", f"units.{uid}", f"unknown zone {arr.get('zone')!r}"))
+        for i, f in enumerate(self.doc.get("fires") or []):
+            if not isinstance(f, dict):
+                continue
+            for k in ("zone", "from_zone"):
+                if f.get(k) is not None and f[k] not in zones:
+                    issues.append(Issue("error", f"fires[{i}].{k}", f"unknown zone {f[k]!r}"))
         al = self.doc.get("airlift")
         if al and al.get("unit") not in self.doc.get("units", {}):
             issues.append(Issue("error", "airlift", f"unknown unit {al.get('unit')!r}"))

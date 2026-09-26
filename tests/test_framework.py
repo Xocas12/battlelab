@@ -557,3 +557,32 @@ def test_notes_placeholders():
     assert out == "Joint 0.68 (68%), RISK -0.25."
     with pytest.raises(SystemExit, match="unknown result keys: nope"):
         fill_notes("{{nope}}", vals)
+
+
+# -------------------------------------------------- expressions, from_zone ---
+def test_param_expressions():
+    from battlelab.scenario import ScenarioError, eval_expr, is_expr
+    p = {"a.b": 10.0, "c": 0.25}
+    assert eval_expr("$a.b * (1 - $c)", p) == 7.5
+    assert eval_expr("-$c + 2 / 4", p) == 0.25
+    assert not is_expr("$a.b") and is_expr("$a.b*2")
+    with pytest.raises(ScenarioError):
+        eval_expr("__import__('os')", p)
+    with pytest.raises(ScenarioError):
+        eval_expr("$c ** 2", p)
+    doc = yaml.safe_load(HOST.read_text())
+    doc["units"]["ngu_garrison"]["strength"] = "$hold.strength * $nope"
+    assert any("$nope is not a parameter" in str(i) for i in Scenario(doc).lint())
+
+
+def test_perimeter_split_and_fire_from_zone():
+    ypb = Scenario.load(YPB).with_overrides({"hold.perimeter_frac": 0.4,
+                                             "hold.perimeter_fire": 0.2})
+    p = ypb.space.sample(1, 0)
+    w, _ = ypb.run(p, 1, 0)
+    field, edge = w.units["grenadiers_iii_bn"], w.units["grenadiers_perimeter"]
+    assert edge.initial == pytest.approx(0.4 * p["hold.strength"])
+    assert field.initial == pytest.approx(0.6 * p["hold.strength"])
+    doc = yaml.safe_load(YPB.read_text())
+    doc["fires"][0]["from_zone"] = "nowhere"
+    assert any(i.where == "fires[0].from_zone" for i in Scenario(doc).lint())
