@@ -443,7 +443,8 @@ def test_report_smoke(tmp_path):
                        sweep_scenario="hostomel_2022",
                        sweep_grid={"risk.tolerance": [0.05, 0.3], "denial.t_fires": [2.0, 6.0]},
                        go_rule_pair=("hostomel_2022", "maleme_1941"),
-                       factors=["RISK", "HOLD"], log=False)
+                       factors=["RISK", "HOLD"], log=False,
+                       line_sweeps=[("m_hold", "maleme_1941", "hold.strength", [500.0, 2000.0], {})])
     text = run_report(cfg).read_text()
     for head in ("## 1.", "## 2.", "## 3.", "## 4.", "## 5.", "## 6."):
         assert head in text
@@ -451,8 +452,11 @@ def test_report_smoke(tmp_path):
     assert (tmp_path / "anchors_maleme_1941_crt.manifest.json").exists()
     assert (tmp_path / "shapley_hostomel_2022__maleme_1941_lanchester.csv").exists()
     assert "## Reading these results" not in text                  # no NOTES.md: no section
+    assert "## 5b. One-parameter sweeps" in text
+    assert (tmp_path / "linesweep_m_hold.csv").exists()
     (tmp_path / "NOTES.md").write_text(
-        "# Notes\nMaleme joint {{anchor.maleme_1941.lanchester.joint}}.")
+        "# Notes\nMaleme joint {{anchor.maleme_1941.lanchester.joint}}, "
+        "garrison 2000: {{linesweep.m_hold.2000}}.")
     text = run_report(cfg).read_text()
     assert "## Reading these results\n\nMaleme joint 0." in text
     from battlelab.report import apply_notes
