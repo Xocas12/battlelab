@@ -247,7 +247,8 @@ def cmd_report(a):
     files = a.scenarios or sorted(glob.glob("scenarios/*.yaml"))
     cfg = ReportConfig(scenarios=files, n=a.n, seed=a.seed, workers=a.workers, out=a.out,
                        sweep_scenario=a.sweep, go_rule_pair=tuple(a.go_pair.split(","))
-                       if a.go_pair else None, line_sweeps=DEFAULT_LINE_SWEEPS)
+                       if a.go_pair else None, line_sweeps=DEFAULT_LINE_SWEEPS,
+                       pairs=[tuple(x.split(":")) for x in a.pairs.split(",")] if a.pairs else None)
     run_report(cfg)
 
 
@@ -365,6 +366,7 @@ def main(argv=None):
     p.add_argument("--sweep", default="hostomel_2022", help="scenario id to sweep")
     p.add_argument("--go-pair", default="hostomel_2022,maleme_1941",
                    help="scenario ids for the go/no-go rule comparison")
+    p.add_argument("--pairs", help="swap only these pairs, both directions: a:b,c:d (default: all)")
     p.add_argument("--notes-only", action="store_true",
                    help="only re-embed results/NOTES.md into the existing SUMMARY.md")
     p.set_defaults(fn=cmd_report)
