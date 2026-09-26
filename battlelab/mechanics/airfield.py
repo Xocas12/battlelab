@@ -75,6 +75,8 @@ class AirliftSpec:
     wreck_obstacle: float = 0.004    # runway blocked per wrecked aircraft
     organisation: float = 0.9        # fraction of landed troops combat-ready
     contested_risk: float = 0.0      # extra loss prob landing on a contested field
+    bog_risk: float = 0.0            # prob a landed aircraft sinks into soft ground and
+                                     # stays on the strip (troops get off, aircraft blocks)
     go_rule: str = "threshold"       # threshold | logistic
     go_width: float = 0.02           # logistic: scale of the acceptance curve
     info_lag_h: float = 0.0          # risk estimate lags the true risk by this long
@@ -191,13 +193,17 @@ class Airlift(Mechanic):
             else:       # landing into a fight: the troops attack off the aircraft
                 u.activate(s.zone, w.t, "attack")
         u.peak = max(u.peak, u.strength)
+        bogged = 0
+        if s.bog_risk > 0 and s.aircraft - lost > 0:        # own stream: no draw when off
+            bogged = int(w.rng("bog").binomial(s.aircraft - lost, s.bog_risk))
         r = self.runway(w)
-        r.obstacles = min(1.0, r.obstacles + s.wreck_obstacle * lost)
+        r.obstacles = min(1.0, r.obstacles + s.wreck_obstacle * (lost + bogged))
+        st["stranded"] = st.get("stranded", 0) + bogged
         st["landed"] += troops
         st["lost"] += lost
         if st["first_landing"] is None:
             st["first_landing"] = w.t
-        w.emit("airlanding", wave=label, aircraft=s.aircraft, lost=lost,
+        w.emit("airlanding", wave=label, aircraft=s.aircraft, lost=lost, bogged=bogged,
                troops=round(troops), p_loss=round(p, 3), control=w.zones[s.zone].control)
 
     def commit_time(self, t_ctrl: float) -> float:
@@ -311,6 +317,7 @@ class Outcome(Mechanic):
             t_airbridge=m.get("t_airbridge"),
             t_first_landing=st.get("first_landing"),
             transports_lost=st.get("lost", 0),
+            transports_stranded=st.get("stranded", 0),
             t_control=t_att,
             attacker_ever_controls=t_att is not None,
             attacker_hours_on_field=w.persist.get("attacker_hours", 0.0),

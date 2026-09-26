@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+* **Valkenburg 1940** (sixth airhead member) and a **soft-ground mechanic**. With `airlift.bog_risk` (context parameter `ctx.bog_risk`), each landed aircraft may sink into soft ground: its troops get off, the aircraft stays on the strip as an obstacle, and it is counted in the new metric `transports_stranded`. The mechanic draws from its own random stream and makes no draw when off, so the other five scenarios are unchanged run-for-run (checked over 300 runs each).
+  * Results: the Germans take the field in 56% of runs, and at least 20 transports are stranded in 40%. The Dutch retake the field in only 7%, so the joint share is 0.03. The counterattack cannot dislodge a few hundred landed troops; this is the same limit as Ypenburg.
+  * The swap with Ypenburg is nearly silent, because what differed was the airfield (context, never swapped). `ctx.wreck_obstacle` was revised once after the first anchor run: the Ypenburg value closed the wide grass field after one wave.
+* **`battlelab report --pairs a:b,c:d`** runs only those swap pairs (both directions). `scripts/reproduce.sh` uses the six pairs the notes discuss by default (`PAIRS=""` runs all): about 47 min instead of about 100 on 4 cores.
+* The test invariant "airbridge implies attacker control" now applies only without `risk.land_contested`.
+
+## Unreleased
+
 * **Two new scenarios: Heraklion and Rethymno 1941**, within-campaign controls for Maleme. They share its Luftwaffe, HQ and airlift values and are sourced from search excerpts only. Their anchors hold in about 98-99% of runs, which is weak evidence because every anchor follows from "the defenders win". What they add is in the swaps. Heraklion with Maleme's factors goes from 0.01 to 0.63 (Rethymno from 0.02 to 0.64), and Maleme's HOLD bundle is the largest contribution under both resolvers (+0.41 and +0.39 under Lanchester). Maleme with Heraklion's defenders alone falls from 0.66 to 0.03. HOLD mixes garrison size with the command-cycle withdrawal, so these swaps cannot separate the two (see results/NOTES.md).
 * Parameter expressions in scenario values (`"$hold.strength * (1 - $hold.perimeter_frac)"`: + - * / and parentheses, whitelisted); lint checks references inside them.
 * `fires[].from_zone`: a fire acts only while the firing side holds that zone.

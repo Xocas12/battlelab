@@ -124,8 +124,8 @@ def test_invariants(path):
         assert m["landed"] <= lift + 1e-6
         if m["t_control"] is not None:
             assert 0 <= m["t_control"] <= s.horizon
-        if m["airbridge"]:
-            assert m["attacker_ever_controls"]
+        if m["airbridge"] and not p.get("risk.land_contested", 0):
+            assert m["attacker_ever_controls"]      # else troops may land into a fight
         assert len(trace) == int(s.horizon / s.dt) + 1
 
 
@@ -445,7 +445,8 @@ def test_report_smoke(tmp_path):
                        go_rule_pair=("hostomel_2022", "maleme_1941"),
                        factors=["RISK", "HOLD"], log=False,
                        line_sweeps=[("m_hold", "maleme_1941", "hold.strength",
-                                     [500.0, 2000.0], {})])
+                                     [500.0, 2000.0], {})],
+                       pairs=[("hostomel_2022", "maleme_1941")])
     text = run_report(cfg).read_text()
     for head in ("## 1.", "## 2.", "## 3.", "## 4.", "## 5.", "## 6."):
         assert head in text
@@ -454,6 +455,8 @@ def test_report_smoke(tmp_path):
     assert (tmp_path / "shapley_hostomel_2022__maleme_1941_lanchester.csv").exists()
     assert "## Reading these results" not in text                  # no NOTES.md: no section
     assert "## 5b. One-parameter sweeps" in text
+    assert text.count("given maleme_1941's factors.**") == 1          # one pair, both directions
+    assert text.count("given hostomel_2022's factors.**") == 1
     assert (tmp_path / "linesweep_m_hold.csv").exists()
     (tmp_path / "NOTES.md").write_text(
         "# Notes\nMaleme joint {{anchor.maleme_1941.lanchester.joint}}, "
@@ -594,3 +597,18 @@ def test_perimeter_split_and_fire_from_zone():
     doc = yaml.safe_load(YPB.read_text())
     doc["fires"][0]["from_zone"] = "nowhere"
     assert any(i.where == "fires[0].from_zone" for i in Scenario(doc).lint())
+
+
+# ------------------------------------------------------------ soft ground ---
+def test_bogging_strands_aircraft_and_blocks_runway():
+    vkb = Scenario.load(ROOT / "scenarios" / "valkenburg_1940.yaml")
+    hard = experiment.run_batch(vkb.with_overrides({"ctx.bog_risk": 0.0}), 200, seed=2)
+    soft = experiment.run_batch(vkb.with_overrides({"ctx.bog_risk": 0.9}), 200, seed=2)
+    assert (hard["m.transports_stranded"] == 0).all()
+    assert soft["m.transports_stranded"].mean() > 5
+    assert soft["m.runway_end"].mean() < hard["m.runway_end"].mean()
+    for i in range(40):
+        w, _ = vkb.run(vkb.space.sample(2, i), 2, i)
+        landings = [e for e in w.log if e.kind == "airlanding"]
+        assert sum(e.data["bogged"] for e in landings) == w.metrics["transports_stranded"]
+        assert all(e.data["bogged"] <= e.data["aircraft"] - e.data["lost"] for e in landings)
