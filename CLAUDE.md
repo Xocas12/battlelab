@@ -4,7 +4,7 @@ Guidance for Claude Code working in this repository. Read `README.md`, `docs/ARC
 
 ## What this is
 
-`battlelab` is a Monte Carlo framework for comparative analysis of historical battles, currently one scenario family ("airhead": seizing an airfield and flying troops in) with three members, Hostomel 2022, Maleme 1941 and Ypenburg 1940. It has two engines behind one analysis layer: a native Python engine (board-game turn sequence, pluggable mechanics) and a Lua harness that runs replications inside Command: Modern Operations (public edition). Status: v0.3.0. Current results are in `results/SUMMARY.md`.
+`battlelab` is a Monte Carlo framework for comparative analysis of historical battles, currently one scenario family ("airhead": seizing an airfield and flying troops in) with five members: Hostomel 2022, Maleme 1941, Ypenburg 1940, and Heraklion and Rethymno 1941 (within-campaign controls for Maleme). It has two engines behind one analysis layer: a native Python engine (board-game turn sequence, pluggable mechanics) and a Lua harness that runs replications inside Command: Modern Operations (public edition). Status: v0.3.0. Current results are in `results/SUMMARY.md`.
 
 ## Commands
 
@@ -56,11 +56,13 @@ mkdir -p /tmp/out && cd cmo && lua5.3 tests/test_harness.lua lua /tmp/out -  # L
 * Arrival order for simultaneous arrivals is the YAML order of `units`.
 * Empty zones keep their last controller.
 * `losses_*` metrics are peak minus final strength of units; strength that withdrew is not a loss.
-* Scenario sourcing for Ypenburg comes from search excerpts, not full texts (the build sandbox could not reach the sources). Check against War over Holland and Brongers before trusting any Ypenburg number.
+* Scenario sourcing for Ypenburg, Heraklion and Rethymno comes from search excerpts, not full texts (the build sandbox could not reach the sources). Check against the full sources before trusting any number from those three. The Heraklion and Rethymno anchors all follow from "the defenders win", so they are weak evidence; the controls earn their keep in the swaps against Maleme.
 * The CMO harness, probe and scenario builder have only run against the mock (`cmo/tests/`). See `cmo/SETUP.md` "Known gaps". Any CMO API added to the Lua side must be added to `cmo/tests/mock_cmo.lua` with the documented signature.
 * In CMO the heliborne troops are scripted (`RU_VDV_` squads unloaded by helicopters reaching the airfield), not CMO cargo: respawned aircraft carry no cargo.
 
 ## Done (see CHANGELOG)
+
+Unreleased: parameter expressions (`"$a * (1 - $b)"`), zone-gated fire (`from_zone`), an inactive Ypenburg perimeter zone (tried, not adopted), Heraklion and Rethymno.
 
 0.3.0: airborne shock and no-retreat morale (issue #3), withdrawal move delay and attacker commitment gate (#5, partly), NOTES.md embedding in the report (#7).
 

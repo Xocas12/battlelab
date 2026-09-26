@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+* **Two new scenarios: Heraklion and Rethymno 1941**, within-campaign controls for Maleme. They share its Luftwaffe, HQ and airlift values and are sourced from search excerpts only. Their anchors hold in about 98-99% of runs, which is weak evidence because every anchor follows from "the defenders win". What they add is in the swaps. Heraklion with Maleme's factors goes from 0.01 to 0.63 (Rethymno from 0.02 to 0.64), and Maleme's HOLD bundle is the largest contribution under both resolvers (+0.41 and +0.39 under Lanchester). Maleme with Heraklion's defenders alone falls from 0.66 to 0.03. HOLD mixes garrison size with the command-cycle withdrawal, so these swaps cannot separate the two (see results/NOTES.md).
+* Parameter expressions in scenario values (`"$hold.strength * (1 - $hold.perimeter_frac)"`: + - * / and parentheses, whitelisted); lint checks references inside them.
+* `fires[].from_zone`: a fire acts only while the firing side holds that zone.
+* Ypenburg perimeter zone (new HOLD parameters `hold.perimeter_frac`, `hold.perimeter_fire`). Tried and not adopted: sole German control of the field rose only from 0.21 to 0.26, while the joint anchor share fell from 0.54 to 0.46. It is inactive (0) in every scenario.
+* Hostomel, Maleme and Ypenburg are unchanged run-for-run; the full results were regenerated (20 swap pairs, 1962 s on 4 workers).
+
 ## 0.3.0 (2026-09-25)
 
 Model changes. Each is exactly the 0.2.0 model at its default; Hostomel and Maleme were checked run-for-run over 400 runs before Maleme adopted the commitment gate.
