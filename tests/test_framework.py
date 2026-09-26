@@ -22,6 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 HOST = ROOT / "scenarios" / "hostomel_2022.yaml"
 MAL = ROOT / "scenarios" / "maleme_1941.yaml"
 YPB = ROOT / "scenarios" / "ypenburg_1940.yaml"
+ALL_SCENARIOS = sorted((ROOT / "scenarios").glob("*.yaml"))
 LUA = shutil.which("lua5.3") or shutil.which("lua")
 
 
@@ -103,7 +104,7 @@ def test_crt_resolver_runs_and_differs(tmp_path):
 
 
 # ------------------------------------------------------------ invariants ---
-@pytest.mark.parametrize("path", [HOST, MAL, YPB])
+@pytest.mark.parametrize("path", ALL_SCENARIOS, ids=lambda p: p.stem)
 def test_invariants(path):
     s = Scenario.load(path)
     lift = 0
@@ -129,14 +130,16 @@ def test_invariants(path):
 
 
 # ------------------------------------------------------------------ lint ---
-def test_shipped_scenarios_lint_clean(host, mal):
-    ypb = Scenario.load(YPB)
-    for s in (host, mal, ypb):
-        assert [i for i in s.lint() if i.level == "error"] == []
-    for a, b in ((host, mal), (host, ypb), (mal, ypb)):
+def test_shipped_scenarios_lint_clean(host):
+    import itertools
+    scen = [Scenario.load(p) for p in ALL_SCENARIOS]
+    assert len(scen) >= 5
+    for s in scen:
+        assert s.lint() == [], s.id                       # no errors and no warnings
+    for a, b in itertools.combinations(scen, 2):
         assert Scenario.lint_pair(a, b) == []
     mech = {n for n in host.space.names() if n.startswith(("mech.", "doctrine."))}
-    for s in (mal, ypb):                              # family constants identical
+    for s in scen:                                    # family constants identical
         assert {n for n in s.space.names() if n.startswith(("mech.", "doctrine."))} == mech
         assert all(s.space[n].dist == host.space[n].dist for n in mech)
 
