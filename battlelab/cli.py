@@ -229,6 +229,14 @@ def cmd_resolvers(a):
         experiment.save(t, a.out, "resolvers", {"kill_rate": a.kill_rate, "round_h": a.round_h})
 
 
+GARRISON = [500, 650, 800, 1000, 1250, 1500, 2000, 2500, 3000]
+NO_COMMAND = {"hold.decision_h": 0, "hold.comms_loss": 0, "hold.night_moves": 0}
+DEFAULT_LINE_SWEEPS = [
+    ("maleme_garrison", "maleme_1941", "hold.strength", GARRISON, {}),
+    ("maleme_garrison_no_command", "maleme_1941", "hold.strength", GARRISON, NO_COMMAND),
+]
+
+
 def cmd_report(a):
     import glob
 
@@ -239,7 +247,7 @@ def cmd_report(a):
     files = a.scenarios or sorted(glob.glob("scenarios/*.yaml"))
     cfg = ReportConfig(scenarios=files, n=a.n, seed=a.seed, workers=a.workers, out=a.out,
                        sweep_scenario=a.sweep, go_rule_pair=tuple(a.go_pair.split(","))
-                       if a.go_pair else None)
+                       if a.go_pair else None, line_sweeps=DEFAULT_LINE_SWEEPS)
     run_report(cfg)
 
 
