@@ -38,6 +38,8 @@ class ReportConfig:
         "denial.t_fires": list(np.linspace(1, 12, 12))})
     go_rule_pair: tuple[str, str] | None = None  # ids for the go/no-go comparison
     factors: list[str] | None = None             # swap only these bundles (default: all)
+    # one-parameter sweeps: (tag, scenario id, parameter, values, fixed overrides)
+    line_sweeps: list[tuple[str, str, str, list[float], dict]] = field(default_factory=list)
     log: bool = True
 
 
@@ -207,6 +209,28 @@ def run_report(cfg: ReportConfig) -> Path:
         _say(cfg, "go/no-go rule variants")
         sec.append(_go_rule_section(cfg, by_id[cfg.go_rule_pair[0]],
                                     by_id[cfg.go_rule_pair[1]], out))
+
+    # 5b. one-parameter sweeps ---------------------------------------------------
+    rows_ls = []
+    for tag, sid, param, xs, fixed in cfg.line_sweeps:
+        if sid not in by_id:
+            continue
+        _say(cfg, f"line sweep {tag}")
+        sc = by_id[sid].with_overrides(fixed) if fixed else by_id[sid]
+        df = experiment.sweep(sc, {param: list(xs)}, N, seed, workers=W)
+        experiment.save(df, out, f"linesweep_{tag}", {"scenario": sc.fingerprint(), "n": N,
+                                                      "seed": seed, "fixed": fixed})
+        for x, pv in zip(df[param], df["p"]):
+            values[f"linesweep.{tag}.{x:g}"] = float(pv)
+            rows_ls.append({"sweep": tag, "x": x, "p": pv})
+    if rows_ls:
+        t = pd.DataFrame(rows_ls).pivot_table(index="sweep", columns="x", values="p")
+        t.columns = [f"{c:g}" for c in t.columns]
+        sec.append("## 5b. One-parameter sweeps\n\n"
+                   f"P(airbridge), n = {N:,} per point (`linesweep_*.csv`). "
+                   + "; ".join(f"`{tag}`: {sid}, `{param}`" + (f" with {fixed}" if fixed else "")
+                               for tag, sid, param, _, fixed in cfg.line_sweeps)
+                   + ".\n\n" + md_table(t.reset_index()))
 
     # 5. sweep ------------------------------------------------------------------
     if cfg.sweep_scenario and cfg.sweep_scenario in by_id:

@@ -6,7 +6,9 @@
 * Parameter expressions in scenario values (`"$hold.strength * (1 - $hold.perimeter_frac)"`: + - * / and parentheses, whitelisted); lint checks references inside them.
 * `fires[].from_zone`: a fire acts only while the firing side holds that zone.
 * Ypenburg perimeter zone (new HOLD parameters `hold.perimeter_frac`, `hold.perimeter_fire`). Tried and not adopted: sole German control of the field rose only from 0.21 to 0.26, while the joint anchor share fell from 0.54 to 0.46. It is inactive (0) in every scenario.
-* Hostomel, Maleme and Ypenburg are unchanged run-for-run; the full results were regenerated (20 swap pairs, 1962 s on 4 workers).
+* **HOLD split into HOLD (garrison) and COMMAND (command-cycle withdrawal).** Swaps are now 7-factor. Result: in the Crete comparison, Maleme's garrison size decides whether it fell (HOLD +0.36 / +0.32 for Heraklion / Rethymno with Maleme's factors), and COMMAND is small (+0.04 / +0.06). Maleme with Heraklion's command behaviour alone stays at 0.65.
+* **One-parameter sweeps in the report (section 5b).** Maleme's garrison is swept with and without the command cycle: P(airbridge) is 0.73 at 500 defenders, 0.21 at 1,000, 0.04 at 1,500 and 0.01 at 2,000. Without the command cycle, large garrisons hold less reliably (0.08 at 2,000).
+* Hostomel, Maleme and Ypenburg are unchanged run-for-run; the full results were regenerated (20 swap pairs, 7 factors).
 
 ## 0.3.0 (2026-09-25)
 

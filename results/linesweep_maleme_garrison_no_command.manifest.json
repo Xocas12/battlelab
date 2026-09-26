@@ -1,0 +1,15 @@
+{
+  "framework": "battlelab",
+  "version": "0.3.0",
+  "created": "2026-09-26T20:08:47",
+  "python": "3.11.15",
+  "numpy": "2.4.6",
+  "scenario": "5383e419069d2cce",
+  "n": 1000,
+  "seed": 1,
+  "fixed": {
+    "hold.decision_h": 0,
+    "hold.comms_loss": 0,
+    "hold.night_moves": 0
+  }
+}
