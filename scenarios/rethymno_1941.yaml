@@ -59,6 +59,8 @@ parameters:
   response.strength: {dist: uniform, lo: 400, hi: 800, assumption: true}
   response.commit_h: {dist: uniform, lo: 8, hi: 14, assumption: true}
   response.withdraw_ratio: {dist: fixed, value: 2.0, assumption: true}
+  response.t_ca2: {dist: fixed, value: 1000.0, assumption: true, note: "no second counterattack (inactive)"}
+  response.strength2: {dist: fixed, value: 0.0, assumption: true, note: "no second counterattack (inactive)"}
   # DENIAL ------------------------------------------------------------------
   denial.obstacles0: {dist: fixed, value: 0.0, assumption: true}
   denial.t_fires: {dist: uniform, lo: 0.0, hi: 1.0, assumption: true, note: "defending artillery engaged the drop from the start (as at Maleme)"}
@@ -138,6 +140,12 @@ units:
     strength: $response.strength
     morale: {commit_h: $response.commit_h, withdraw_ratio: $response.withdraw_ratio}
     arrive: {t: $response.t_ca, zone: airfield}
+  au_counterattack_2:
+    side: AU
+    kind: infantry
+    strength: $response.strength2
+    morale: {commit_h: $response.commit_h, withdraw_ratio: $response.withdraw_ratio}
+    arrive: {t: $response.t_ca2, zone: airfield}
   gebirgsjaeger:
     side: DE
     kind: airlanded_infantry
@@ -183,7 +191,8 @@ factors:
   HOLD: [hold.strength, hold.quality, hold.dug_in, hold.base_hazard, hold.ammo_out_h,
          hold.perimeter_frac, hold.perimeter_fire]
   COMMAND: [hold.decision_h, hold.comms_loss, hold.fog, hold.night_moves, hold.move_delay_h]
-  RESPONSE: [response.t_ca, response.strength, response.commit_h, response.withdraw_ratio]
+  RESPONSE: [response.t_ca, response.strength, response.commit_h, response.withdraw_ratio,
+             response.t_ca2, response.strength2]
   DENIAL: [denial.obstacles0, denial.t_fires, denial.fire_intensity, denial.crater_rate, denial.demolish_rate]
   RISK: [risk.tolerance, risk.land_contested, risk.commit_lag_h, risk.commit_cycle_h]
 

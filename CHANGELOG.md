@@ -5,7 +5,10 @@
 * **Airborne ammunition limit** (`mass.ammo_out_h`, MASS bundle; issue #13). Parachuted and air-landed units use the existing ammunition hazard. The value is 1000 h (not binding) in Hostomel, Maleme, Heraklion and Rethymno, which are identical run-for-run. Ypenburg and Valkenburg use 6-14 h, an assumption set before the anchor run.
   * Valkenburg: `dutch_retake_field` 0.07 → 0.29, joint 0.03 → 0.14.
   * Ypenburg: joint 0.54 → 0.62; with the sole-control anchor, 0.04 → 0.09.
-  * #13's targets are not met yet, so the issue stays open.
+* **Second, later counterattack** (`response.t_ca2`, `response.strength2`, RESPONSE bundle; issue #13). It is inactive (strength 0) outside the Hague scenarios. At Ypenburg and Valkenburg it comes at 8-14 h with 400-800 men, an assumption set before the anchor run.
+  * Valkenburg: retake 0.29 → 0.41, joint 0.14 → 0.21 (Lanchester), which meets #13's targets.
+  * Ypenburg: joint 0.62 → 0.63.
+  * Also tried and not adopted: lower organisation for troops from bogged aircraft.
 * **Valkenburg 1940** (sixth airhead member) and a **soft-ground mechanic**. With `airlift.bog_risk` (context parameter `ctx.bog_risk`), each landed aircraft may sink into soft ground: its troops get off, the aircraft stays on the strip as an obstacle, and it is counted in the new metric `transports_stranded`. The mechanic draws from its own random stream and makes no draw when off, so the other five scenarios are unchanged run-for-run (checked over 300 runs each).
   * Results: the Germans take the field in 56% of runs, and at least 20 transports are stranded in 40%. The Dutch retake the field in only 7%, so the joint share is 0.03. The counterattack cannot dislodge a few hundred landed troops; this is the same limit as Ypenburg.
   * The swap with Ypenburg is nearly silent, because what differed was the airfield (context, never swapped). `ctx.wreck_obstacle` was revised once after the first anchor run: the Ypenburg value closed the wide grass field after one wave.

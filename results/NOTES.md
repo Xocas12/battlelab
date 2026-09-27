@@ -6,7 +6,7 @@ Hand-written interpretation. Every number below is a placeholder filled in from 
 
 * **Hostomel.** It reproduces its history well: all four facts hold jointly in {{anchor.hostomel_2022.lanchester.joint|pct}} of runs under Lanchester and {{anchor.hostomel_2022.crt.joint|pct}} under the CRT.
 * **Maleme.** It looks worse than in 0.2.0 ({{anchor.maleme_1941.lanchester.joint|pct}} joint under Lanchester) because its first-landing anchor was tightened from "day 2" to "the afternoon of day 2", not because the model got worse. The commitment gate moved the first landings toward the afternoon, but most runs still land in the morning.
-* **Ypenburg.** It reaches {{anchor.ypenburg_1940.lanchester.joint|pct}}. That is mostly because its control anchor was reread as "German troops on the field for at least 3 hours" rather than sole control, and partly because of the airborne ammunition limit (#13). Its parameters are thinly sourced (issue #4).
+* **Ypenburg.** It reaches {{anchor.ypenburg_1940.lanchester.joint|pct}}. That is mostly because its control anchor was reread as "German troops on the field for at least 3 hours" rather than sole control, and partly because of the airborne ammunition limit and the second counterattack (#13). Its parameters are thinly sourced (issue #4).
 
 **What the factor swaps say.**
 
@@ -34,7 +34,10 @@ Hand-written interpretation. Every number below is a placeholder filled in from 
 **Valkenburg: the ground, not the fight.** Valkenburg is the same operation as Ypenburg on an unfinished airfield that could not carry loaded Ju 52s.
 
 * **The soft-ground mechanic works.** Many transports get stranded ({{anchor.valkenburg_1940.lanchester.many_transports_stranded|pct}} of runs strand at least 20), and the Germans take the field ({{anchor.valkenburg_1940.lanchester.germans_take_field|pct}}).
-* **The recapture is only partly reproduced.** The Dutch retake the field in {{anchor.valkenburg_1940.lanchester.dutch_retake_field|pct}} of runs, and all four facts hold together in {{anchor.valkenburg_1940.lanchester.joint|pct}}. Most of that comes from limiting the airborne troops' ammunition (`mass.ammo_out_h`, 6-14 h of fighting, issue #13); before it, the Dutch retook the field in 7% of runs. The remaining gap is the counterattack itself: a few hundred landed troops with ammunition left still hold. Destroying the stranded aircraft and pinning the troops beside them is the next candidate (#13 stays open).
+* **The recapture needs two things.** The Dutch retake the field in {{anchor.valkenburg_1940.lanchester.dutch_retake_field|pct}} of runs, and all four facts hold together in {{anchor.valkenburg_1940.lanchester.joint|pct}} (issue #13). It took two mechanisms:
+  * The airborne troops run out of ammunition after 6-14 h of fighting (`mass.ammo_out_h`). This alone lifts the recapture from 7% to 29%.
+  * A second, later Dutch counterattack (`response.t_ca2`, `response.strength2`). One counterattack cannot both let the Germans take the field and take it back the same day; two successive efforts, as in the history, can.
+  * Both are assumptions set before their anchor runs. A third idea, disorganised troops from bogged aircraft, was tried and not adopted (it made the Germans weaker without making the recapture likelier).
 * **The factor swap is nearly silent.** Ypenburg and Valkenburg share almost every factor value, so Valkenburg with Ypenburg's factors only moves from {{swap.valkenburg_1940__ypenburg_1940.lanchester.base}} to {{swap.valkenburg_1940__ypenburg_1940.lanchester.full}} (all of it HOLD, {{shapley.valkenburg_1940__ypenburg_1940.lanchester.HOLD|signed}}). What differed was the airfield itself (soft ground, a wide grass surface, a fourth wave), and that is context (`ctx.*`), which swaps never exchange by design (MODELING_STANDARDS §5). Answering "why did Valkenburg differ from Ypenburg" needs a context comparison, not a factor swap.
 * **Sources.** Search excerpts only (Stichting Historie Vliegveld Valkenburg, Forgotten Airfields). One prior (`ctx.wreck_obstacle`) was revised after the first anchor run, and its note says so.
 

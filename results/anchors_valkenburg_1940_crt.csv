@@ -1,6 +1,6 @@
 anchor,metric,op,target,share,lo95,hi95,source
-germans_take_field,attacker_ever_controls,eq,True,0.5605,0.5386521087371636,0.5821159200331743,VVH
-dutch_retake_field,defender_retakes,eq,True,0.2905,0.27101953511781973,0.3107837371567951,VVH
+germans_take_field,attacker_ever_controls,eq,True,0.5545,0.532633256218941,0.5761577779626031,VVH
+dutch_retake_field,defender_retakes,eq,True,0.4965,0.4746147944983598,0.5183986253248437,VVH
 many_transports_stranded,transports_stranded,ge,20,0.481,0.4591597562130036,0.5029130942558159,VVH
-runway_blocked,runway_end,lt,0.6,0.65,0.6288263855998415,0.6705984791200046,VVH
-ALL (joint),,,,0.1515,0.13645546031888056,0.16788077064867696,
+runway_blocked,runway_end,lt,0.6,0.79,0.7716014210087279,0.8072866507829748,VVH
+ALL (joint),,,,0.273,0.2539241212989076,0.29294625009172526,

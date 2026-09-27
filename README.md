@@ -24,7 +24,7 @@ Statements about the model, with the caveats and every number in [`results/SUMMA
 * **Hostomel 2022 vs Maleme 1941.** Give the 2022 Russian assault the 1941 German factors, and the chance of an airbridge roughly doubles. The two largest contributions are the defenders (Maleme's would have stopped the 2022 assault) and the attacker's willingness to land under risk. This holds under both combat models and all three go/no-go rules.
 * **Why Maleme fell and Heraklion and Rethymno did not.** In this model it is the size of the garrison at the airfield, not the night withdrawal: the withdrawal explains *when* Maleme fell, the garrison *whether*. A garrison of about 1,500 would probably have held.
 * **Hostomel's counterfactual surface has a cliff.** Once Ukrainian fires start after the first Il-76 landing window, even modest Russian risk appetite produces an airbridge.
-* **Known gaps.** The model does not yet reproduce the same-day Dutch recaptures of the Hague airfields well (#13), or the afternoon timing of Maleme's first landings (#5).
+* **Known gaps.** The afternoon timing of Maleme's first landings is still reproduced in only a minority of runs (#5). The Hague scenarios reproduce the same-day Dutch recaptures only with two assumed mechanisms (#13), and Ypenburg, Valkenburg, Heraklion and Rethymno rest on search-excerpt sourcing (#4).
 
 ![Shapley contributions, Hostomel with Maleme's factors](results/shapley_hostomel_2022__maleme_1941.png)
 ![Shapley contributions, Heraklion with Maleme's factors](results/shapley_heraklion_1941__maleme_1941.png)
