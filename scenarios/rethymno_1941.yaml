@@ -40,6 +40,7 @@ parameters:
   mass.shock_decay_h: {dist: fixed, value: 2.0, assumption: true, note: "inactive while mass.shock = 0"}
   mass.cornered: {dist: fixed, value: 1.0, assumption: true,
     note: "1 = ordinary force-ratio morale; not estimated, keeps 0.2.0 behaviour"}
+  mass.ammo_out_h: {dist: fixed, value: 1000.0, assumption: true, note: "not binding: the attacker was resupplied (air-landing or ground link-up) or held out beyond the horizon"}
   # HOLD --------------------------------------------------------------------
   hold.strength: {dist: uniform, lo: 1000, hi: 1600, source: WPR, assumption: true, confidence: low, note: "2/1st and 2/11th Australian Battalions with supporting elements; the Greek 4th and 5th Regiments were poorly armed and are not counted"}
   hold.quality: {dist: uniform, lo: 1.0, hi: 1.2, assumption: true}
@@ -120,14 +121,14 @@ units:
   fjr_2:
     side: DE
     kind: airborne_infantry
-    morale: {on_break: disperse, ratio_scale: $mass.cornered}
+    morale: {on_break: disperse, ratio_scale: $mass.cornered, ammo_out_h: $mass.ammo_out_h}
     arrive: {t: 0.0, zone: airfield, mode: parachute, aircraft: $mass.aircraft,
              capacity: $mass.capacity, dz_loss: $mass.dz_loss,
              shock: $mass.shock, shock_decay_h: $mass.shock_decay_h}
   airborne_reserve:
     side: DE
     kind: parachute_infantry
-    morale: {on_break: disperse, ratio_scale: $mass.cornered}
+    morale: {on_break: disperse, ratio_scale: $mass.cornered, ammo_out_h: $mass.ammo_out_h}
     arrive: {t: $mass.t_reserve, zone: airfield, mode: parachute, aircraft: $mass.reserve_aircraft,
              capacity: $mass.reserve_capacity, dz_loss: $mass.reserve_dz,
              shock: $mass.shock, shock_decay_h: $mass.shock_decay_h, only_if_present: true}
@@ -140,7 +141,7 @@ units:
   gebirgsjaeger:
     side: DE
     kind: airlanded_infantry
-    morale: {on_break: disperse, ratio_scale: $mass.cornered}
+    morale: {on_break: disperse, ratio_scale: $mass.cornered, ammo_out_h: $mass.ammo_out_h}
 
 fires:
   - {id: perimeter_fire, side: AU, zone: airfield, active_from: 0.0, intensity: $hold.perimeter_fire}   # 0: no separate perimeter
@@ -178,7 +179,7 @@ factors:
   AIR: [air.att.ingress_loss, air.att.approach_loss, air.att.suppression, air.att.interdiction, air.att.cas]
   MASS: [mass.aircraft, mass.capacity, mass.dz_loss, mass.reserve_aircraft, mass.reserve_capacity,
          mass.reserve_dz, mass.t_reserve, mass.shock, mass.shock_decay_h,
-         mass.cornered]
+         mass.cornered, mass.ammo_out_h]
   HOLD: [hold.strength, hold.quality, hold.dug_in, hold.base_hazard, hold.ammo_out_h,
          hold.perimeter_frac, hold.perimeter_fire]
   COMMAND: [hold.decision_h, hold.comms_loss, hold.fog, hold.night_moves, hold.move_delay_h]
