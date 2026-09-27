@@ -1,11 +1,11 @@
 {
   "framework": "battlelab",
   "version": "0.3.0",
-  "created": "2026-09-26T20:44:34",
+  "created": "2026-09-27T10:02:24",
   "python": "3.11.15",
   "numpy": "2.4.6",
-  "home": "bdb1b8cd5e284033",
-  "away": "9b61493d8e1f6978",
+  "home": "94521bf8dba563e8",
+  "away": "641d5878fa87b36b",
   "n": 400,
   "seed": 1,
   "resolver": "crt"
