@@ -17,6 +17,18 @@ The failure mode of a quick battle model is untraceable numbers: parameters pick
 * **Common random numbers.** Each parameter's draw depends only on (seed, run, parameter name), so swapping one factor never reshuffles the others. This is what makes factor-swap differences and Shapley values meaningful at modest run counts.
 * **Everything is traceable.** Saved results carry a manifest with scenario fingerprints, seeds and overrides.
 
+## Findings at a glance
+
+Statements about the model, with the caveats and every number in [`results/SUMMARY.md`](results/SUMMARY.md) (read its "Reading these results" section first). Most parameters are flagged assumptions; three scenarios are sourced from search excerpts only.
+
+* **Hostomel 2022 vs Maleme 1941.** Give the 2022 Russian assault the 1941 German factors, and the chance of an airbridge roughly doubles. The two largest contributions are the defenders (Maleme's would have stopped the 2022 assault) and the attacker's willingness to land under risk. This holds under both combat models and all three go/no-go rules.
+* **Why Maleme fell and Heraklion and Rethymno did not.** In this model it is the size of the garrison at the airfield, not the night withdrawal: the withdrawal explains *when* Maleme fell, the garrison *whether*. A garrison of about 1,500 would probably have held.
+* **Hostomel's counterfactual surface has a cliff.** Once Ukrainian fires start after the first Il-76 landing window, even modest Russian risk appetite produces an airbridge.
+* **Known gaps.** The model does not yet reproduce the same-day Dutch recaptures of the Hague airfields well (#13), or the afternoon timing of Maleme's first landings (#5).
+
+![Shapley contributions, Hostomel with Maleme's factors](results/shapley_hostomel_2022__maleme_1941.png)
+![Shapley contributions, Heraklion with Maleme's factors](results/shapley_heraklion_1941__maleme_1941.png)
+
 ## Install
 
 ```bash

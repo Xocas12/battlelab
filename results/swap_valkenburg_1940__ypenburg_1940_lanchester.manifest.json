@@ -1,11 +1,11 @@
 {
   "framework": "battlelab",
   "version": "0.3.0",
-  "created": "2026-09-26T20:50:12",
+  "created": "2026-09-27T10:08:30",
   "python": "3.11.15",
   "numpy": "2.4.6",
-  "home": "e9dcb70a50a11017",
-  "away": "9b61493d8e1f6978",
+  "home": "b00a7b36172ad83c",
+  "away": "641d5878fa87b36b",
   "n": 1000,
   "seed": 1,
   "resolver": "lanchester"
