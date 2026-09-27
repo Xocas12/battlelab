@@ -621,3 +621,15 @@ def test_airborne_ammunition_limits_holdout():
     short = experiment.run_batch(vkb.with_overrides({"mass.ammo_out_h": 6.0}), 300, seed=6)
     assert short["m.defender_retakes"].mean() > long["m.defender_retakes"].mean() + 0.1
     assert short["m.attacker_hours_on_field"].mean() < long["m.attacker_hours_on_field"].mean()
+
+
+def test_second_counterattack():
+    vkb = Scenario.load(ROOT / "scenarios" / "valkenburg_1940.yaml")
+    w, _ = vkb.run(vkb.space.sample(3, 0), 3, 0)
+    assert any(e.kind == "arrival" and e.data["unit"] == "nl_counterattack_2" for e in w.log)
+    one = experiment.run_batch(vkb.with_overrides({"response.strength2": 0.0}), 300, seed=7)
+    two = experiment.run_batch(vkb, 300, seed=7)
+    assert two["m.defender_retakes"].mean() > one["m.defender_retakes"].mean()
+    host = Scenario.load(HOST)                       # inactive: never arrives
+    w, _ = host.run(host.space.sample(3, 0), 3, 0)
+    assert not any(e.data.get("unit") == "ua_counterattack_2" for e in w.log)

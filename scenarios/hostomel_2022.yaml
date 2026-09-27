@@ -70,6 +70,8 @@ parameters:
   response.commit_h: {dist: uniform, lo: 8, hi: 14, assumption: true}
   response.withdraw_ratio: {dist: fixed, value: 2.0, assumption: true,
     note: "light infantry leaves rather than fight 2:1 against a mechanised force"}
+  response.t_ca2: {dist: fixed, value: 1000.0, assumption: true, note: "no second counterattack (inactive)"}
+  response.strength2: {dist: fixed, value: 0.0, assumption: true, note: "no second counterattack (inactive)"}
   # DENIAL ------------------------------------------------------------------
   denial.obstacles0: {dist: uniform, lo: 0.5, hi: 0.8, source: WOTR2023, assumption: true,
     note: "vehicles parked on the runway; a downed Ka-52 added another obstacle"}
@@ -160,6 +162,12 @@ units:          # arrival order matters for simultaneous arrivals
     strength: $response.strength
     morale: {commit_h: $response.commit_h, withdraw_ratio: $response.withdraw_ratio}
     arrive: {t: $response.t_ca, zone: airfield}
+  ua_counterattack_2:
+    side: UA
+    kind: infantry
+    strength: $response.strength2
+    morale: {commit_h: $response.commit_h, withdraw_ratio: $response.withdraw_ratio}
+    arrive: {t: $response.t_ca2, zone: airfield}
   ru_ground_column:
     side: RU
     kind: mechanised
@@ -209,7 +217,8 @@ factors:
   HOLD: [hold.strength, hold.quality, hold.dug_in, hold.base_hazard, hold.ammo_out_h,
          hold.perimeter_frac, hold.perimeter_fire]
   COMMAND: [hold.decision_h, hold.comms_loss, hold.fog, hold.night_moves, hold.move_delay_h]
-  RESPONSE: [response.t_ca, response.strength, response.commit_h, response.withdraw_ratio]
+  RESPONSE: [response.t_ca, response.strength, response.commit_h, response.withdraw_ratio,
+             response.t_ca2, response.strength2]
   DENIAL: [denial.obstacles0, denial.t_fires, denial.fire_intensity, denial.crater_rate, denial.demolish_rate]
   RISK: [risk.tolerance, risk.land_contested, risk.commit_lag_h, risk.commit_cycle_h]
 
