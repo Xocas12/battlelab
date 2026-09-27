@@ -612,3 +612,12 @@ def test_bogging_strands_aircraft_and_blocks_runway():
         landings = [e for e in w.log if e.kind == "airlanding"]
         assert sum(e.data["bogged"] for e in landings) == w.metrics["transports_stranded"]
         assert all(e.data["bogged"] <= e.data["aircraft"] - e.data["lost"] for e in landings)
+
+
+def test_airborne_ammunition_limits_holdout():
+    """Airborne troops that run dry leave the field; with 1000 h nothing changes."""
+    vkb = Scenario.load(ROOT / "scenarios" / "valkenburg_1940.yaml")
+    long = experiment.run_batch(vkb.with_overrides({"mass.ammo_out_h": 1000.0}), 300, seed=6)
+    short = experiment.run_batch(vkb.with_overrides({"mass.ammo_out_h": 6.0}), 300, seed=6)
+    assert short["m.defender_retakes"].mean() > long["m.defender_retakes"].mean() + 0.1
+    assert short["m.attacker_hours_on_field"].mean() < long["m.attacker_hours_on_field"].mean()

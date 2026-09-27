@@ -52,6 +52,8 @@ parameters:
     note: "e-folding time of the surprise; the Dutch had reorganised and counterattacked within hours"}
   mass.cornered: {dist: uniform, lo: 0.2, hi: 0.6, source: WOH, assumption: true, confidence: low,
     note: "carried over from Ypenburg (same operation, same Luftwaffe units): scales the force-ratio morale term of the airborne units: surrounded, with nowhere to withdraw to, they held out in pockets until killed or captured (WOH). Added for issue #3 after traces showed the paratroops 'withdrawing' at 5:1 within hours; prior set before the anchor run with it"}
+  mass.ammo_out_h: {dist: uniform, lo: 6.0, hi: 14.0, assumption: true, confidence: low,
+    note: "hours of fighting until the airborne troops run dry: they landed with what they carried, weapons containers were scattered, and nothing came in once the transport stream stopped. Added for issue #13 (the Dutch retook both fields the same day); prior set before the anchor run"}
   # HOLD --------------------------------------------------------------------
   hold.strength: {dist: uniform, lo: 150, hi: 400, assumption: true, confidence: low, note: "defenders at the unfinished field; weaker than at Ypenburg, since the Germans took it at first (VVH)"}
   hold.quality: {dist: uniform, lo: 0.8, hi: 1.0, assumption: true,
@@ -154,14 +156,14 @@ units:
   fallschirmjaeger:
     side: DE
     kind: parachute_infantry
-    morale: {on_break: disperse, ratio_scale: $mass.cornered}
+    morale: {on_break: disperse, ratio_scale: $mass.cornered, ammo_out_h: $mass.ammo_out_h}
     arrive: {t: 0.0, zone: airfield, mode: parachute, aircraft: $mass.aircraft,
              capacity: $mass.capacity, dz_loss: $mass.dz_loss,
              shock: $mass.shock, shock_decay_h: $mass.shock_decay_h}
   airborne_reserve:
     side: DE
     kind: parachute_infantry
-    morale: {on_break: disperse, ratio_scale: $mass.cornered}
+    morale: {on_break: disperse, ratio_scale: $mass.cornered, ammo_out_h: $mass.ammo_out_h}
     arrive: {t: $mass.t_reserve, zone: airfield, mode: parachute, aircraft: $mass.reserve_aircraft,
              capacity: $mass.reserve_capacity, dz_loss: $mass.reserve_dz,
              shock: $mass.shock, shock_decay_h: $mass.shock_decay_h, only_if_present: true}
@@ -174,7 +176,7 @@ units:
   airlanded_infantry:
     side: DE
     kind: airlanded_infantry
-    morale: {on_break: disperse, ratio_scale: $mass.cornered}
+    morale: {on_break: disperse, ratio_scale: $mass.cornered, ammo_out_h: $mass.ammo_out_h}
 
 fires:
   - {id: nl_perimeter_fire, side: NL, zone: airfield, from_zone: perimeter, active_from: 0.0,
@@ -213,7 +215,7 @@ factors:
   AIR: [air.att.ingress_loss, air.att.approach_loss, air.att.suppression, air.att.interdiction, air.att.cas]
   MASS: [mass.aircraft, mass.capacity, mass.dz_loss, mass.reserve_aircraft, mass.reserve_capacity,
          mass.reserve_dz, mass.t_reserve, mass.shock, mass.shock_decay_h,
-         mass.cornered]
+         mass.cornered, mass.ammo_out_h]
   HOLD: [hold.strength, hold.quality, hold.dug_in, hold.base_hazard, hold.ammo_out_h,
          hold.perimeter_frac, hold.perimeter_fire]
   COMMAND: [hold.decision_h, hold.comms_loss, hold.fog, hold.night_moves, hold.move_delay_h]
