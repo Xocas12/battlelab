@@ -240,3 +240,47 @@ def compare_backends(a: pd.DataFrame, b: pd.DataFrame, rtol: float = 1e-5
                          "only_b": int((x.isna() & y.notna()).sum()), "corr": corr,
                          "n": int(ok.sum())})
     return pd.DataFrame(rows), info
+
+
+# ---------------------------------------------------------------------------
+# Parameter comparison across scenarios
+# ---------------------------------------------------------------------------
+def _dist_label(prm) -> str:
+    d = prm.dist.to_spec()
+    kind = d.pop("dist")
+    fmt = "{:g}".format
+    if kind == "fixed":
+        body = fmt(d["value"])
+    elif kind == "uniform":
+        body = f"{fmt(d['lo'])}-{fmt(d['hi'])}"
+    elif kind == "triangular":
+        body = f"tri({fmt(d['lo'])}, {fmt(d['mode'])}, {fmt(d['hi'])})"
+    else:
+        body = f"logn({fmt(d['median'])}, gsd {fmt(d['gsd'])})"
+    flag = "A" if prm.prov.assumption else "S"
+    if prm.prov.source and prm.prov.assumption:
+        flag = "S+A"
+    return f"{body} `{flag}{prm.prov.confidence[0]}`"
+
+
+def parameter_table(scenarios) -> pd.DataFrame:
+    """Every parameter of every scenario, side by side, with its factor bundle.
+
+    Cells show the distribution and a provenance flag: S = sourced,
+    A = assumption, S+A = sourced fact turned into a number by judgement,
+    followed by the confidence initial (l/m/h).
+    """
+    bundle: dict[str, str] = {}
+    for s in scenarios:
+        for f, names in s.factors.items():
+            for n in names:
+                bundle.setdefault(n, f)
+    names = sorted({n for s in scenarios for n in s.space.names()},
+                   key=lambda n: (bundle.get(n, "~" + n.split(".")[0]), n))
+    rows = []
+    for n in names:
+        row = {"parameter": f"`{n}`", "bundle": bundle.get(n, n.split(".")[0] + " (not swapped)")}
+        for s in scenarios:
+            row[s.id] = _dist_label(s.space[n]) if n in s.space else "-"
+        rows.append(row)
+    return pd.DataFrame(rows)
