@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Guidance for Claude Code working in this repository. Read `README.md`, `docs/ARCHITECTURE.md` and `docs/MODELING_STANDARDS.md` before changing model behaviour.
+Guidance for Claude Code working in this repository. Read `README.md`, `docs/ARCHITECTURE.md`, `docs/MECHANISMS.md` and `docs/MODELING_STANDARDS.md` before changing model behaviour. After changing any scenario parameter, run `battlelab params --out docs/PARAMETERS.md` (a test checks it is current), and add new mechanisms to `docs/MECHANISMS.md`.
 
 ## What this is
 

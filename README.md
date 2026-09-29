@@ -78,7 +78,8 @@ scenarios/         the "airhead" family: hostomel_2022, maleme_1941, heraklion_1
                    rethymno_1941, ypenburg_1940 (.yaml)
 cmo/lua/battlelab/ bl_core.lua (replication engine), bl_hostomel.lua (plugin), bl_run.lua
 cmo/tests/         mock_cmo.lua + test_harness.lua (offline tests of the harness)
-docs/              ARCHITECTURE.md, MODELING_STANDARDS.md
+docs/              ARCHITECTURE.md, MECHANISMS.md (what is modelled), PARAMETERS.md
+                   (generated: every parameter across scenarios), MODELING_STANDARDS.md
 cmo/SETUP.md       how to wire the harness into a CMO scenario
 ```
 
