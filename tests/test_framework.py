@@ -633,3 +633,11 @@ def test_second_counterattack():
     host = Scenario.load(HOST)                       # inactive: never arrives
     w, _ = host.run(host.space.sample(3, 0), 3, 0)
     assert not any(e.data.get("unit") == "ua_counterattack_2" for e in w.log)
+
+
+def test_parameters_doc_is_current(tmp_path):
+    from battlelab.cli import main
+    out = tmp_path / "PARAMETERS.md"
+    main(["params", *map(str, ALL_SCENARIOS), "--out", str(out)])
+    assert out.read_text() == (ROOT / "docs" / "PARAMETERS.md").read_text(), \
+        "docs/PARAMETERS.md is stale: run `battlelab params --out docs/PARAMETERS.md`"
