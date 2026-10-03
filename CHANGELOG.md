@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+Sourcing pass (issues #4, #5) against full texts instead of search excerpts: the NIMH airfield histories and the Hague WOH pages for Ypenburg and Valkenburg; Long, *Greece, Crete and Syria* (AWM official history, chapters 11-13) and Playfair, *Mediterranean and Middle East* vol. II for Crete. Every revised parameter note names its source.
+
+* **Two mechanisms, each exactly the old model at its default** (Hostomel identical run-for-run over 2,000 runs under both resolvers; the wave sizes were checked on all six scenarios over 200 runs).
+  * `airlift.wave_aircraft`: a separate aircraft count per wave.
+  * `redeploy:`: a share of one side's troops leaves a zone it holds for another zone after a delay.
+* **Valkenburg.** Sourced: two waves (53 and 5-12 aircraft), garrison 100-150, Dutch counterattacks at H+1-1.75 and H+11.5-12. The ammunition limit is off (1000 h): the German pocket held out to 14 May. With the sourced values alone the joint share fell to 0.002: the Germans held the field and never ran dry. The sources say most of them moved into Valkenburg village before the Dutch retook the field at 17:30, which the redeployment models (60-80% after 1-4 h, an assumption set before the anchor run). Joint 0.21 → 0.33 (Lanchester), 0.27 → 0.40 (CRT); retake 0.44 / 0.52.
+* **Ypenburg.** Sourced: 40 aircraft per wave, sourced wave times, Dutch counterattacks at H+5.5-6 and H+7.5-10. Joint 0.63 → 0.62 (Lanchester), 0.61 → 0.56 (CRT).
+* **Crete.** Garrison sizes and counterattack times from Long; Heraklion now uses the second counterattack (the Black Watch and Leicesters' sweeps); Rethymno's prisoners corrected to 25 + 34. Maleme's afternoon first-landing anchor is confirmed (troops air-landed about 16:00 on 21 May, H+32; one Ju 52 landed at 08:10). Joint shares under Lanchester / CRT:
+  * Maleme 0.20 → 0.19 / 0.029 → 0.028
+  * Heraklion 0.99 → 0.98 / 0.98 → 0.98
+  * Rethymno 0.99 → 0.98 / 0.98 → 0.97
+* Davin's NZ official history (NZETC) could not be read (the site blocks automated access); Long and Playfair cover the same events.
+
+
 ## 0.4.0 (2026-09-29)
 
 Six scenarios, three new mechanisms for the Hague airfields, a garrison/command split of the defenders, and documentation for a public repository.
@@ -19,7 +35,7 @@ Six scenarios, three new mechanisms for the Hague airfields, a garrison/command 
 * **`battlelab report --pairs a:b,c:d`** runs only those swap pairs (both directions). `scripts/reproduce.sh` uses the six pairs the notes discuss by default (`PAIRS=""` runs all): about 47 min instead of about 100 on 4 cores.
 * The test invariant "airbridge implies attacker control" now applies only without `risk.land_contested`.
 
-## Unreleased
+## 0.4.0, earlier entries
 
 * **Two new scenarios: Heraklion and Rethymno 1941**, within-campaign controls for Maleme. They share its Luftwaffe, HQ and airlift values and are sourced from search excerpts only. Their anchors hold in about 98-99% of runs, which is weak evidence because every anchor follows from "the defenders win". What they add is in the swaps. Heraklion with Maleme's factors goes from 0.01 to 0.63 (Rethymno from 0.02 to 0.64), and Maleme's HOLD bundle is the largest contribution under both resolvers (+0.41 and +0.39 under Lanchester). Maleme with Heraklion's defenders alone falls from 0.66 to 0.03. HOLD mixes garrison size with the command-cycle withdrawal, so these swaps cannot separate the two (see results/NOTES.md).
 * Parameter expressions in scenario values (`"$hold.strength * (1 - $hold.perimeter_frac)"`: + - * / and parentheses, whitelisted); lint checks references inside them.
