@@ -19,12 +19,12 @@ The failure mode of a quick battle model is untraceable numbers: parameters pick
 
 ## Findings at a glance
 
-Statements about the model, with the caveats and every number in [`results/SUMMARY.md`](results/SUMMARY.md) (read its "Reading these results" section first). Most parameters are flagged assumptions; three scenarios are sourced from search excerpts only.
+Statements about the model, with the caveats and every number in [`results/SUMMARY.md`](results/SUMMARY.md) (read its "Reading these results" section first). Most parameters are flagged assumptions; the sourced ones cite official histories (Long and Playfair for Crete, NIMH for the Hague airfields).
 
 * **Hostomel 2022 vs Maleme 1941.** Give the 2022 Russian assault the 1941 German factors, and the chance of an airbridge roughly doubles. The two largest contributions are the defenders (Maleme's would have stopped the 2022 assault) and the attacker's willingness to land under risk. This holds under both combat models and all three go/no-go rules.
 * **Why Maleme fell and Heraklion and Rethymno did not.** In this model it is the size of the garrison at the airfield, not the night withdrawal: the withdrawal explains *when* Maleme fell, the garrison *whether*. A garrison of about 1,500 would probably have held.
 * **Hostomel's counterfactual surface has a cliff.** Once Ukrainian fires start after the first Il-76 landing window, even modest Russian risk appetite produces an airbridge.
-* **Known gaps.** The afternoon timing of Maleme's first landings is still reproduced in only a minority of runs (#5). The Hague scenarios reproduce the same-day Dutch recaptures only with two assumed mechanisms (#13), and Ypenburg, Valkenburg, Heraklion and Rethymno rest on search-excerpt sourcing (#4).
+* **Known gaps.** The afternoon timing of Maleme's first landings is still reproduced in only a minority of runs (#5). Ypenburg reproduces the same-day Dutch recapture only with an assumed airborne ammunition limit (#13). Valkenburg reproduces it through a sourced move: most Germans left the field for the village. The size and timing of that move are assumptions.
 
 ![Shapley contributions, Hostomel with Maleme's factors](results/shapley_hostomel_2022__maleme_1941.png)
 ![Shapley contributions, Heraklion with Maleme's factors](results/shapley_heraklion_1941__maleme_1941.png)
@@ -106,7 +106,7 @@ Results, with every number traced to a file, are in `results/SUMMARY.md`, writte
 * The native engine is tested (determinism across processes, CRN independence, resolver expectations, invariants over hundreds of runs, lint and schema, Shapley identities, reductions of every new mechanism to the old behaviour). CI runs the tests, ruff, mypy and the Lua harness on every push.
 * The CMO harness is tested only against a mock of the CMO Lua API built from the published documentation. Some unit-wrapper fields it reads (`base`, `damage`, `loadoutdbid`, `group`) and the `course` field of `ScenEdit_SetUnit` are used defensively but have not been verified in a live CMO build. Run the self-test first.
 * The combat, morale and landing-risk constants are flagged assumptions. The CRT table is a structural alternative, not a calibrated one (`battlelab resolvers` shows how far apart the two are).
-* Ypenburg 1940, Heraklion 1941 and Rethymno 1941 were sourced from search excerpts only; their parameters are mostly low-confidence assumptions (see `CLAUDE.md` and `results/NOTES.md`).
+* Most parameters in every scenario are still low-confidence assumptions; the sourced ones name their source in their notes (see `docs/PARAMETERS.md`, `CLAUDE.md` and `results/NOTES.md`).
 * See `docs/MODELING_STANDARDS.md` for how results should and should not be read.
 
 ## Licence

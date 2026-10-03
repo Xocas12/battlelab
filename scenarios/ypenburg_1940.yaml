@@ -17,29 +17,31 @@ clock:
   horizon_h: 48
 
 sources:
+  NIMH:
+    cite: "Nederlands Instituut voor Militaire Historie, 'De slag om de Residentie' and 'Vliegvelden in oorlogstijd: Ypenburg'"
+    url: "https://www.nimh.nl/militaire-geschiedenis-van-nederland/historische-overzichten/vliegvelden-in-oorlogstijd/ypenburg"
   WOH:
-    cite: "War over Holland - May 1940: the Dutch struggle, 'Ypenburg' (airlandings around The Hague)"
+    cite: "War over Holland - May 1940: the Dutch struggle, 'Ypenburg' (10 May, airlandings around The Hague); read in full in 0.5.0"
     url: "https://waroverholland.nl/10-may/airlanding/ypenburg"
   BRONGERS:
     cite: "E.H. Brongers, 'The Battle for The Hague 1940: The First Great Airborne Operation in History', Aspekt, 2004"
     note: "cited via WOH and secondary summaries, not read directly"
+  WPH:
+    cite: "Wikipedia, 'Battle for The Hague' (EN) and 'Slag om Den Haag' (NL)"
+    url: "https://en.wikipedia.org/wiki/Battle_for_The_Hague"
 
 parameters:
   # AIR ---------------------------------------------------------------------
-  air.att.ingress_loss: {dist: uniform, lo: 0.03, hi: 0.10, source: WOH, assumption: true, confidence: low,
-    note: "Dutch fighters and AA engaged the transport stream; losses on the approach reported but not quantified here"}
-  air.att.approach_loss: {dist: uniform, lo: 0.05, hi: 0.15, source: WOH, assumption: true, confidence: low,
-    note: "Landsverk armoured cars (Bofors 3.7 cm, Lewis MGs) and AA MGs covered the field"}
+  air.att.ingress_loss: {dist: uniform, lo: 0.04, hi: 0.08, source: WOH, confidence: medium, note: "three loaded transports of the drop Gruppe crashed from direct AA hits on the way in (about 3 of 53, 0.06); most of the 26 that did not return were lost after the drop"}
+  air.att.approach_loss: {dist: uniform, lo: 0.05, hi: 0.15, source: WOH, assumption: true, confidence: medium, note: "AA around the field (6 x Vickers 7.5 cm, 12 x Oerlikon 2 cm, 20 heavy MGs) and the 2 cm platoons at Delft were the main threat to the transports; three Landsverk armoured cars also fired"}
   air.att.suppression: {dist: uniform, lo: 0.2, hi: 0.5, source: WOH, assumption: true,
     note: "dawn bombing of the defences; several positions survived and fired on the first wave"}
   air.att.interdiction: {dist: uniform, lo: 0.1, hi: 0.3, assumption: true}
   air.att.cas: {dist: uniform, lo: 1.1, hi: 1.3, assumption: true}
   # MASS --------------------------------------------------------------------
-  mass.aircraft: {dist: uniform, lo: 13, hi: 26, source: WOH, assumption: true, confidence: low,
-    note: "paratroop drop of one to two companies around the field. REVISED once after the first anchor run: the draft value (fixed 13) left paratroops breaking within the hour in most runs, contradicting WOH (Germans held the base buildings until the afternoon)"}
+  mass.aircraft: {dist: fixed, value: 40, source: WOH, confidence: medium, note: "I./FJR 2 less its 3rd company, about 480 men, flown by IV./KGzbV.1 (53 aircraft, one squadron dropping the 3rd company over Ockenburg): about 40 over Ypenburg. SOURCED in 0.5.0 (was 13-26, an assumption revised after an anchor run)"}
   mass.capacity: {dist: fixed, value: 12, assumption: true}
-  mass.dz_loss: {dist: uniform, lo: 0.30, hi: 0.60, source: WOH, confidence: low,
-    note: "Dutch machine-gun fire inflicted casualties and scattered the landings"}
+  mass.dz_loss: {dist: uniform, lo: 0.50, hi: 0.75, source: WOH, confidence: medium, note: "badly scattered between Overschie, Rijswijk, Delft, Nootdorp and Pijnacker; at least half could not take part because of misdrops; the fight began with a few dozen, growing to a few hundred"}
   mass.reserve_aircraft: {dist: fixed, value: 0, assumption: true, note: "no second drop at Ypenburg modelled"}
   mass.reserve_capacity: {dist: fixed, value: 12, assumption: true}
   mass.reserve_dz: {dist: fixed, value: 0.0, assumption: true}
@@ -53,8 +55,7 @@ parameters:
   mass.ammo_out_h: {dist: uniform, lo: 6.0, hi: 14.0, assumption: true, confidence: low,
     note: "hours of fighting until the airborne troops run dry: they landed with what they carried, weapons containers were scattered, and nothing came in once the transport stream stopped. Added for issue #13 (the Dutch retook both fields the same day); prior set before the anchor run"}
   # HOLD --------------------------------------------------------------------
-  hold.strength: {dist: uniform, lo: 300, hi: 700, source: WOH, assumption: true, confidence: low,
-    note: "III Bn Regiment Grenadiers plus armoured cars and AA, counting only what could engage the landing area. REVISED once with mass.aircraft (draft 500-800, the whole battalion)"}
+  hold.strength: {dist: uniform, lo: 250, hi: 450, source: WOH, assumption: true, confidence: low, note: "III Bn Regiment Grenadiers: one company and the heavy-MG company on the NW and SW sides of the field (plus two platoons of Landsverk armoured cars), a second company in an outer NW screen, a third in reserve. No headcount in any source; counts the company, the MG company and the armoured-car crews at the field (about 150 a company). Was 300-700"}
   hold.quality: {dist: uniform, lo: 0.8, hi: 1.0, assumption: true,
     note: "conscript army without combat experience, but well sited and alert"}
   hold.dug_in: {dist: fixed, value: 1.3, assumption: true}
@@ -69,19 +70,15 @@ parameters:
     note: "share of defenders in NW/SW edge positions (zone `perimeter`) instead of on the field. Tried 0.2-0.5 with perimeter_fire 0.1-0.3 (issue #3 follow-up): sole German control of the field rose only 0.21 -> 0.26, and the joint anchor share fell 0.54 -> 0.46 (the extra fire makes the first wave abort more often: first_wave_lands_under_fire 0.76 -> 0.65). Not adopted; the zone and fire stay in the file, inactive, for the sourcing pass (#4)"}
   hold.perimeter_fire: {dist: fixed, value: 0.0, assumption: true, note: "fire from the perimeter positions onto the field while held; inactive (see hold.perimeter_frac)"}
   # RESPONSE ----------------------------------------------------------------
-  response.t_ca: {dist: uniform, lo: 5.0, hi: 9.0, source: WOH, confidence: low,
-    note: "counterattack launched 'several hours later'; field retaken in the afternoon"}
-  response.strength: {dist: uniform, lo: 400, hi: 900, source: WOH, assumption: true,
-    note: "Grenadier companies and supporting units; one company alone took 123 prisoners"}
+  response.t_ca: {dist: uniform, lo: 5.5, hi: 6.0, source: WOH, confidence: high, note: "first counterattack about 10:00 (WOH, NIMH): one company of recruits over the Hoornbrug and a Grenadier company toward Johannahoeve; it ended in a stand-off"}
+  response.strength: {dist: uniform, lo: 300, hi: 500, source: WOH, assumption: true, confidence: low, note: "two Grenadier companies and 1.5 recruit companies (snippet) at about 150 a company; was 400-900"}
   response.commit_h: {dist: uniform, lo: 8, hi: 14, assumption: true}
   response.withdraw_ratio: {dist: fixed, value: 2.0, assumption: true}
-  response.t_ca2: {dist: uniform, lo: 8.0, hi: 14.0, source: WOH, assumption: true, confidence: low,
-    note: "a second, later Dutch counterattack: the Hague fields were retaken by successive efforts during the afternoon and evening of 10 May. Added for issue #13; prior set before the anchor run"}
-  response.strength2: {dist: uniform, lo: 400, hi: 800, assumption: true, confidence: low, note: "size of the second counterattack"}
+  response.t_ca2: {dist: uniform, lo: 7.5, hi: 10.0, source: WOH, confidence: medium, note: "after a half-hour truce, the decisive artillery-supported attack (three small companies) in the early afternoon; the German defence collapsed within minutes and the field was Dutch again before the RAF raid at 15:10"}
+  response.strength2: {dist: uniform, lo: 300, hi: 500, source: WOH, assumption: true, confidence: low, note: "three small companies (two east of the highway, one west); was 400-800"}
   # DENIAL ------------------------------------------------------------------
   denial.obstacles0: {dist: fixed, value: 0.0, assumption: true, note: "no deliberate obstruction reported"}
-  denial.t_fires: {dist: uniform, lo: 4.0, hi: 9.0, source: WOH, confidence: low,
-    note: "Dutch artillery shelled the airfield in support of the counterattack"}
+  denial.t_fires: {dist: uniform, lo: 5.5, hi: 8.0, source: WOH, confidence: medium, note: "three batteries of light field artillery (7.5 cm) firing direct, and guns from Naaldwijk, from about 10:00 in support of the counterattacks"}
   denial.fire_intensity: {dist: uniform, lo: 0.3, hi: 0.6, assumption: true}
   denial.crater_rate: {dist: uniform, lo: 0.0, hi: 0.03, assumption: true}
   denial.demolish_rate: {dist: uniform, lo: 0.0, hi: 0.05, assumption: true}
@@ -97,11 +94,9 @@ parameters:
     note: "first twelve Ju 52 with the first air-landing infantry"}
   ctx.troops_per_aircraft: {dist: uniform, lo: 12, hi: 16, source: WOH, confidence: medium,
     note: "about 150-200 men on board the first wave"}
-  ctx.wave1_t: {dist: uniform, lo: 0.5, hi: 1.0, source: WOH, assumption: true,
-    note: "shortly after the drop"}
-  ctx.wave2_t: {dist: uniform, lo: 1.5, hi: 2.5, assumption: true}
-  ctx.wave3_t: {dist: uniform, lo: 3.0, hi: 4.5, source: WOH, assumption: true,
-    note: "burning planes on the strip prevented many third-wave Ju 52 from landing"}
+  ctx.wave1_t: {dist: uniform, lo: 0.9, hi: 1.1, source: WOH, confidence: high, note: "the first twelve Ju 52 (KGrzbV.12) landed at about 05:15"}
+  ctx.wave2_t: {dist: uniform, lo: 1.15, hi: 1.4, source: WOH, confidence: high, note: "wave 2 landed about fifteen minutes after the first and shared its fate. Was 1.5-2.5"}
+  ctx.wave3_t: {dist: uniform, lo: 1.5, hi: 3.0, source: WOH, assumption: true, note: "no time in any source; wave 3 came after wave 2 and mostly diverted because of the burning wrecks; a fourth wave diverted to Ockenburg and elsewhere. Was 3.0-4.5"}
   ctx.loiter_h: {dist: fixed, value: 0.5, assumption: true, note: "Ju 52 diverted to other fields and beaches"}
   ctx.night_limited_air: {dist: fixed, value: 1, assumption: true, note: "1940 air power is essentially day-only"}
   ctx.wreck_obstacle: {dist: uniform, lo: 0.03, hi: 0.06, source: WOH, assumption: true,

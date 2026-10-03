@@ -17,8 +17,11 @@ clock:
 
 sources:
   WOH:
-    cite: "War over Holland - May 1940: the Dutch struggle (search excerpts; values shared with Ypenburg)"
-    url: "https://waroverholland.nl/10-may/airlanding/ypenburg"
+    cite: "War over Holland - May 1940: the Dutch struggle, 'Valkenburg' (10, 11 and 14 May), read in full in 0.5.0; values shared with Ypenburg say so"
+    url: "https://waroverholland.nl/10-may/airlanding/valkenburg"
+  NIMH:
+    cite: "Nederlands Instituut voor Militaire Historie, 'Vliegvelden in oorlogstijd: Valkenburg'"
+    url: "https://www.nimh.nl/militaire-geschiedenis-van-nederland/historische-overzichten/vliegvelden-in-oorlogstijd/valkenburg"
   VVH:
     cite: "Stichting Historie Vliegveld Valkenburg, 'Valkenburg Airbase: a short history' (search excerpt only)"
     url: "https://vliegveldvalkenburg.nl/en/history/valkenburg-airbase-a-short-history/"
@@ -30,18 +33,15 @@ parameters:
   # AIR ---------------------------------------------------------------------
   air.att.ingress_loss: {dist: uniform, lo: 0.03, hi: 0.10, source: WOH, assumption: true, confidence: low,
     note: "carried over from Ypenburg (same operation, same Luftwaffe units): Dutch fighters and AA engaged the transport stream; losses on the approach reported but not quantified here"}
-  air.att.approach_loss: {dist: uniform, lo: 0.05, hi: 0.15, source: WOH, assumption: true, confidence: low,
-    note: "carried over from Ypenburg (same operation, same Luftwaffe units): Landsverk armoured cars (Bofors 3.7 cm, Lewis MGs) and AA MGs covered the field"}
+  air.att.approach_loss: {dist: uniform, lo: 0.0, hi: 0.03, source: WOH, confidence: high, note: "no AA at Valkenburg; the Ju 52s did not suffer badly on landing, only one was shot up. Was 0.05-0.15 (carried over from Ypenburg)"}
   air.att.suppression: {dist: uniform, lo: 0.2, hi: 0.5, source: WOH, assumption: true,
     note: "carried over from Ypenburg (same operation, same Luftwaffe units): dawn bombing of the defences; several positions survived and fired on the first wave"}
   air.att.interdiction: {dist: uniform, lo: 0.1, hi: 0.3, assumption: true}
   air.att.cas: {dist: uniform, lo: 1.1, hi: 1.3, assumption: true}
   # MASS --------------------------------------------------------------------
-  mass.aircraft: {dist: uniform, lo: 13, hi: 26, source: WOH, assumption: true, confidence: low,
-    note: "carried over from Ypenburg (same operation, same Luftwaffe units): paratroop drop of one to two companies around the field. REVISED once after the first anchor run: the draft value (fixed 13) left paratroops breaking within the hour in most runs, contradicting WOH (Germans held the base buildings until the afternoon)"}
+  mass.aircraft: {dist: fixed, value: 10, source: WOH, confidence: high, note: "6./FJR 2 (Oblt Schirmer): ten Ju 52 dropped about 120 men. Was 13-26 (carried over from Ypenburg)"}
   mass.capacity: {dist: fixed, value: 12, assumption: true}
-  mass.dz_loss: {dist: uniform, lo: 0.30, hi: 0.60, source: WOH, confidence: low,
-    note: "carried over from Ypenburg (same operation, same Luftwaffe units): Dutch machine-gun fire inflicted casualties and scattered the landings"}
+  mass.dz_loss: {dist: uniform, lo: 0.30, hi: 0.40, source: WOH, confidence: high, note: "of about 120, about 80 landed near or next to the field; about 55 engaged the defences"}
   mass.reserve_aircraft: {dist: fixed, value: 0, assumption: true, note: "no second drop modelled"}
   mass.reserve_capacity: {dist: fixed, value: 12, assumption: true}
   mass.reserve_dz: {dist: fixed, value: 0.0, assumption: true}
@@ -52,10 +52,9 @@ parameters:
     note: "e-folding time of the surprise; the Dutch had reorganised and counterattacked within hours"}
   mass.cornered: {dist: uniform, lo: 0.2, hi: 0.6, source: WOH, assumption: true, confidence: low,
     note: "carried over from Ypenburg (same operation, same Luftwaffe units): scales the force-ratio morale term of the airborne units: surrounded, with nowhere to withdraw to, they held out in pockets until killed or captured (WOH). Added for issue #3 after traces showed the paratroops 'withdrawing' at 5:1 within hours; prior set before the anchor run with it"}
-  mass.ammo_out_h: {dist: uniform, lo: 6.0, hi: 14.0, assumption: true, confidence: low,
-    note: "hours of fighting until the airborne troops run dry: they landed with what they carried, weapons containers were scattered, and nothing came in once the transport stream stopped. Added for issue #13 (the Dutch retook both fields the same day); prior set before the anchor run"}
+  mass.ammo_out_h: {dist: fixed, value: 1000.0, source: WOH, confidence: high, note: "not binding: the Germans did not run dry at Valkenburg; 500-600 withdrew into the village and held out until the capitulation on 14 May. Was 6-14 h (issue #13), which the sources contradict"}
   # HOLD --------------------------------------------------------------------
-  hold.strength: {dist: uniform, lo: 150, hi: 400, assumption: true, confidence: low, note: "defenders at the unfinished field; weaker than at Ypenburg, since the Germans took it at first (VVH)"}
+  hold.strength: {dist: uniform, lo: 100, hi: 150, source: WOH, confidence: high, note: "III./4 RI, two companies (about 350 men); about 120 defended the airfield itself, and no more than about 100 manning some 20 MGs remained after the bombing. Was 150-400"}
   hold.quality: {dist: uniform, lo: 0.8, hi: 1.0, assumption: true,
     note: "conscript army without combat experience, but well sited and alert"}
   hold.dug_in: {dist: fixed, value: 1.3, assumption: true}
@@ -70,18 +69,15 @@ parameters:
     note: "share of defenders in NW/SW edge positions (zone `perimeter`) instead of on the field. Tried 0.2-0.5 with perimeter_fire 0.1-0.3 (issue #3 follow-up): sole German control of the field rose only 0.21 -> 0.26, and the joint anchor share fell 0.54 -> 0.46 (the extra fire makes the first wave abort more often: first_wave_lands_under_fire 0.76 -> 0.65). Not adopted; the zone and fire stay in the file, inactive, for the sourcing pass (#4)"}
   hold.perimeter_fire: {dist: fixed, value: 0.0, assumption: true, note: "fire from the perimeter positions onto the field while held; inactive (see hold.perimeter_frac)"}
   # RESPONSE ----------------------------------------------------------------
-  response.t_ca: {dist: uniform, lo: 5.0, hi: 9.0, source: WOH, confidence: low,
-    note: "carried over from Ypenburg (same operation, same Luftwaffe units): counterattack launched 'several hours later'; field retaken in the afternoon"}
-  response.strength: {dist: uniform, lo: 400, hi: 900, source: VVH, assumption: true, confidence: low, note: "Dutch units that retook the airfield; size not in the excerpts"}
+  response.t_ca: {dist: uniform, lo: 1.0, hi: 1.75, source: WOH, confidence: medium, note: "a not very convincing counter-action by the 3rd company, easily repulsed, before the Germans held the field at about 06:00"}
+  response.strength: {dist: uniform, lo: 80, hi: 150, source: WOH, assumption: true, confidence: low, note: "part of the 3rd company; was 400-900 (carried over from Ypenburg)"}
   response.commit_h: {dist: uniform, lo: 8, hi: 14, assumption: true}
   response.withdraw_ratio: {dist: fixed, value: 2.0, assumption: true}
-  response.t_ca2: {dist: uniform, lo: 8.0, hi: 14.0, source: WOH, assumption: true, confidence: low,
-    note: "a second, later Dutch counterattack: the Hague fields were retaken by successive efforts during the afternoon and evening of 10 May. Added for issue #13; prior set before the anchor run"}
-  response.strength2: {dist: uniform, lo: 400, hi: 800, assumption: true, confidence: low, note: "size of the second counterattack"}
+  response.t_ca2: {dist: uniform, lo: 11.5, hi: 12.0, source: WOH, confidence: high, note: "main attack by Maj. Mallinckrodt around 16:00; the whole airfield was retaken around 17:30"}
+  response.strength2: {dist: uniform, lo: 200, hi: 350, source: WOH, assumption: true, confidence: low, note: "remnants of about company size plus one company of I./4 RI; was 400-800"}
   # DENIAL ------------------------------------------------------------------
   denial.obstacles0: {dist: fixed, value: 0.0, assumption: true, note: "no deliberate obstruction reported"}
-  denial.t_fires: {dist: uniform, lo: 4.0, hi: 9.0, source: WOH, confidence: low,
-    note: "carried over from Ypenburg (same operation, same Luftwaffe units): Dutch artillery shelled the airfield in support of the counterattack"}
+  denial.t_fires: {dist: uniform, lo: 4.0, hi: 4.5, source: WOH, confidence: high, note: "12 cm howitzers from 08:30 until shortly after 12:00 (the model keeps fires on once started)"}
   denial.fire_intensity: {dist: uniform, lo: 0.3, hi: 0.6, assumption: true}
   denial.crater_rate: {dist: uniform, lo: 0.0, hi: 0.03, assumption: true}
   denial.demolish_rate: {dist: uniform, lo: 0.0, hi: 0.05, assumption: true}
@@ -93,15 +89,17 @@ parameters:
   risk.commit_lag_h: {dist: fixed, value: 0.0, assumption: true, note: "0 = no commitment delay (only used in shuttle mode)"}
   risk.commit_cycle_h: {dist: fixed, value: 0.0, assumption: true, note: "0 = no decision cycle (only used in shuttle mode)"}
   # CONTEXT (not swapped) ---------------------------------------------------
-  ctx.aircraft: {dist: fixed, value: 13, source: VVH, assumption: true, note: "over 50 Ju 52 landed in all (VVH, FAF); four waves of 13 assumed"}
+  ctx.aircraft: {dist: fixed, value: 30, source: WOH, assumption: true, note: "nominal; the wave sizes are set by ctx.wave1_n and ctx.wave2_n"}
   ctx.troops_per_aircraft: {dist: uniform, lo: 12, hi: 16, assumption: true, note: "as at Ypenburg (same Ju 52 loads)"}
-  ctx.wave1_t: {dist: uniform, lo: 0.5, hi: 1.0, source: WOH, assumption: true,
-    note: "carried over from Ypenburg (same operation, same Luftwaffe units): shortly after the drop"}
-  ctx.wave2_t: {dist: uniform, lo: 1.5, hi: 2.5, assumption: true}
-  ctx.wave3_t: {dist: uniform, lo: 3.0, hi: 4.5, assumption: true}
-  ctx.wave4_t: {dist: uniform, lo: 4.5, hi: 6.0, assumption: true}
-  ctx.bog_risk: {dist: uniform, lo: 0.5, hi: 0.9, source: VVH, confidence: medium,
-    note: "the surface of the unfinished airfield could not carry the Ju 52s; aircraft stuck in the soft, wet soil (VVH, FAF)"}
+  ctx.wave1_t: {dist: uniform, lo: 0.6, hi: 0.9, source: WOH, confidence: high, note: "the first wave (53 Ju 52) was scheduled 30 minutes after the airborne troops (04:30)"}
+  ctx.wave2_t: {dist: uniform, lo: 1.5, hi: 3.0, assumption: true, note: "no time in the sources; part of wave 2 was waved off to the beach, and nothing landed after it"}
+  ctx.wave1_n: {dist: fixed, value: 53, source: WOH, confidence: high, note: "the first wave: 53 Ju 52"}
+  ctx.wave2_n: {dist: uniform, lo: 5, hi: 12, source: WOH, assumption: true, note: "about 60 landed in all (WOH; 57 stranded per NL Wikipedia), so the rest of wave 2 that got down"}
+  ctx.bog_risk: {dist: uniform, lo: 0.8, hi: 1.0, source: WOH, confidence: high, note: "almost all Ju 52 turned out to be operational losses: the swampy ground sucked the wheels in, and only very few could leave; of about 60 landed, only 14 appeared undamaged. Was 0.5-0.9"}
+  ctx.redeploy_delay_h: {dist: uniform, lo: 1.0, hi: 4.0, source: WOH, assumption: true, confidence: low,
+    note: "the air-landing troops started expanding their bridgehead quite soon after seizing the landing place: they occupied Valkenburg village, set up an HQ and moved on toward Katwijk"}
+  ctx.redeploy_frac: {dist: uniform, lo: 0.6, hi: 0.8, source: WOH, confidence: medium,
+    note: "share that left the field: it was 'by then evacuated by most Germans' when retaken at 17:30, while 500-600 of about 950 held the village until 14 May"}
   ctx.loiter_h: {dist: fixed, value: 0.5, assumption: true, note: "Ju 52 diverted to other fields and beaches"}
   ctx.night_limited_air: {dist: fixed, value: 1, assumption: true, note: "1940 air power is essentially day-only"}
   ctx.wreck_obstacle: {dist: uniform, lo: 0.005, hi: 0.015, source: VVH, assumption: true, confidence: low,
@@ -135,6 +133,7 @@ sides:
 
 zones:
   airfield: {kind: airfield, control: NL, runway: {obstacles: $denial.obstacles0}}
+  village: {kind: village, control: NL}        # Valkenburg village, the German pocket until 14 May
   perimeter: {kind: open, control: NL}        # NW/SW edge positions overlooking the field
 
 units:
@@ -187,6 +186,15 @@ units:
     kind: airlanded_infantry
     morale: {on_break: disperse, ratio_scale: $mass.cornered, ammo_out_h: $mass.ammo_out_h}
 
+  village_force:                  # receives the troops that leave the field (Redeploy)
+    side: DE
+    kind: airlanded_infantry
+    morale: {on_break: disperse, ratio_scale: $mass.cornered, ammo_out_h: $mass.ammo_out_h}
+
+redeploy:
+  - {side: DE, from_zone: airfield, to_zone: village, units: [fallschirmjaeger, airlanded_infantry],
+     to_unit: village_force, after_control_h: $ctx.redeploy_delay_h, fraction: $ctx.redeploy_frac}
+
 fires:
   - {id: nl_perimeter_fire, side: NL, zone: airfield, from_zone: perimeter, active_from: 0.0,
      intensity: $hold.perimeter_fire}
@@ -200,7 +208,8 @@ airlift:
   aircraft: $ctx.aircraft
   troops_per_aircraft: $ctx.troops_per_aircraft
   mode: waves
-  waves: [$ctx.wave1_t, $ctx.wave2_t, $ctx.wave3_t, $ctx.wave4_t]
+  waves: [$ctx.wave1_t, $ctx.wave2_t]
+  wave_aircraft: [$ctx.wave1_n, $ctx.wave2_n]
   bog_risk: $ctx.bog_risk
   loiter_h: $ctx.loiter_h
   wreck_obstacle: $ctx.wreck_obstacle
