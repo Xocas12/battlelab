@@ -564,6 +564,25 @@ def test_commit_time():
     assert at(3, 8, 13.0) == 16.0                     # report lands exactly on a point
 
 
+def test_commit_daylight():
+    from battlelab.mechanics.airfield import Airlift, AirliftSpec
+    def at(t, h_hour=8.0, lag=2.0, day=1.0):
+        return Airlift(AirliftSpec("DE", "airfield", "x", 10, 10, mode="shuttle", commit_lag_h=lag,
+                                   commit_daylight=day)).commit_time(t, h_hour)
+    assert at(12.0, day=0.0) == 14.0                  # off: control at 20:00 counts at once
+    assert at(12.0) == 22.0 + 2.0                     # 20:00 -> next dawn (06:00), then the lag
+    assert at(18.0) == 22.0 + 2.0                     # 02:00 -> same dawn
+    assert at(5.0) == 7.0                             # 13:00 is daylight: no wait
+    mal = Scenario.load(ROOT / "scenarios" / "maleme_1941.yaml")
+    for i in range(30):
+        p = mal.space.sample(6, i)
+        w, _ = mal.run(p, 6, i)
+        m = w.metrics
+        if m["t_first_landing"] is not None and m["t_control"] is not None and m["t_control"] >= 12.0:
+            # night control: no landing before dawn + lag + exploitation delay
+            assert m["t_first_landing"] >= 22.0 + p["risk.commit_lag_h"] + p["ctx.exploit_delay"] - 1e-9
+
+
 def test_notes_placeholders():
     from battlelab.report import fill_notes
     vals = {"anchor.x.lanchester.joint": 0.6789, "shapley.a__b.crt.RISK": -0.25}

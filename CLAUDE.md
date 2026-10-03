@@ -51,7 +51,7 @@ mkdir -p /tmp/out && cd cmo && lua5.3 tests/test_harness.lua lua /tmp/out -  # L
 
 * **Ypenburg anchors depend on how "holding the field" is read.** With the 0.3.0 shock and no-retreat mechanisms and the anchor `germans_hold_on_field` (German troops on the field for at least 3 h), the joint share is about 0.54. Under the old sole-control reading (`attacker_ever_controls`), it is still about 0.04: in a one-zone model the Dutch never all leave while the Germans hold the buildings. Multiple perimeter zones would settle it (issue #3 follow-up).
 * **Maleme under CRT.** The command cycle fixed Maleme under Lanchester (joint about 0.68) but not under CRT (about 0.13): the CRT bleeds an attacker at near parity about 6 times faster (`battlelab resolvers`), so the Germans rarely hold on long enough.
-* **Maleme timing.** The New Zealand withdrawal still lands at nightfall (H+12) in most runs; `hold.move_delay_h` spreads it but was not adopted (it costs anchor fit, see the parameter note). The commitment gate (`risk.commit_lag_h`, `risk.commit_cycle_h`) moves the first landings from dawn toward the afternoon of day 2, but the anchor `landings_begin_day2_afternoon` (confirmed by Long: about 16:00, H+32) still holds in only about 20% of runs, so the Maleme joint share is about 0.19 (Lanchester). This is the known gap now.
+* **Maleme timing.** The New Zealand withdrawal lands at nightfall (H+12) in most runs; `hold.move_delay_h` spreads it but was not adopted (see the parameter note). Since 0.6.0 the daylight confirmation (`risk.commit_daylight`, replacing the decision cycle) puts the first landings in the afternoon of day 2. The anchor `landings_begin_day2_afternoon` (Long: about 16:00, H+32) holds in about 56% of runs, and the Maleme joint share is about 0.54 (Lanchester). Under the CRT it stays low (about 0.08).
 * **Hard go/no-go threshold** is still the default. The logistic and lagged variants exist (`mechanics.go_no_go`, `--go-rule`, `--set mech.info_lag_h=...`); `results/SUMMARY.md` section 4 compares them. The zero single-swap of Maleme's DENIAL into Hostomel is a property of the threshold rule.
 * Arrival order for simultaneous arrivals is the YAML order of `units`.
 * Empty zones keep their last controller.
@@ -61,6 +61,8 @@ mkdir -p /tmp/out && cd cmo && lua5.3 tests/test_harness.lua lua /tmp/out -  # L
 * In CMO the heliborne troops are scripted (`RU_VDV_` squads unloaded by helicopters reaching the airfield), not CMO cargo: respawned aircraft carry no cargo.
 
 ## Done (see CHANGELOG)
+
+Unreleased: daylight confirmation of control (#5).
 
 0.5.0: sourcing pass (#4, #5), `airlift.wave_aircraft`, `redeploy:` (Valkenburg village).
 

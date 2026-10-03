@@ -48,7 +48,8 @@ What the native engine models, one mechanism at a time: what it does, the parame
 | Wave sizes (0.5.0) | `airlift.wave_aircraft` gives each wave its own number of aircraft instead of `ctx.aircraft` for all. | `ctx.wave*_n`; default: every wave uses `ctx.aircraft` | Valkenburg |
 | Go/no-go rule (0.2.0) | A wave lands if the side holds the field, the runway is usable enough, and the expected loss per aircraft is acceptable. The rule is a hard threshold (default), or logistic, with one nerve draw per wave. The risk estimate can lag reality by `info_lag_h`. | `risk.tolerance` (RISK), `mech.go_width`, `mech.info_lag_h`; `mechanics.go_no_go.rule` | all |
 | Landing on a contested field (0.2.0) | With this doctrine, a wave may land while the field is contested, at an extra per-aircraft loss, and its troops attack off the aircraft. | `risk.land_contested` (RISK), `mech.contested_risk`; default 0 | Ypenburg, Valkenburg |
-| Commitment gate (0.3.0) | In shuttle mode, the first sortie waits until the HQ has heard of control (a reporting lag) and reached its next decision point. | `risk.commit_lag_h`, `risk.commit_cycle_h` (RISK); default 0 | Maleme, Heraklion, Rethymno |
+| Commitment gate (0.3.0) | In shuttle mode, the first sortie waits until the HQ has heard of control (a reporting lag) and reached its next decision point. | `risk.commit_lag_h`, `risk.commit_cycle_h` (RISK); default 0 | Maleme, Heraklion, Rethymno (lag only since 0.6.0) |
+| Daylight confirmation (0.6.0) | Control gained at night (20:00-06:00) reaches the HQ only after the next dawn, then the reporting lag applies. | `risk.commit_daylight` (RISK); default 0 | Maleme, Heraklion, Rethymno |
 | Soft ground (0.4.0) | Each landed aircraft may sink into the ground: its troops get off, the aircraft stays on the strip as an obstacle, and it is counted in `transports_stranded`. | `ctx.bog_risk`; default 0 | Valkenburg |
 
 ## Response (phase SCHEDULE)
