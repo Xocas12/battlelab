@@ -88,8 +88,10 @@ parameters:
   risk.land_contested: {dist: fixed, value: 0, source: LONG11, assumption: true, note: "the troop-carriers landed from about 16:00 on 21 May after the 22nd Battalion had gone, though the field was still under the fire of nine guns (Long, Playfair): under fire, but no longer held by the NZ"}
   risk.commit_lag_h: {dist: uniform, lo: 2.0, hi: 6.0, source: NZH, assumption: true, confidence: low,
     note: "reports from Maleme reached Student's HQ in Athens late and incompletely. Added for issue #5 (first landings at dawn instead of the afternoon of 21 May); prior set before the anchor run"}
-  risk.commit_cycle_h: {dist: uniform, lo: 6.0, hi: 12.0, assumption: true, confidence: low,
-    note: "HQ commits the air-landing force only at its decision points (a test landing on the morning of 21 May preceded the commitment)"}
+  risk.commit_cycle_h: {dist: fixed, value: 0.0, assumption: true,
+    note: "0.3.0-0.5.0: uniform 6-12 h, a fixed HQ decision cycle standing in for the morning test landing. Replaced in 0.6.0 by risk.commit_daylight, which models that test directly. Keeping both delayed the commitment twice: first landing p50 at H+35, P(airbridge) 0.63 to 0.25, timing anchor 0.19 to 0.15. Set to 0 after that run (issue #5)"}
+  risk.commit_daylight: {dist: fixed, value: 1, source: LONG11, assumption: true, confidence: medium,
+    note: "control gained at night counts only once daylight confirms it. The 22nd Bn left Point 107 overnight; Student learnt of it only from a test landing at 08:10 on 21 May, then ordered II/100 to embark in Greece and land from 16:00 (Long ch. 11). Added for issue #5, set before its anchor run"}
   # CONTEXT (not swapped) ---------------------------------------------------
   ctx.aircraft: {dist: uniform, lo: 25, hi: 40, assumption: true, note: "Ju 52 per shuttle sortie"}
   ctx.troops_per_aircraft: {dist: fixed, value: 13, assumption: true}
@@ -189,6 +191,7 @@ airlift:
   contested_risk: $mech.contested_risk
   commit_lag_h: $risk.commit_lag_h
   commit_cycle_h: $risk.commit_cycle_h
+  commit_daylight: $risk.commit_daylight
 
 mechanics:
   # resolver: lanchester | crt. The CRT is ILLUSTRATIVE, not calibrated: at 1:1 it
@@ -213,7 +216,7 @@ factors:
   RESPONSE: [response.t_ca, response.strength, response.commit_h, response.withdraw_ratio,
              response.t_ca2, response.strength2]
   DENIAL: [denial.obstacles0, denial.t_fires, denial.fire_intensity, denial.crater_rate, denial.demolish_rate]
-  RISK: [risk.tolerance, risk.land_contested, risk.commit_lag_h, risk.commit_cycle_h]
+  RISK: [risk.tolerance, risk.land_contested, risk.commit_lag_h, risk.commit_cycle_h, risk.commit_daylight]
 
 anchors:
   - {id: nz_leave_field_day1, metric: t_control, op: between, value: [4.0, 24.0], source: NZH,

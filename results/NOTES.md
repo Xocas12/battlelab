@@ -5,7 +5,7 @@ Hand-written interpretation. Every number below is a placeholder filled in from 
 **How far to trust each scenario.**
 
 * **Hostomel.** It reproduces its history well: all four facts hold jointly in {{anchor.hostomel_2022.lanchester.joint|pct}} of runs under Lanchester and {{anchor.hostomel_2022.crt.joint|pct}} under the CRT.
-* **Maleme.** It looks worse than in 0.2.0 ({{anchor.maleme_1941.lanchester.joint|pct}} joint under Lanchester) because its first-landing anchor was tightened from "day 2" to "the afternoon of day 2", not because the model got worse. The commitment gate moved the first landings toward the afternoon, but most runs still land in the morning.
+* **Maleme.** All four facts hold together in {{anchor.maleme_1941.lanchester.joint|pct}} of runs under Lanchester, and the first troop landings fall in the afternoon of day 2 in {{anchor.maleme_1941.lanchester.landings_begin_day2_afternoon|pct}}. That fit comes from the daylight confirmation (0.6.0): the New Zealanders left Point 107 at night, and the German HQ acted only after a test landing the next morning, then needed most of a day to embark and fly in a battalion. Under the CRT the joint share is still only {{anchor.maleme_1941.crt.joint|pct}}, because the CRT bleeds the Germans before the landings come.
 * **Ypenburg.** It reaches {{anchor.ypenburg_1940.lanchester.joint|pct}}. That is mostly because its control anchor was reread as "German troops on the field for at least 3 hours" rather than sole control, and partly because of the airborne ammunition limit and the second counterattack (#13). In 0.5.0 its wave sizes, wave times and Dutch counterattacks were sourced from the NIMH and WOH histories; that moved the joint share by about one point.
 
 **What the factor swaps say.**
