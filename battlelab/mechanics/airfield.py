@@ -68,6 +68,8 @@ class AirliftSpec:
     commit_lag_h: float = 0.0        # shuttle: reports of control reach the HQ this late
     commit_cycle_h: float = 0.0      # shuttle: HQ decides only every this many hours
                                      #   (0 = at once); first sortie after the decision
+    commit_daylight: float = 0.0     # shuttle: 1 = a report of control made at night counts
+                                     #   only once daylight confirms it (0 = off)
     daylight_only: bool = False
     r_min: float = 0.6               # usable runway fraction needed
     fire_risk: float = 0.25          # loss prob per unit of enemy fire intensity
@@ -208,11 +210,20 @@ class Airlift(Mechanic):
         w.emit("airlanding", wave=label, aircraft=n, lost=lost, bogged=bogged,
                troops=round(troops), p_loss=round(p, 3), control=w.zones[s.zone].control)
 
-    def commit_time(self, t_ctrl: float) -> float:
+    def commit_time(self, t_ctrl: float, h_hour_clock: float = 0.0) -> float:
         """When the HQ commits the air-landing force: the first decision point
         (every commit_cycle_h hours from H-hour) after the report of control
-        arrives commit_lag_h later. Defaults (0, 0) give t_ctrl."""
-        known = t_ctrl + self.s.commit_lag_h
+        arrives commit_lag_h later. With commit_daylight, control gained at
+        night is only confirmed at the next dawn (06:00). Defaults (0, 0, 0)
+        give t_ctrl."""
+        seen = t_ctrl
+        if self.s.commit_daylight:
+            clock = (h_hour_clock + t_ctrl) % 24.0
+            if clock >= 20.0:
+                seen = t_ctrl + 30.0 - clock
+            elif clock < 6.0:
+                seen = t_ctrl + 6.0 - clock
+        known = seen + self.s.commit_lag_h
         c = self.s.commit_cycle_h
         if c <= 0:
             return known
@@ -257,7 +268,8 @@ class Airlift(Mechanic):
         else:
             t_ctrl = w.persist.get("first_control", {}).get((s.side, s.zone))
             if math.isinf(st["next_slot"]) and t_ctrl is not None:
-                st["next_slot"] = self.commit_time(t_ctrl) + s.first_after_control_h
+                st["next_slot"] = (self.commit_time(t_ctrl, w.h_hour_clock)
+                                   + s.first_after_control_h)
             if w.t >= st["next_slot"]:
                 key = f"sortie{int(st.get('sorties', 0))}"
                 if self.conditions(w, p_est, key):
