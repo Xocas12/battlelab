@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.0 (2026-10-03)
 
 Sourcing pass (issues #4, #5) against full texts instead of search excerpts: the NIMH airfield histories and the Hague WOH pages for Ypenburg and Valkenburg; Long, *Greece, Crete and Syria* (AWM official history, chapters 11-13) and Playfair, *Mediterranean and Middle East* vol. II for Crete. Every revised parameter note names its source.
 
