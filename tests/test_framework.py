@@ -578,9 +578,10 @@ def test_commit_daylight():
         p = mal.space.sample(6, i)
         w, _ = mal.run(p, 6, i)
         m = w.metrics
-        if m["t_first_landing"] is not None and m["t_control"] is not None and m["t_control"] >= 12.0:
+        t1, tc = m["t_first_landing"], m["t_control"]
+        if t1 is not None and tc is not None and tc >= 12.0:
             # night control: no landing before dawn + lag + exploitation delay
-            assert m["t_first_landing"] >= 22.0 + p["risk.commit_lag_h"] + p["ctx.exploit_delay"] - 1e-9
+            assert t1 >= 22.0 + p["risk.commit_lag_h"] + p["ctx.exploit_delay"] - 1e-9
 
 
 def test_notes_placeholders():
