@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+* **Daylight confirmation of control** (`airlift.commit_daylight`, RISK parameter `risk.commit_daylight`; issue #5). In shuttle mode, control gained at night (20:00-06:00) reaches the HQ only after the next dawn. Source: the 22nd Battalion left Point 107 overnight, and Student learnt of it only from a test landing at 08:10 on 21 May, then ordered II/100 to land from 16:00 (Long ch. 11). Default 0; Hostomel, Ypenburg and Valkenburg are identical run-for-run (300 runs each).
+  * Maleme, Heraklion and Rethymno use it (same HQ). The decision cycle `risk.commit_cycle_h` it replaces is now 0 there. Keeping both delayed the commitment twice (first landing p50 H+35, P(airbridge) 0.63 → 0.25); this was seen in the first run, recorded in the parameter note, and the cycle was then set to 0.
+  * Maleme: first landing p50 H+26.5 → H+31.8; `landings_begin_day2_afternoon` 0.19 → 0.56; joint 0.19 → 0.54 (Lanchester), 0.028 → 0.076 (CRT). Heraklion and Rethymno unchanged (within 0.001).
+
 ## 0.5.0 (2026-10-03)
 
 Sourcing pass (issues #4, #5) against full texts instead of search excerpts: the NIMH airfield histories and the Hague WOH pages for Ypenburg and Valkenburg; Long, *Greece, Crete and Syria* (AWM official history, chapters 11-13) and Playfair, *Mediterranean and Middle East* vol. II for Crete. Every revised parameter note names its source.
