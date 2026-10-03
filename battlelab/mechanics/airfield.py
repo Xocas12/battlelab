@@ -61,6 +61,7 @@ class AirliftSpec:
     troops_per_aircraft: float
     mode: str = "waves"              # waves | shuttle
     waves: list[float] = field(default_factory=list)   # arrival times (waves)
+    wave_aircraft: list[int] | None = None   # aircraft per wave (default: `aircraft` each)
     loiter_h: float = 1.5            # waves: how long a wave waits before aborting
     interval_h: float = 3.0          # shuttle: time between sorties
     first_after_control_h: float = 0.0   # shuttle: delay after first control
@@ -176,10 +177,11 @@ class Airlift(Mechanic):
             return False
         return p_est <= self.tolerance(w, key)
 
-    def land(self, w: World, p: float, label: str):
+    def land(self, w: World, p: float, label: str, n_aircraft: int | None = None):
         s, st = self.s, w.persist["airlift"]
-        lost = int(w.rng("airlift").binomial(s.aircraft, p))
-        troops = (s.aircraft - lost) * s.troops_per_aircraft \
+        n = s.aircraft if n_aircraft is None else n_aircraft
+        lost = int(w.rng("airlift").binomial(n, p))
+        troops = (n - lost) * s.troops_per_aircraft \
             + lost * s.troops_per_aircraft * s.crash_survival
         u = w.units[s.unit_id]
         add = troops * s.organisation
@@ -194,8 +196,8 @@ class Airlift(Mechanic):
                 u.activate(s.zone, w.t, "attack")
         u.peak = max(u.peak, u.strength)
         bogged = 0
-        if s.bog_risk > 0 and s.aircraft - lost > 0:        # own stream: no draw when off
-            bogged = int(w.rng("bog").binomial(s.aircraft - lost, s.bog_risk))
+        if s.bog_risk > 0 and n - lost > 0:        # own stream: no draw when off
+            bogged = int(w.rng("bog").binomial(n - lost, s.bog_risk))
         r = self.runway(w)
         r.obstacles = min(1.0, r.obstacles + s.wreck_obstacle * (lost + bogged))
         st["stranded"] = st.get("stranded", 0) + bogged
@@ -203,7 +205,7 @@ class Airlift(Mechanic):
         st["lost"] += lost
         if st["first_landing"] is None:
             st["first_landing"] = w.t
-        w.emit("airlanding", wave=label, aircraft=s.aircraft, lost=lost, bogged=bogged,
+        w.emit("airlanding", wave=label, aircraft=n, lost=lost, bogged=bogged,
                troops=round(troops), p_loss=round(p, 3), control=w.zones[s.zone].control)
 
     def commit_time(self, t_ctrl: float) -> float:
@@ -241,7 +243,8 @@ class Airlift(Mechanic):
                 if st["waves"][i] is not None or w.t < t0:
                     continue
                 if self.conditions(w, p_est, f"wave{i}"):
-                    self.land(w, p, f"wave{i + 1}")
+                    self.land(w, p, f"wave{i + 1}",
+                              s.wave_aircraft[i] if s.wave_aircraft else None)
                     st["waves"][i] = "landed"
                     p = self.p_loss(w)
                     if s.info_lag_h <= 0:

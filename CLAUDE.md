@@ -51,18 +51,20 @@ mkdir -p /tmp/out && cd cmo && lua5.3 tests/test_harness.lua lua /tmp/out -  # L
 
 * **Ypenburg anchors depend on how "holding the field" is read.** With the 0.3.0 shock and no-retreat mechanisms and the anchor `germans_hold_on_field` (German troops on the field for at least 3 h), the joint share is about 0.54. Under the old sole-control reading (`attacker_ever_controls`), it is still about 0.04: in a one-zone model the Dutch never all leave while the Germans hold the buildings. Multiple perimeter zones would settle it (issue #3 follow-up).
 * **Maleme under CRT.** The command cycle fixed Maleme under Lanchester (joint about 0.68) but not under CRT (about 0.13): the CRT bleeds an attacker at near parity about 6 times faster (`battlelab resolvers`), so the Germans rarely hold on long enough.
-* **Maleme timing.** The New Zealand withdrawal still lands at nightfall (H+12) in most runs; `hold.move_delay_h` spreads it but was not adopted (it costs anchor fit, see the parameter note). The commitment gate (`risk.commit_lag_h`, `risk.commit_cycle_h`) moves the first landings from dawn toward the afternoon of day 2, but the tightened anchor `landings_begin_day2_afternoon` still holds in only about 30% of runs, so the Maleme joint share is about 0.2 (Lanchester). This is the known gap now.
+* **Maleme timing.** The New Zealand withdrawal still lands at nightfall (H+12) in most runs; `hold.move_delay_h` spreads it but was not adopted (it costs anchor fit, see the parameter note). The commitment gate (`risk.commit_lag_h`, `risk.commit_cycle_h`) moves the first landings from dawn toward the afternoon of day 2, but the anchor `landings_begin_day2_afternoon` (confirmed by Long: about 16:00, H+32) still holds in only about 20% of runs, so the Maleme joint share is about 0.19 (Lanchester). This is the known gap now.
 * **Hard go/no-go threshold** is still the default. The logistic and lagged variants exist (`mechanics.go_no_go`, `--go-rule`, `--set mech.info_lag_h=...`); `results/SUMMARY.md` section 4 compares them. The zero single-swap of Maleme's DENIAL into Hostomel is a property of the threshold rule.
 * Arrival order for simultaneous arrivals is the YAML order of `units`.
 * Empty zones keep their last controller.
 * `losses_*` metrics are peak minus final strength of units; strength that withdrew is not a loss.
-* Scenario sourcing for Ypenburg, Heraklion and Rethymno comes from search excerpts, not full texts (the build sandbox could not reach the sources). Check against the full sources before trusting any number from those three. The Heraklion and Rethymno anchors all follow from "the defenders win", so they are weak evidence; the controls earn their keep in the swaps against Maleme.
+* Sourcing: the Hague scenarios use the NIMH airfield histories and the WOH pages, and Crete uses Long's AWM official history (ch. 11-13) and Playfair. Davin (NZETC) is unreadable from the sandbox. Most parameters are still flagged assumptions; the sourced ones say so in their notes. The Heraklion and Rethymno anchors all follow from "the defenders win", so they are weak evidence; the controls earn their keep in the swaps against Maleme.
 * The CMO harness, probe and scenario builder have only run against the mock (`cmo/tests/`). See `cmo/SETUP.md` "Known gaps". Any CMO API added to the Lua side must be added to `cmo/tests/mock_cmo.lua` with the documented signature.
 * In CMO the heliborne troops are scripted (`RU_VDV_` squads unloaded by helicopters reaching the airfield), not CMO cargo: respawned aircraft carry no cargo.
 
 ## Done (see CHANGELOG)
 
-Unreleased: parameter expressions (`"$a * (1 - $b)"`), zone-gated fire (`from_zone`), an inactive Ypenburg perimeter zone (tried, not adopted), Heraklion and Rethymno.
+Unreleased: sourcing pass (#4, #5), `airlift.wave_aircraft`, `redeploy:` (Valkenburg village).
+
+0.4.0: parameter expressions (`"$a * (1 - $b)"`), zone-gated fire (`from_zone`), an inactive Ypenburg perimeter zone (tried, not adopted), Heraklion and Rethymno.
 
 0.3.0: airborne shock and no-retreat morale (issue #3), withdrawal move delay and attacker commitment gate (#5, partly), NOTES.md embedding in the report (#7).
 
@@ -70,4 +72,4 @@ Unreleased: parameter expressions (`"$a * (1 - $b)"`), zone-gated fire (`from_zo
 
 ## Backlog
 
-Tracked as GitHub issues, in priority order: #2 CMO live pilot; #4 Ypenburg sourcing pass; #5 Maleme first-landing timing (remaining gap after the commitment gate) and more airhead members (Heraklion, Rethymno, Valkenburg with a soft-ground mechanic); #3 follow-up: perimeter zones for Ypenburg; #8 batched parameter sampling (after #2, it changes every draw). Each issue has a "done when".
+Tracked as GitHub issues, in priority order: #2 CMO live pilot; #5 Maleme first-landing timing (remaining gap after the commitment gate) and more airhead members (Heraklion, Rethymno, Valkenburg with a soft-ground mechanic); #3 follow-up: perimeter zones for Ypenburg; #8 batched parameter sampling (after #2, it changes every draw). Each issue has a "done when".

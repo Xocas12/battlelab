@@ -41,6 +41,8 @@ from .mechanics import (
     MoraleCheck,
     Outcome,
     OutcomeSpec,
+    Redeploy,
+    RedeploySpec,
     RunwayEngineering,
 )
 from .params import Param, ParamSpace, parse_dist
@@ -53,7 +55,7 @@ KNOWN_METRICS = {
     "attacker_holds_end", "defender_retakes", "runway_end",
     "losses_attacker", "losses_defender",
 }
-INT_FIELDS = {"aircraft"}
+INT_FIELDS = {"aircraft", "wave_aircraft"}
 
 
 # ---------------------------------------------------------------------------
@@ -80,7 +82,8 @@ def _init_keys(cls) -> set[str]:
 _GO_KEYS = {"go_rule", "go_width", "info_lag_h"}
 SCHEMA: dict[str, tuple[set[str], set[str]]] = {
     "top": ({"id", "title", "family", "description", "clock", "sources", "parameters", "sides",
-             "zones", "units", "fires", "airlift", "mechanics", "outcome", "factors", "anchors"},
+             "zones", "units", "fires", "airlift", "redeploy", "mechanics", "outcome", "factors",
+             "anchors"},
             {"id", "sides", "zones", "units", "outcome"}),
     "clock": ({"h_hour_local", "dt_h", "horizon_h"}, set()),
     "source": ({"cite", "url", "note"}, {"cite"}),
@@ -103,6 +106,7 @@ SCHEMA: dict[str, tuple[set[str], set[str]]] = {
     "morale_check": (_init_keys(MoraleCheck), set()),
     "go_no_go": ({"rule", "width", "info_lag_h"}, set()),
     "outcome": _keys(OutcomeSpec),
+    "redeploy": _keys(RedeploySpec),
     "anchor": ({"id", "metric", "op", "value", "source", "note"}, {"id", "metric", "op", "value"}),
 }
 SCHEMA["airlift"] = (SCHEMA["airlift"][0] | {"unit"}, SCHEMA["airlift"][1] | {"unit"})
@@ -276,6 +280,8 @@ def schema_issues(doc: dict) -> list[Issue]:
             if isinstance(mech.get("go_no_go"), dict):
                 _enum(mech["go_no_go"].get("rule"), ENUMS["mechanics.go_no_go.rule"],
                       "mechanics.go_no_go.rule", out)
+    for w, v in _each(doc.get("redeploy"), "redeploy", out):
+        _check(v, "redeploy", w, out)
     if "outcome" in doc:
         _check(doc["outcome"], "outcome", "outcome", out)
     for w, v in _each(doc.get("anchors"), "anchors", out):
@@ -286,7 +292,7 @@ def schema_issues(doc: dict) -> list[Issue]:
 
 
 class Scenario:
-    SECTIONS = ("sides", "zones", "units", "fires", "airlift", "mechanics", "outcome")
+    SECTIONS = ("sides", "zones", "units", "fires", "airlift", "redeploy", "mechanics", "outcome")
 
     def __init__(self, doc: dict, source_text: str = "", path: str | None = None,
                  space: ParamSpace | None = None, variant: dict | None = None):
@@ -416,6 +422,15 @@ class Scenario:
             for k in ("zone", "from_zone"):
                 if f.get(k) is not None and f[k] not in zones:
                     issues.append(Issue("error", f"fires[{i}].{k}", f"unknown zone {f[k]!r}"))
+        for i, r in enumerate(self.doc.get("redeploy") or []):
+            if not isinstance(r, dict):
+                continue
+            for k in ("from_zone", "to_zone"):
+                if r.get(k) is not None and r[k] not in zones:
+                    issues.append(Issue("error", f"redeploy[{i}].{k}", f"unknown zone {r[k]!r}"))
+            for uid in list(r.get("units") or []) + [r.get("to_unit")]:
+                if uid is not None and uid not in self.doc.get("units", {}):
+                    issues.append(Issue("error", f"redeploy[{i}]", f"unknown unit {uid!r}"))
         al = self.doc.get("airlift")
         if al and al.get("unit") not in self.doc.get("units", {}):
             issues.append(Issue("error", "airlift", f"unknown unit {al.get('unit')!r}"))
@@ -483,6 +498,8 @@ class Scenario:
             Control(), FirstControlTracker(), RunwayEngineering(),
             Outcome(OutcomeSpec(**R(self.doc["outcome"], params))),
         ]
+        if self.doc.get("redeploy"):
+            mechs.append(Redeploy([RedeploySpec(**R(r, params)) for r in self.doc["redeploy"]]))
         if self.doc.get("airlift"):
             al = R(self.doc["airlift"], params)
             al["unit_id"] = al.pop("unit")

@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ..engine import Mechanic, Phase
-from ..state import PENDING, World
+from ..state import ACTIVE, PENDING, World
 
 AIR_MODES = ("air_assault", "parachute", "glider")
 
@@ -128,3 +128,55 @@ class Fires(Mechanic):
             if zone.runway is not None and zone.control != f.side:
                 zone.runway.craters = min(1.0, zone.runway.craters + f.crater_rate * e * w.dt)
         w.scratch["fire"] = eff
+
+
+@dataclass
+class RedeploySpec:
+    side: str
+    from_zone: str
+    to_zone: str
+    units: list[str]                # units that send part of their strength
+    to_unit: str                    # pending unit that receives it in to_zone
+    after_control_h: float          # hours after the side first holds from_zone
+    fraction: float                 # share of each unit's strength that moves
+
+
+class Redeploy(Mechanic):
+    """After a side has held a zone for a while, part of its force there moves
+    on to another zone (e.g. airborne troops leaving a captured, useless field
+    to hold a nearby village). Moved strength is taken off the senders' peak as
+    well, so it is not counted as a loss."""
+    phase = Phase.AFTER_CONTROL
+    name = "redeploy"
+
+    def __init__(self, specs: list[RedeploySpec]):
+        self.specs = specs
+
+    def step(self, w: World):
+        done = w.persist.setdefault("redeployed", set())
+        fc = w.persist.get("first_control", {})
+        for i, r in enumerate(self.specs):
+            t_ctrl = fc.get((r.side, r.from_zone))
+            if i in done or t_ctrl is None or w.t + 1e-9 < t_ctrl + r.after_control_h:
+                continue
+            done.add(i)
+            moved = 0.0
+            for uid in r.units:
+                u = w.units[uid]
+                if not (u.active and u.zone == r.from_zone):
+                    continue
+                m = u.strength * r.fraction
+                u.strength -= m
+                u.peak = max(0.0, u.peak - m)
+                moved += m
+            if moved <= 0:
+                continue
+            dest = w.units[r.to_unit]
+            if dest.status == ACTIVE:
+                dest.strength += moved
+            else:
+                dest.strength = moved
+                dest.activate(r.to_zone, w.t, "defend")
+            dest.peak = max(dest.peak, dest.strength)
+            w.emit("redeploy", side=r.side, frm=r.from_zone, to=r.to_zone,
+                   strength=round(moved, 1))

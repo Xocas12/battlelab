@@ -9,11 +9,14 @@ description: >
   airfield. Sourced from search excerpts only (Wikipedia, Warfare History
   Network): most values are flagged assumptions.
 clock:
-  h_hour_local: 16.5        # drops from ~16:00, the bulk after ~17:00
+  h_hour_local: 17.0        # first troop-carriers at 17:00 (Long); drops at intervals for two hours
   dt_h: 0.25
   horizon_h: 48
 
 sources:
+  LONG13:
+    cite: "Gavin Long, 'Greece, Crete and Syria', ch. 13 'Heraklion'; times British"
+    url: "https://s3-ap-southeast-2.amazonaws.com/awm-media/collection/RCDIG1070151/document/5519477.PDF"
   NZH:
     cite: "NZHistory, 'The Battle for Crete - The battle: days 1-3', Manatu Taonga (updated 3 Nov 2020); used for values shared with Maleme (same Luftwaffe, HQ and airlift)"
     url: "https://nzhistory.govt.nz/war/the-battle-for-crete/the-battle-day-1-3"
@@ -26,13 +29,13 @@ sources:
 
 parameters:
   # AIR ---------------------------------------------------------------------
-  air.att.ingress_loss: {dist: uniform, lo: 0.03, hi: 0.08, source: WPH, assumption: true, confidence: low, note: "drops over an alert garrison with Bofors AA, after the preparatory raids had ended"}
+  air.att.ingress_loss: {dist: uniform, lo: 0.05, hi: 0.08, source: LONG13, confidence: high, note: "at least 15 of more than 240 troop-carriers shot down; twelve Bofors round the airfield plus 3-inch AA and pom-poms"}
   air.att.approach_loss: {dist: uniform, lo: 0.005, hi: 0.015, assumption: true}
   air.att.suppression: {dist: uniform, lo: 0.0, hi: 0.2, source: WPH, confidence: medium, note: "launched without direct air support, nearly an hour after the Luftwaffe raids had ended"}
   air.att.interdiction: {dist: uniform, lo: 0.1, hi: 0.3, assumption: true, note: "Luftwaffe over Crete by day, but not supporting this drop"}
   air.att.cas: {dist: uniform, lo: 1.0, hi: 1.1, source: WPH, assumption: true, note: "no direct air support"}
   # MASS --------------------------------------------------------------------
-  mass.aircraft: {dist: uniform, lo: 120, hi: 180, assumption: true, confidence: low, note: "Fallschirmjaeger-Regiment 1 and attachments, roughly 1,500-2,000 men; not in the excerpts"}
+  mass.aircraft: {dist: fixed, value: 200, source: LONG13, confidence: medium, note: "more than 240 Ju 52 counted over two hours, enough to carry more than 2,000 men; 600 of FJR 1 stayed in Greece for lack of aircraft. 200 x 12 = 2,400. Was 120-180"}
   mass.capacity: {dist: fixed, value: 12, assumption: true}
   mass.dz_loss: {dist: uniform, lo: 0.45, hi: 0.70, source: WPH, assumption: true, confidence: low, note: "staggered drops over several hours onto defended positions"}
   mass.reserve_aircraft: {dist: fixed, value: 0, assumption: true, note: "all airborne reserves went to Maleme"}
@@ -45,7 +48,7 @@ parameters:
     note: "1 = ordinary force-ratio morale; not estimated, keeps 0.2.0 behaviour"}
   mass.ammo_out_h: {dist: fixed, value: 1000.0, assumption: true, note: "not binding: the attacker was resupplied (air-landing or ground link-up) or held out beyond the horizon"}
   # HOLD --------------------------------------------------------------------
-  hold.strength: {dist: uniform, lo: 1500, hi: 3000, source: WPH, assumption: true, confidence: low, note: "8,024 defenders in the Heraklion sector (WPH); the share able to fight at the airfield is a judgement"}
+  hold.strength: {dist: uniform, lo: 1400, hi: 2050, source: LONG13, confidence: high, note: "2nd Black Watch (867) on the airfield and heights, 2/4th Australian (550) on the Charlies above it, and the 2nd Leicesters (637) as airfield counterattack reserve; the rest of the 14th Brigade and the Greeks held the town. Was 1,500-3,000"}
   hold.quality: {dist: uniform, lo: 1.0, hi: 1.2, assumption: true, note: "regular British and Australian battalions plus Greek units"}
   hold.dug_in: {dist: fixed, value: 1.5, assumption: true}
   hold.base_hazard: {dist: uniform, lo: 0.0, hi: 0.01, assumption: true, note: "no withdrawal from the airfield sector"}
@@ -58,12 +61,12 @@ parameters:
   hold.perimeter_frac: {dist: fixed, value: 0.0, assumption: true, note: "0 = no separate perimeter; all defenders on the field"}
   hold.perimeter_fire: {dist: fixed, value: 0.0, assumption: true, note: "0 = no perimeter fire"}
   # RESPONSE ----------------------------------------------------------------
-  response.t_ca: {dist: uniform, lo: 14.0, hi: 20.0, assumption: true, confidence: low, note: "local counterattacks with tanks from the morning of 21 May"}
-  response.strength: {dist: uniform, lo: 500, hi: 1000, assumption: true}
+  response.t_ca: {dist: uniform, lo: 1.0, hi: 1.5, source: LONG13, confidence: high, note: "at 18:15 Chappel sent the carrier platoon of the Leicesters and a platoon of the York and Lancasters toward Buttercup Field (cleared by 21:30). Was 14-20"}
+  response.strength: {dist: uniform, lo: 60, hi: 150, source: LONG13, assumption: true, confidence: low, note: "a carrier platoon and an infantry platoon. Was 500-1000"}
   response.commit_h: {dist: uniform, lo: 8, hi: 14, assumption: true}
   response.withdraw_ratio: {dist: fixed, value: 2.0, assumption: true}
-  response.t_ca2: {dist: fixed, value: 1000.0, assumption: true, note: "no second counterattack (inactive)"}
-  response.strength2: {dist: fixed, value: 0.0, assumption: true, note: "no second counterattack (inactive)"}
+  response.t_ca2: {dist: uniform, lo: 14.0, hi: 17.0, source: LONG13, confidence: medium, note: "next morning the platoon of Germans on the eastern edge of the field was overcome by tanks"}
+  response.strength2: {dist: uniform, lo: 150, hi: 300, source: LONG13, assumption: true, confidence: low, note: "tanks with infantry; size not given"}
   # DENIAL ------------------------------------------------------------------
   denial.obstacles0: {dist: fixed, value: 0.0, assumption: true}
   denial.t_fires: {dist: uniform, lo: 0.0, hi: 1.0, assumption: true, note: "defending artillery engaged the drop from the start (as at Maleme)"}
