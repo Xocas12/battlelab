@@ -7,6 +7,12 @@ clock:
   horizon_h: 48
 
 sources:
+  LONG11:
+    cite: "Gavin Long, 'Greece, Crete and Syria' (Australia in the War of 1939-1945, Army, Vol II), ch. 11 'Maleme and Galatas'; times British/NZ"
+    url: "https://s3-ap-southeast-2.amazonaws.com/awm-media/collection/RCDIG1070149/document/5519475.PDF"
+  PLAYFAIR:
+    cite: "I.S.O. Playfair, 'The Mediterranean and Middle East, Vol II' (UK official history), ch. 7"
+    url: "https://www.ibiblio.org/hyperwar/UN/UK/UK-Med-II/UK-Med-2-7.html"
   NZH:
     cite: "NZHistory, 'The Battle for Crete - The battle: days 1-3', Manatu Taonga (updated 3 Nov 2020)"
     url: "https://nzhistory.govt.nz/war/the-battle-for-crete/the-battle-day-1-3"
@@ -26,7 +32,7 @@ parameters:
   air.att.cas: {dist: uniform, lo: 1.2, hi: 1.4, assumption: true}
   # MASS --------------------------------------------------------------------
   mass.aircraft: {dist: fixed, value: 150, assumption: true,
-    note: "~50 gliders at Maleme plus the Sturmregiment's parachute battalions; round number"}
+    note: "about 75 gliders overall, perhaps 45 west of the airfield (Long), plus the Sturmregiment parachute battalions (400-600 paratroops around the 22nd Battalion); round number"}
   mass.capacity: {dist: fixed, value: 12, assumption: true}
   mass.dz_loss: {dist: uniform, lo: 0.40, hi: 0.60, source: W2W, confidence: medium,
     note: "III Bn lost ~400 of 600 on day 1; paratroops landing on NZ positions were 'cut to pieces' (NZH)"}
@@ -43,8 +49,7 @@ parameters:
     note: "1 = ordinary force-ratio morale; not estimated, keeps 0.2.0 behaviour"}
   mass.ammo_out_h: {dist: fixed, value: 1000.0, assumption: true, note: "not binding: the attacker was resupplied (air-landing or ground link-up) or held out beyond the horizon"}
   # HOLD --------------------------------------------------------------------
-  hold.strength: {dist: uniform, lo: 500, hi: 650, assumption: true,
-    note: "22nd NZ Battalion plus attached elements around the airfield and Point 107"}
+  hold.strength: {dist: uniform, lo: 580, hi: 640, source: NZH, confidence: medium, note: "22nd NZ Battalion, about 20 officers and 600 other ranks in five rifle companies (Davin, via NZETC excerpt). Was 500-650"}
   hold.quality: {dist: uniform, lo: 0.9, hi: 1.1, assumption: true}
   hold.dug_in: {dist: fixed, value: 1.5, assumption: true}
   hold.base_hazard: {dist: uniform, lo: 0.005, hi: 0.03, source: NZH, confidence: medium,
@@ -63,8 +68,7 @@ parameters:
   hold.perimeter_frac: {dist: fixed, value: 0.0, assumption: true, note: "0 = no separate perimeter; all defenders on the field"}
   hold.perimeter_fire: {dist: fixed, value: 0.0, assumption: true, note: "0 = no perimeter fire"}
   # RESPONSE ----------------------------------------------------------------
-  response.t_ca: {dist: uniform, lo: 38.0, hi: 46.0, source: NZH, confidence: medium,
-    note: "night 21/22 May, delayed four hours; reached the airfield edge at dawn"}
+  response.t_ca: {dist: uniform, lo: 43.0, hi: 46.0, source: LONG11, confidence: high, note: "20th and 28th (Maori) Battalions moved off about 03:30 on 22 May (H+43.5) and reached the edge of the airfield about 07:30; the attack had been delayed waiting for the 20th. Was 38-46"}
   response.strength: {dist: uniform, lo: 900, hi: 1300, source: NZH, assumption: true,
     note: "20th and 28th (Maori) Battalions"}
   response.commit_h: {dist: uniform, lo: 8, hi: 14, assumption: true}
@@ -81,8 +85,7 @@ parameters:
   # RISK --------------------------------------------------------------------
   risk.tolerance: {dist: uniform, lo: 0.25, hi: 0.40, source: NZH, assumption: true,
     note: "airfield littered with wrecked aircraft, but enough troops landed to tip the balance"}
-  risk.land_contested: {dist: fixed, value: 0, source: NZH, assumption: true,
-    note: "Student waited for the field: transports landed only after the NZ withdrawal"}
+  risk.land_contested: {dist: fixed, value: 0, source: LONG11, assumption: true, note: "the troop-carriers landed from about 16:00 on 21 May after the 22nd Battalion had gone, though the field was still under the fire of nine guns (Long, Playfair): under fire, but no longer held by the NZ"}
   risk.commit_lag_h: {dist: uniform, lo: 2.0, hi: 6.0, source: NZH, assumption: true, confidence: low,
     note: "reports from Maleme reached Student's HQ in Athens late and incompletely. Added for issue #5 (first landings at dawn instead of the afternoon of 21 May); prior set before the anchor run"}
   risk.commit_cycle_h: {dist: uniform, lo: 6.0, hi: 12.0, assumption: true, confidence: low,
@@ -215,7 +218,7 @@ factors:
 anchors:
   - {id: nz_leave_field_day1, metric: t_control, op: between, value: [4.0, 24.0], source: NZH,
      note: "22nd Bn pulled back from Point 107 during the night of 20/21 May"}
-  - {id: landings_begin_day2_afternoon, metric: t_first_landing, op: between, value: [28.0, 34.0], source: NZH,
-     note: "first transports landed on the afternoon of 21 May (12:00-18:00 = H+28 to H+34). TIGHTENED in 0.3.0 from [20, 40] (any time on day 2), see CHANGELOG and issue #5"}
+  - {id: landings_begin_day2_afternoon, metric: t_first_landing, op: between, value: [28.0, 34.0], source: LONG11,
+     note: "the troop air-landing (II/100th Mountain Regiment) began about 16:00 on 21 May, H+32 (Long, Playfair; the German plan said from 4 p.m.). Earlier, one Ju 52 touched down at 08:10 and left under fire, and some landed supplies on the beach and riverbed; the model counts troop landings. CONFIRMED in 0.5.0 (issue #5)"}
   - {id: airbridge, metric: airbridge, op: eq, value: true, source: NZH}
   - {id: counterattack_fails, metric: defender_retakes, op: eq, value: false, source: NZH}

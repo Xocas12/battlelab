@@ -118,9 +118,14 @@ def test_invariants(path):
             if z.runway:
                 assert 0.0 <= z.runway.usable <= 1.0
             assert z.control in (None, "contested", *w.sides)
-        waves = (len(al["waves"]) if al.get("mode") == "waves"
-                 else math.ceil(48 / p["ctx.interval_h"]) + 1)
-        lift = p["ctx.aircraft"] * p["ctx.troops_per_aircraft"] * waves
+        spec = s.resolve(al, p)
+        if spec.get("wave_aircraft"):
+            sorties = sum(spec["wave_aircraft"])
+        else:
+            waves = (len(al["waves"]) if al.get("mode") == "waves"
+                     else math.ceil(48 / p["ctx.interval_h"]) + 1)
+            sorties = p["ctx.aircraft"] * waves
+        lift = sorties * p["ctx.troops_per_aircraft"]
         assert m["landed"] <= lift + 1e-6
         if m["t_control"] is not None:
             assert 0 <= m["t_control"] <= s.horizon
@@ -641,3 +646,39 @@ def test_parameters_doc_is_current(tmp_path):
     main(["params", *map(str, ALL_SCENARIOS), "--out", str(out)])
     assert out.read_text() == (ROOT / "docs" / "PARAMETERS.md").read_text(), \
         "docs/PARAMETERS.md is stale: run `battlelab params --out docs/PARAMETERS.md`"
+
+
+# ----------------------------------------------- wave sizes, redeployment ---
+def test_wave_aircraft_sizes_each_wave():
+    vkb = Scenario.load(ROOT / "scenarios" / "valkenburg_1940.yaml")
+    for i in range(30):
+        p = vkb.space.sample(4, i)
+        w, _ = vkb.run(p, 4, i)
+        sizes = {e.data["wave"]: e.data["aircraft"] for e in w.log if e.kind == "airlanding"}
+        if "wave1" in sizes:
+            assert sizes["wave1"] == round(p["ctx.wave1_n"])
+        if "wave2" in sizes:
+            assert sizes["wave2"] == round(p["ctx.wave2_n"])
+    # without wave_aircraft every wave uses ctx.aircraft (the pre-0.5.0 model)
+    doc = yaml.safe_load(YPB.read_text())
+    assert "wave_aircraft" not in doc["airlift"]
+
+
+def test_redeploy_moves_troops_off_the_field():
+    vkb = Scenario.load(ROOT / "scenarios" / "valkenburg_1940.yaml")
+    moved = 0
+    for i in range(40):
+        p = vkb.space.sample(5, i)
+        w, _ = vkb.run(p, 5, i)
+        ev = [e for e in w.log if e.kind == "redeploy"]
+        assert len(ev) <= 1
+        if ev:
+            moved += 1
+            assert ev[0].t >= w.metrics["t_control"] + p["ctx.redeploy_delay_h"] - 1e-9
+            assert w.units["village_force"].zone == "village"
+        else:
+            assert w.units["village_force"].strength == 0
+    assert moved > 20
+    none = experiment.run_batch(vkb.with_overrides({"ctx.redeploy_frac": 0.0}), 300, seed=8)
+    some = experiment.run_batch(vkb, 300, seed=8)
+    assert some["m.defender_retakes"].mean() > none["m.defender_retakes"].mean() + 0.1

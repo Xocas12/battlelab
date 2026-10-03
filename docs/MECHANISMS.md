@@ -29,7 +29,7 @@ What the native engine models, one mechanism at a time: what it does, the parame
 | Morale hazard | Per-hour hazard of leaving the fight: base + ratio term × ratio_scale × (enemy/own − 1) + casualty term × losses + ammunition term once ammunition runs out. There are also immediate exits: collapse, outmatched (`withdraw_ratio`), counterattack commitment expired, and a forced CRT retreat. | `hold.base_hazard`, `hold.ammo_out_h` (HOLD); `response.commit_h`, `response.withdraw_ratio` (RESPONSE); `mech.ratio_coeff`, `mech.casualty_coeff`, `mech.ammo_hazard` | all |
 | Command decision cycle (0.2.0) | The fight-or-leave hazard is judged by the commander every `decision_h` hours. With probability `comms_loss` there are no reports, and the commander then assumes at least `fog` casualties. With `night_moves` a withdrawal order waits for darkness, and `move_delay_h` delays it further (exponential). | `hold.decision_h`, `hold.comms_loss`, `hold.fog`, `hold.night_moves`, `hold.move_delay_h` (COMMAND); default 0 | Maleme (move delay tried, inactive) |
 | No line of retreat (0.3.0) | Scales the force-ratio term for encircled airborne troops (below 1: they hold at worse odds). | `mass.cornered` (MASS); default 1 | Ypenburg, Valkenburg |
-| Airborne ammunition limit (0.4.0) | Parachuted and air-landed units run dry after this many hours of fighting, which switches on the ammunition hazard. | `mass.ammo_out_h` (MASS); default 1000 h (not binding) | Ypenburg, Valkenburg |
+| Airborne ammunition limit (0.4.0) | Parachuted and air-landed units run dry after this many hours of fighting, which switches on the ammunition hazard. | `mass.ammo_out_h` (MASS); default 1000 h (not binding) | Ypenburg (Valkenburg set it to 1000 h in 0.5.0: the pocket held out to 14 May) |
 
 ## Control and engineering (phases CONTROL, ENGINEERING)
 
@@ -37,6 +37,7 @@ What the native engine models, one mechanism at a time: what it does, the parame
 |---|---|---|---|
 | Zone control | A zone belongs to the only side with active units in it; it is contested if both are there; an empty zone keeps its last controller. On capture, the side's units there switch to defence with the hasty-defence bonus. | `doctrine.hasty_defense` | all |
 | Runway | Usable fraction = (1 − obstacles)(1 − craters). Whichever side holds the field alone applies its doctrine every turn: the attacker clears obstacles (`clear_rate`), and the defender demolishes (`demolish_rate`) — in practice once the landing force has broken or after a retake, since the field is contested from the first landing. | `denial.obstacles0`, `denial.demolish_rate` (DENIAL), `doctrine.clear_rate` | all |
+| Redeployment (0.5.0) | Once, `after_control_h` hours after a side first holds `from_zone`, a `fraction` of each listed unit's strength there leaves for `to_zone` and joins `to_unit` (defending). The moved troops no longer count on the field. | `redeploy:` section; `ctx.redeploy_delay_h`, `ctx.redeploy_frac`; default: no section | Valkenburg (Germans moving into the village) |
 | Perimeter zone (0.4.0) | A second zone for defenders at the edge of the field, split from the garrison by an expression (`"$hold.strength * (1 - $hold.perimeter_frac)"`). | `hold.perimeter_frac` (HOLD); default 0 | Ypenburg (tried, inactive) |
 
 ## Air-landing (phase AIRLIFT)
@@ -44,6 +45,7 @@ What the native engine models, one mechanism at a time: what it does, the parame
 | Mechanism | What it does | Parameters | Used by |
 |---|---|---|---|
 | Waves or shuttle | Transport waves at set times (loitering, then aborting), or a shuttle that starts after control of the field. Landed troops join one unit at an organisation fraction. Lost aircraft leave wrecks on the runway. | `ctx.aircraft`, `ctx.troops_per_aircraft`, `ctx.wave*_t`, `ctx.interval_h`, `ctx.exploit_delay`, `ctx.wreck_obstacle` | all |
+| Wave sizes (0.5.0) | `airlift.wave_aircraft` gives each wave its own number of aircraft instead of `ctx.aircraft` for all. | `ctx.wave*_n`; default: every wave uses `ctx.aircraft` | Valkenburg |
 | Go/no-go rule (0.2.0) | A wave lands if the side holds the field, the runway is usable enough, and the expected loss per aircraft is acceptable. The rule is a hard threshold (default), or logistic, with one nerve draw per wave. The risk estimate can lag reality by `info_lag_h`. | `risk.tolerance` (RISK), `mech.go_width`, `mech.info_lag_h`; `mechanics.go_no_go.rule` | all |
 | Landing on a contested field (0.2.0) | With this doctrine, a wave may land while the field is contested, at an extra per-aircraft loss, and its troops attack off the aircraft. | `risk.land_contested` (RISK), `mech.contested_risk`; default 0 | Ypenburg, Valkenburg |
 | Commitment gate (0.3.0) | In shuttle mode, the first sortie waits until the HQ has heard of control (a reporting lag) and reached its next decision point. | `risk.commit_lag_h`, `risk.commit_cycle_h` (RISK); default 0 | Maleme, Heraklion, Rethymno |
@@ -54,7 +56,7 @@ What the native engine models, one mechanism at a time: what it does, the parame
 | Mechanism | What it does | Parameters | Used by |
 |---|---|---|---|
 | Counterattack | A defender force arrives at a set time and attacks, and gives up after `commit_h`. | `response.t_ca`, `response.strength`, `response.commit_h`, `response.withdraw_ratio` (RESPONSE) | all |
-| Second counterattack (0.4.0) | A later, separate counterattack force. | `response.t_ca2`, `response.strength2` (RESPONSE); default strength 0 | Ypenburg, Valkenburg |
+| Second counterattack (0.4.0) | A later, separate counterattack force. | `response.t_ca2`, `response.strength2` (RESPONSE); default strength 0 | Ypenburg, Valkenburg, Heraklion (0.5.0) |
 | Ground relief | An attacker column arriving at a set time (context). | `ctx.t_relief`, `ctx.relief_strength` | Hostomel |
 
 ## Metrics (phase RECORD)
