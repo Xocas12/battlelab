@@ -62,7 +62,7 @@ mkdir -p /tmp/out && cd cmo && lua5.3 tests/test_harness.lua lua /tmp/out -  # L
 
 ## Done (see CHANGELOG)
 
-Unreleased: sourcing pass (#4, #5), `airlift.wave_aircraft`, `redeploy:` (Valkenburg village).
+0.5.0: sourcing pass (#4, #5), `airlift.wave_aircraft`, `redeploy:` (Valkenburg village).
 
 0.4.0: parameter expressions (`"$a * (1 - $b)"`), zone-gated fire (`from_zone`), an inactive Ypenburg perimeter zone (tried, not adopted), Heraklion and Rethymno.
 
