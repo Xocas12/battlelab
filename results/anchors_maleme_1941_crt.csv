@@ -1,6 +1,6 @@
 anchor,metric,op,target,share,lo95,hi95,source
-nz_leave_field_day1,t_control,between,"[4.0, 24.0]",0.1505,0.1354999352936696,0.16684012990908892,NZH
-landings_begin_day2_afternoon,t_first_landing,between,"[28.0, 34.0]",0.0315,0.02469793238521229,0.04009840680646833,NZH
-airbridge,airbridge,eq,True,0.2595,0.24076196728806473,0.279160166277782,NZH
-counterattack_fails,defender_retakes,eq,False,0.995,0.990820204876819,0.9972818486986733,NZH
-ALL (joint),,,,0.029,0.02250029695161516,0.03730562782806803,
+nz_leave_field_day1,t_control,between,"[4.0, 24.0]",0.1245,0.11074633065003775,0.13969342466794749,NZH
+landings_begin_day2_afternoon,t_first_landing,between,"[28.0, 34.0]",0.029,0.02250029695161516,0.03730562782806803,LONG11
+airbridge,airbridge,eq,True,0.2105,0.19319686101952466,0.22891315007117236,NZH
+counterattack_fails,defender_retakes,eq,False,0.9995,0.9971730649772383,0.9999117345398496,NZH
+ALL (joint),,,,0.028,0.021625107564685334,0.036184651450198876,

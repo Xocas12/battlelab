@@ -1,5 +1,5 @@
 anchor,metric,op,target,share,lo95,hi95,source
-germans_never_take_field,attacker_ever_controls,eq,False,0.9835,0.97691889840248,0.9882272488778242,WPH
-no_airbridge,airbridge,eq,False,0.9885,0.9828021470402394,0.9923248290640597,WPH
-no_landings,transports_lost,eq,0,0.9865,0.9804290754423747,0.9907055691323264,WPH
-ALL (joint),,,,0.9835,0.97691889840248,0.9882272488778242,
+germans_never_take_field,attacker_ever_controls,eq,False,0.976,0.9683243679263988,0.981850536117913,WPH
+no_airbridge,airbridge,eq,False,0.977,0.9694586354778314,0.9827124343312792,WPH
+no_landings,transports_lost,eq,0,0.977,0.9694586354778314,0.9827124343312792,WPH
+ALL (joint),,,,0.976,0.9683243679263988,0.981850536117913,

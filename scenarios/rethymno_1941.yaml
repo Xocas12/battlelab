@@ -14,6 +14,9 @@ clock:
   horizon_h: 48
 
 sources:
+  LONG12:
+    cite: "Gavin Long, 'Greece, Crete and Syria', ch. 12 'Retimo'; times British"
+    url: "https://s3-ap-southeast-2.amazonaws.com/awm-media/collection/RCDIG1070150/document/5519476.PDF"
   NZH:
     cite: "NZHistory, 'The Battle for Crete - The battle: days 1-3', Manatu Taonga (updated 3 Nov 2020); used for values shared with Maleme (same Luftwaffe, HQ and airlift)"
     url: "https://nzhistory.govt.nz/war/the-battle-for-crete/the-battle-day-1-3"
@@ -23,14 +26,14 @@ sources:
 
 parameters:
   # AIR ---------------------------------------------------------------------
-  air.att.ingress_loss: {dist: uniform, lo: 0.02, hi: 0.06, assumption: true, confidence: low}
+  air.att.ingress_loss: {dist: uniform, lo: 0.04, hi: 0.06, source: LONG12, confidence: high, note: "seven troop-carriers (and two other aircraft) shot down of 161, by small-arms and machine-gun fire; the defenders had no AA"}
   air.att.approach_loss: {dist: uniform, lo: 0.005, hi: 0.015, assumption: true}
   air.att.suppression: {dist: uniform, lo: 0.1, hi: 0.3, assumption: true, confidence: low, note: "the positions on the hills were largely intact"}
   air.att.interdiction: {dist: uniform, lo: 0.1, hi: 0.3, assumption: true}
   air.att.cas: {dist: uniform, lo: 1.0, hi: 1.2, assumption: true}
   # MASS --------------------------------------------------------------------
-  mass.aircraft: {dist: uniform, lo: 90, hi: 130, assumption: true, confidence: low, note: "Fallschirmjaeger-Regiment 2 (less detachments), roughly 1,100-1,500 men; not in the excerpts"}
-  mass.capacity: {dist: fixed, value: 12, assumption: true}
+  mass.aircraft: {dist: fixed, value: 161, source: LONG12, confidence: high, note: "161 troop-carriers counted; the landing was completed in thirty-five minutes. Was 90-130"}
+  mass.capacity: {dist: fixed, value: 10, source: LONG12, assumption: true, note: "about 1,500 men in all (Sturm's captured orders; about 1,700 per Wikipedia) over 161 aircraft"}
   mass.dz_loss: {dist: uniform, lo: 0.40, hi: 0.65, source: WPR, confidence: low, note: "landings scattered along the coast, some on top of the 2/11th Battalion"}
   mass.reserve_aircraft: {dist: fixed, value: 0, assumption: true, note: "all airborne reserves went to Maleme"}
   mass.reserve_capacity: {dist: fixed, value: 12, assumption: true}
@@ -42,7 +45,7 @@ parameters:
     note: "1 = ordinary force-ratio morale; not estimated, keeps 0.2.0 behaviour"}
   mass.ammo_out_h: {dist: fixed, value: 1000.0, assumption: true, note: "not binding: the attacker was resupplied (air-landing or ground link-up) or held out beyond the horizon"}
   # HOLD --------------------------------------------------------------------
-  hold.strength: {dist: uniform, lo: 1000, hi: 1600, source: WPR, assumption: true, confidence: low, note: "2/1st and 2/11th Australian Battalions with supporting elements; the Greek 4th and 5th Regiments were poorly armed and are not counted"}
+  hold.strength: {dist: uniform, lo: 1270, hi: 1360, source: LONG12, confidence: high, note: "2/1st Battalion (620) on Hills A and D and 2/11th (650) on Hill B, plus some 90 gunners and machine-gunners; the four Greek battalions (2,300, about ten rounds a rifle) are not counted"}
   hold.quality: {dist: uniform, lo: 1.0, hi: 1.2, assumption: true}
   hold.dug_in: {dist: fixed, value: 1.6, source: WPR, assumption: true, note: "positions in the hills south of the airfield"}
   hold.base_hazard: {dist: uniform, lo: 0.0, hi: 0.01, assumption: true}
@@ -55,8 +58,8 @@ parameters:
   hold.perimeter_frac: {dist: fixed, value: 0.0, assumption: true, note: "0 = no separate perimeter; all defenders on the field"}
   hold.perimeter_fire: {dist: fixed, value: 0.0, assumption: true, note: "0 = no perimeter fire"}
   # RESPONSE ----------------------------------------------------------------
-  response.t_ca: {dist: uniform, lo: 13.0, hi: 18.0, source: WPR, confidence: low, note: "Campbell counterattacked on the morning of 21 May, took the hill and 69 prisoners"}
-  response.strength: {dist: uniform, lo: 400, hi: 800, assumption: true}
+  response.t_ca: {dist: uniform, lo: 15.5, hi: 16.0, source: LONG12, confidence: high, note: "after a failed dawn attack, Moriarty's force retook Hill A about 08:00 on 21 May; groups took 25 and 34 prisoners (the 69 in the old note is not supported). The two tanks sent at 17:15 on 20 May both stuck"}
+  response.strength: {dist: uniform, lo: 200, hi: 400, source: LONG12, assumption: true, confidence: low, note: "companies of the 2/1st; size not given"}
   response.commit_h: {dist: uniform, lo: 8, hi: 14, assumption: true}
   response.withdraw_ratio: {dist: fixed, value: 2.0, assumption: true}
   response.t_ca2: {dist: fixed, value: 1000.0, assumption: true, note: "no second counterattack (inactive)"}
