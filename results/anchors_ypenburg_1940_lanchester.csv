@@ -2,7 +2,8 @@ anchor,metric,op,target,share,lo95,hi95,source
 germans_hold_on_field,attacker_hours_on_field,ge,3.0,0.9555,0.9455560351259518,0.963697470739981,WOH
 first_wave_lands_under_fire,t_first_landing,le,1.5,0.798,0.7798401210245763,0.8150172768855181,WOH
 heavy_transport_losses,transports_lost,ge,8,0.686,0.6653189985041471,0.7059678337484622,WOH
-runway_blocked,runway_end,lt,0.6,0.877,0.8618785048769102,0.890675988452303,WOH
+runway_blocked,runway_end,lt,0.6,0.8865,0.8718505801436812,0.8996674879511223,WOH
 no_airbridge,airbridge,eq,False,0.9835,0.97691889840248,0.9882272488778242,WOH
-germans_lose_field,attacker_holds_end,eq,False,0.9485,0.9379249175274234,0.9573554279849166,WOH
-ALL (joint),,,,0.6215,0.6000295400557871,0.6425046003672883,
+germans_off_field_by_1510,attacker_hours_on_field,le,11.0,0.804,0.7860262008733626,0.8208081916255258,WOH
+germans_lose_field,attacker_holds_end,eq,False,0.962,0.9526960596538981,0.9695325236832278,WOH
+ALL (joint),,,,0.5135,0.4915896341052006,0.5353586037195854,
