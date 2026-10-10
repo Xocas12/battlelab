@@ -702,3 +702,30 @@ def test_redeploy_moves_troops_off_the_field():
     none = experiment.run_batch(vkb.with_overrides({"ctx.redeploy_frac": 0.0}), 300, seed=8)
     some = experiment.run_batch(vkb, 300, seed=8)
     assert some["m.defender_retakes"].mean() > none["m.defender_retakes"].mean() + 0.1
+
+
+# ---------------------------------------------------------------- context swap ---
+def test_context_swap():
+    ypb = Scenario.load(YPB)
+    wh = Scenario.load(ROOT / "scenarios" / "waalhaven_1940.yaml")
+    shared, only = experiment.context_params(ypb, wh)
+    assert "ctx.wreck_obstacle" in shared and "ctx.wave_gap_h" in only
+    assert all(n.startswith("ctx.") for n in shared + only)
+    plain = experiment.factor_swap(ypb, wh, 60, seed=5, factors=["RISK"])
+    ctx = experiment.factor_swap(ypb, wh, 60, seed=5, factors=["RISK"], context=True)
+    assert ctx.factors == ["RISK", experiment.CONTEXT]
+    # common random numbers: the context-off corners reproduce the ordinary swap
+    assert (ctx.runs[(0, 0)] == plain.runs[(0,)]).all()
+    assert (ctx.runs[(1, 0)] == plain.runs[(1,)]).all()
+    v = experiment.variant(ypb, wh, ctx.factors, (0, 1),
+                           {"RISK": ypb.factors["RISK"], experiment.CONTEXT: shared})
+    assert v.space["ctx.wreck_obstacle"] == wh.space["ctx.wreck_obstacle"]
+    assert v.space["risk.tolerance"] == ypb.space["risk.tolerance"]
+    same = experiment.factor_swap(ypb, ypb, 40, seed=5, factors=["RISK"], context=True)
+    assert len({float(r.mean()) for r in same.runs.values()}) == 1   # self-swap is a no-op
+
+
+def test_screen_constant_outcome():
+    df = pd.DataFrame({"p.a": np.linspace(0, 1, 50), "m.airbridge": [True] * 50})
+    out = analysis.screen(df)
+    assert out.empty and list(out.columns) == ["param", "eta2", "direction", "noise_floor"]

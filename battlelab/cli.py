@@ -158,7 +158,7 @@ def cmd_swap(a):
     tables, titles = {}, {}
     for h, w in pairs:
         res = experiment.factor_swap(h, w, a.n, a.seed, outcome=a.metric,
-                                     workers=a.workers, progress=True)
+                                     workers=a.workers, progress=True, context=a.context)
         t = analysis.shapley_table(res)
         base, full = res.value((0,) * len(res.factors)), res.value((1,) * len(res.factors))
         print(f"\n{h.id} with {w.id}'s factors: P({a.metric}) {base:.3f} -> {full:.3f}")
@@ -237,6 +237,10 @@ DEFAULT_LINE_SWEEPS = [
 ]
 
 
+def _pairs(spec: str | None) -> list[tuple[str, str]] | None:
+    return [tuple(x.split(":")) for x in spec.split(",")] if spec else None  # type: ignore[misc]
+
+
 def cmd_report(a):
     import glob
 
@@ -248,7 +252,7 @@ def cmd_report(a):
     cfg = ReportConfig(scenarios=files, n=a.n, seed=a.seed, workers=a.workers, out=a.out,
                        sweep_scenario=a.sweep, go_rule_pair=tuple(a.go_pair.split(","))
                        if a.go_pair else None, line_sweeps=DEFAULT_LINE_SWEEPS,
-                       pairs=[tuple(x.split(":")) for x in a.pairs.split(",")] if a.pairs else None)
+                       pairs=_pairs(a.pairs), context_pairs=_pairs(a.context_pairs) or [])
     run_report(cfg)
 
 
@@ -350,6 +354,8 @@ def main(argv=None):
     common(p, 1000)
     p.add_argument("--metric", default="airbridge")
     p.add_argument("--both", action="store_true", help="also run away->home")
+    p.add_argument("--context", action="store_true",
+                   help="also swap the shared ctx.* parameters as one more bundle, CONTEXT")
     p.add_argument("--out")
     p.set_defaults(fn=cmd_swap)
 
@@ -387,6 +393,8 @@ def main(argv=None):
     p.add_argument("--go-pair", default="hostomel_2022,maleme_1941",
                    help="scenario ids for the go/no-go rule comparison")
     p.add_argument("--pairs", help="swap only these pairs, both directions: a:b,c:d (default: all)")
+    p.add_argument("--context-pairs",
+                   help="pairs (a:b,c:d) to swap again with a CONTEXT bundle (section 3b)")
     p.add_argument("--notes-only", action="store_true",
                    help="only re-embed results/NOTES.md into the existing SUMMARY.md")
     p.set_defaults(fn=cmd_report)
