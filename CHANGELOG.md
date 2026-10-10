@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+* **Context swaps** (`battlelab swap --context`, `battlelab report --context-pairs`, report section 3b). The `ctx.*` parameters two scenarios share become one more bundle, CONTEXT, in the full-factorial swap. This answers "how much of the difference is the setting", which the notes had flagged twice (Valkenburg, Waalhaven) as beyond an ordinary swap. Structure (zones, units, the number of waves) and context parameters only one scenario has are never swapped, so the CONTEXT share is a lower bound. `scripts/reproduce.sh` runs Ypenburg-Valkenburg and Ypenburg-Waalhaven by default (`CPAIRS`). Ordinary swaps are unchanged: a context swap's context-off corners reproduce them run for run (tested).
+* `analysis.screen` returns an empty table instead of failing when the outcome is constant (it crashed `battlelab report` at small n).
+
 ## 0.6.0 (2026-10-10)
 
 Seven scenarios: Waalhaven 1940 joins as the control for Ypenburg; Maleme's first-landing timing is fixed by a sourced daylight-confirmation rule (#5); Ypenburg's ammunition limit is sourced.

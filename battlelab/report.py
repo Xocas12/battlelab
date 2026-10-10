@@ -39,6 +39,7 @@ class ReportConfig:
     go_rule_pair: tuple[str, str] | None = None  # ids for the go/no-go comparison
     factors: list[str] | None = None             # swap only these bundles (default: all)
     pairs: list[tuple[str, str]] | None = None   # swap only these (both directions); None = all
+    context_pairs: list[tuple[str, str]] = field(default_factory=list)  # 3b: + CONTEXT bundle
     # one-parameter sweeps: (tag, scenario id, parameter, values, fixed overrides)
     line_sweeps: list[tuple[str, str, str, list[float], dict]] = field(default_factory=list)
     log: bool = True
@@ -207,6 +208,11 @@ def run_report(cfg: ReportConfig) -> Path:
                f"noise only). Lanchester n = {N:,} per configuration, CRT n = {n_crt:,}. "
                "`Single` is P(airbridge) with only that factor swapped (Lanchester).\n\n"
                + "\n\n".join(swap_parts))
+
+    # 3b. context swaps -----------------------------------------------------------
+    if cfg.context_pairs:
+        _say(cfg, "context swaps")
+        sec.append(_context_section(cfg, by_id, values, out, n_crt))
 
     # 4. go/no-go rule variants --------------------------------------------------
     if cfg.go_rule_pair and all(x in by_id for x in cfg.go_rule_pair):
@@ -385,6 +391,49 @@ def _swap_section(h: Scenario, w: Scenario, res_by_r: dict, n_lan: int, n_crt: i
     return (f"**{h.id} given {w.id}'s factors.** P(airbridge) {base_l:.2f} -> {full_l:.2f} "
             f"under Lanchester, {base_c:.2f} -> {full_c:.2f} under CRT. {robust}\n\n"
             + md_table(df))
+
+
+def _context_section(cfg: ReportConfig, by_id: dict, values: dict, out: Path,
+                     n_crt: int) -> str:
+    """Section 3b: the listed pairs again, with the shared ctx.* parameters as an
+    eighth bundle (CONTEXT). Value keys: ctxswap.*, ctxshapley.*, ctxsingle.*."""
+    N, seed, W = cfg.n, cfg.seed, cfg.workers
+    parts = []
+    for a, b in cfg.context_pairs:
+        if a not in by_id or b not in by_id:
+            continue
+        for h, w in ((by_id[a], by_id[b]), (by_id[b], by_id[a])):
+            res_by_r = {}
+            for r, n in (("lanchester", N), ("crt", n_crt)):
+                _say(cfg, f"  context swap {h.id} <- {w.id} ({r})")
+                res = experiment.factor_swap(_variant(h, r), _variant(w, r), n, seed,
+                                             factors=cfg.factors, workers=W, context=True)
+                t = analysis.shapley_table(res)
+                res_by_r[r] = (res, t)
+                k = len(res.factors)
+                pair = f"{h.id}__{w.id}.{r}"
+                values[f"ctxswap.{pair}.base"] = res.value((0,) * k)
+                values[f"ctxswap.{pair}.full"] = res.value((1,) * k)
+                for row in t.itertuples():
+                    values[f"ctxshapley.{pair}.{row.factor}"] = float(row.shapley)
+                    values[f"ctxsingle.{pair}.{row.factor}"] = float(row.single_swap_p)
+                meta = {"home": h.fingerprint(), "away": w.fingerprint(), "n": n,
+                        "seed": seed, "resolver": r, "context": True}
+                experiment.save(res.table(), out, f"ctxswap_{h.id}__{w.id}_{r}", meta)
+                experiment.save(t, out, f"ctxshapley_{h.id}__{w.id}_{r}", meta)
+            shared, only = experiment.context_params(h, w)
+            parts.append(_swap_section(h, w, res_by_r, N, n_crt).replace(
+                "'s factors.**", "'s factors and shared context.**", 1)
+                + f"\n\nCONTEXT = {', '.join(f'`{x}`' for x in shared)}. Not swappable "
+                  f"(only one scenario has them, or they are structure): "
+                  f"{', '.join(f'`{x}`' for x in only) or 'none'}, plus zones, units "
+                  "and the airlift schedule's shape.")
+    return ("## 3b. Context swaps\n\n"
+            "The same full-factorial swap with one more bundle, CONTEXT: the `ctx.*` "
+            "parameters both scenarios have (airfield, airlift and timing values). "
+            "Ordinary swaps leave context alone by design (MODELING_STANDARDS §5); this "
+            "section asks how much of a difference it explains. Structure (zones, units, "
+            "the number of waves) is never swapped.\n\n" + "\n\n".join(parts))
 
 
 def _go_rule_section(cfg: ReportConfig, a: Scenario, b: Scenario, out: Path) -> str:

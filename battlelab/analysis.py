@@ -151,7 +151,11 @@ def screen(df: pd.DataFrame, metric: str = "airbridge", bins: int = 10) -> pd.Da
         corr = np.corrcoef(x, y)[0, 1]
         rows.append({"param": col[2:], "eta2": eta2, "direction": np.sign(corr),
                      "noise_floor": (q.cat.categories.size - 1) / len(y)})
-    return pd.DataFrame(rows).sort_values("eta2", ascending=False).reset_index(drop=True)
+    cols = ["param", "eta2", "direction", "noise_floor"]
+    if not rows:          # constant outcome (or nothing sampled): nothing to screen
+        return pd.DataFrame(columns=cols)
+    return pd.DataFrame(rows, columns=cols).sort_values(
+        "eta2", ascending=False).reset_index(drop=True)
 
 
 # ---------------------------------------------------------------------------

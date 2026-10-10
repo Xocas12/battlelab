@@ -102,21 +102,45 @@ class SwapResult:
         return float(self.runs[mask].mean())
 
 
-def variant(home: Scenario, away: Scenario, factors: list[str], mask: tuple) -> Scenario:
-    names = [n for f, b in zip(factors, mask) if b for n in home.factors[f]]
+CONTEXT = "CONTEXT"
+
+
+def context_params(home: Scenario, away: Scenario) -> tuple[list[str], list[str]]:
+    """Context parameters (`ctx.*`) the two scenarios share, and those only one has.
+    Only shared ones can be swapped; structure (zones, wave lists, units) never is."""
+    a = {n for n in home.space if n.startswith("ctx.")}
+    b = {n for n in away.space if n.startswith("ctx.")}
+    return sorted(a & b), sorted(a ^ b)
+
+
+def variant(home: Scenario, away: Scenario, factors: list[str], mask: tuple,
+            groups: dict[str, list[str]] | None = None) -> Scenario:
+    groups = groups or home.factors
+    names = [n for f, b in zip(factors, mask) if b for n in groups[f]]
     return home.with_params_from(away, names) if names else home
 
 
 def factor_swap(home: Scenario, away: Scenario, n: int, seed: int = 1,
                 factors: list[str] | None = None, outcome: str = "airbridge",
-                workers: int = 1, progress: bool = False) -> SwapResult:
+                workers: int = 1, progress: bool = False,
+                context: bool = False) -> SwapResult:
+    """Full-factorial swap of factor bundles from `away` into `home`. With
+    `context`, the shared `ctx.*` parameters form one more bundle, CONTEXT, which
+    ordinary swaps leave alone by design (MODELING_STANDARDS §5)."""
     issues = Scenario.lint_pair(home, away)
     if issues:
         raise ValueError("; ".join(map(str, issues)))
-    factors = factors or list(home.factors)
+    factors = list(factors or home.factors)
+    groups = dict(home.factors)
+    if context:
+        shared, _ = context_params(home, away)
+        if not shared:
+            raise ValueError(f"{home.id} and {away.id} share no ctx.* parameters")
+        groups[CONTEXT] = shared
+        factors.append(CONTEXT)
     res = SwapResult(home.id, away.id, factors, outcome)
     masks = list(itertools.product([0, 1], repeat=len(factors)))
-    variants = [variant(home, away, factors, m) for m in masks]
+    variants = [variant(home, away, factors, m, groups) for m in masks]
     if workers > 1:
         with ProcessPoolExecutor(workers) as ex:
             dfs = run_batches(variants, n, seed, workers, keep_params=False, executor=ex)
