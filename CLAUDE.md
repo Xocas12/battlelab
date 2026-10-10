@@ -62,6 +62,8 @@ mkdir -p /tmp/out && cd cmo && lua5.3 tests/test_harness.lua lua /tmp/out -  # L
 
 ## Done (see CHANGELOG)
 
+Unreleased: context swaps (`swap --context`, `report --context-pairs`).
+
 0.6.0: Waalhaven 1940 (seventh member); daylight confirmation of control (#5); Ypenburg ammunition limit sourced, new anchor `germans_off_field_by_1510`.
 
 0.5.0: sourcing pass (#4, #5), `airlift.wave_aircraft`, `redeploy:` (Valkenburg village).

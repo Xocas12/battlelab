@@ -40,7 +40,7 @@ A factor swap asks: "if battle A had battle B's version of this factor, as this 
 * The answer depends on how factors are bundled. Changing the bundles changes the question.
 * Bootstrap intervals cover Monte Carlo noise only, not parameter or structural uncertainty.
 * A swap can put a factor outside the context where it is meaningful (a 1941 risk tolerance applied to a 2022 air-defence environment). The model will still produce a number. Judge whether the question makes sense before reporting it.
-* Context parameters (`ctx.*`) are never swapped; decide deliberately what counts as context.
+* Context parameters (`ctx.*`) are not swapped by default; decide deliberately what counts as context. When the question is "how much of the difference is the setting", ask for it explicitly with `swap --context` or `report --context-pairs`. That adds one bundle, CONTEXT, holding the `ctx.*` parameters both scenarios have. Structure (zones, units, the number and shape of airlift waves) is never swapped, and context parameters only one scenario has are listed rather than swapped, so a context swap is a lower bound on what the setting explains.
 
 ## 6. Minimum reporting checklist
 
