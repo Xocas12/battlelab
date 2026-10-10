@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.6.0 (2026-10-10)
+
+Seven scenarios: Waalhaven 1940 joins as the control for Ypenburg; Maleme's first-landing timing is fixed by a sourced daylight-confirmation rule (#5); Ypenburg's ammunition limit is sourced.
 
 * **Waalhaven 1940** (seventh airhead member), sourced from War over Holland (read in full). The German success at the Rotterdam airfield on the same morning as Ypenburg, against a Jagers battalion: III./FJR 1 dropped behind the defence (about 50 Ju 52, 600 men), the first transports landed during the fight, the field was German by 06:30, and more than a thousand men were flown in on the first day. It shares Ypenburg's German side (RISK, AIR doctrine, mechanism constants), so the Ypenburg-Waalhaven swap (added to the default `PAIRS`) isolates what differed on the ground.
   * First anchor run, all priors set before it: joint 0.41 (Lanchester), 0.59 (CRT). Five of six anchors hold in at least 99% of runs. The miss is speed: the model takes the field at H+3.25 (median) against H+1.6 historically (`field_taken_fast` 0.42 / 0.59).
