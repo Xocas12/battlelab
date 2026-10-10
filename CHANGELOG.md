@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+* **Waalhaven 1940** (seventh airhead member), sourced from War over Holland (read in full). The German success at the Rotterdam airfield on the same morning as Ypenburg, against a Jagers battalion: III./FJR 1 dropped behind the defence (about 50 Ju 52, 600 men), the first transports landed during the fight, the field was German by 06:30, and more than a thousand men were flown in on the first day. It shares Ypenburg's German side (RISK, AIR doctrine, mechanism constants), so the Ypenburg-Waalhaven swap (added to the default `PAIRS`) isolates what differed on the ground.
+  * First anchor run, all priors set before it: joint 0.41 (Lanchester), 0.59 (CRT). Five of six anchors hold in at least 99% of runs. The miss is speed: the model takes the field at H+3.25 (median) against H+1.6 historically (`field_taken_fast` 0.42 / 0.59).
+  * The test invariant on air-landed troops now uses the resolved (whole) aircraft count; Waalhaven's per-wave count is the first uniform draw where rounding mattered.
 * **Ypenburg ammunition limit sourced** (`mass.ammo_out_h` 6-14 h → 6-10.5 h; WOH). At the truce of about 10:00-10:30 (H+6) the Germans redistributed their "scarce ammo". The field defence collapsed, with its ammunition caches exploding under Dutch artillery, shortly before the RAF raid at 15:10 (H+10.9). The range comes from that timeline, not from the anchors.
   * New anchor `germans_off_field_by_1510` (`attacker_hours_on_field` ≤ 11).
   * Joint share on the old anchors: 0.62 → 0.63 (Lanchester), 0.56 → 0.58 (CRT).

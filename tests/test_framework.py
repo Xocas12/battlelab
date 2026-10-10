@@ -124,7 +124,7 @@ def test_invariants(path):
         else:
             waves = (len(al["waves"]) if al.get("mode") == "waves"
                      else math.ceil(48 / p["ctx.interval_h"]) + 1)
-            sorties = p["ctx.aircraft"] * waves
+            sorties = spec["aircraft"] * waves  # resolved: whole aircraft
         lift = sorties * p["ctx.troops_per_aircraft"]
         assert m["landed"] <= lift + 1e-6
         if m["t_control"] is not None:
