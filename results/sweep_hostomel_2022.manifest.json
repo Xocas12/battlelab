@@ -1,7 +1,7 @@
 {
   "framework": "battlelab",
   "version": "0.6.0",
-  "created": "2026-10-10T18:14:33",
+  "created": "2026-10-10T19:52:57",
   "python": "3.11.15",
   "numpy": "2.4.6",
   "scenario": "6504c260bca6818b",
