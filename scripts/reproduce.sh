@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Regenerates every number and figure in results/SUMMARY.md.
-# N=1000 (default) takes ~45 min on 4 cores; N=200 is a smoke run.
+# N=1000 (default) takes ~75 min on 4 cores; N=200 is a smoke run.
 # W sets the number of worker processes (default: all cores but one).
 # PAIRS limits the factor swaps to the comparisons the notes discuss
 # (both directions each); set PAIRS="" to run every pair in the family.
