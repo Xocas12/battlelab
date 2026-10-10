@@ -1,0 +1,8 @@
+anchor,metric,op,target,share,lo95,hi95,source
+germans_take_field,attacker_ever_controls,eq,True,0.9905,0.9852094988443749,0.993909808789522,WOH
+field_taken_fast,t_control,le,2.5,0.593,0.5713105472851714,0.6143328688411331,WOH
+first_wave_lands_in_the_fight,t_first_landing,le,1.5,0.9885,0.9828021470402394,0.9923248290640597,WOH
+airbridge,airbridge,eq,True,0.991,0.9858178431626362,0.9942995473536601,WOH
+counterattack_fails,defender_retakes,eq,False,1.0,0.9980828823994873,1.0,WOH
+germans_hold_field,attacker_holds_end,eq,True,0.9905,0.9852094988443749,0.993909808789522,WOH
+ALL (joint),,,,0.591,0.5692980207325052,0.6123530638642013,
