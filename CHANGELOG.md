@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+* **Ypenburg ammunition limit sourced** (`mass.ammo_out_h` 6-14 h → 6-10.5 h; WOH). At the truce of about 10:00-10:30 (H+6) the Germans redistributed their "scarce ammo". The field defence collapsed, with its ammunition caches exploding under Dutch artillery, shortly before the RAF raid at 15:10 (H+10.9). The range comes from that timeline, not from the anchors.
+  * New anchor `germans_off_field_by_1510` (`attacker_hours_on_field` ≤ 11).
+  * Joint share on the old anchors: 0.62 → 0.63 (Lanchester), 0.56 → 0.58 (CRT).
+  * With the new anchor: 0.51 (Lanchester), 0.54 (CRT). The new anchor alone holds in 0.80 / 0.85 of runs, against 0.62 / 0.77 under the old range.
 * **Daylight confirmation of control** (`airlift.commit_daylight`, RISK parameter `risk.commit_daylight`; issue #5). In shuttle mode, control gained at night (20:00-06:00) reaches the HQ only after the next dawn. Source: the 22nd Battalion left Point 107 overnight, and Student learnt of it only from a test landing at 08:10 on 21 May, then ordered II/100 to land from 16:00 (Long ch. 11). Default 0; Hostomel, Ypenburg and Valkenburg are identical run-for-run (300 runs each).
   * Maleme, Heraklion and Rethymno use it (same HQ). The decision cycle `risk.commit_cycle_h` it replaces is now 0 there. Keeping both delayed the commitment twice (first landing p50 H+35, P(airbridge) 0.63 → 0.25); this was seen in the first run, recorded in the parameter note, and the cycle was then set to 0.
   * Maleme: first landing p50 H+26.5 → H+31.8; `landings_begin_day2_afternoon` 0.19 → 0.56; joint 0.19 → 0.54 (Lanchester), 0.028 → 0.076 (CRT). Heraklion and Rethymno unchanged (within 0.001).

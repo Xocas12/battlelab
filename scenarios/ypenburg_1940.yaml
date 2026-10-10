@@ -52,8 +52,8 @@ parameters:
     note: "e-folding time of the surprise; the Dutch had reorganised and counterattacked within hours"}
   mass.cornered: {dist: uniform, lo: 0.2, hi: 0.6, source: WOH, assumption: true, confidence: low,
     note: "scales the force-ratio morale term of the airborne units: surrounded, with nowhere to withdraw to, they held out in pockets until killed or captured (WOH). Added for issue #3 after traces showed the paratroops 'withdrawing' at 5:1 within hours; prior set before the anchor run with it"}
-  mass.ammo_out_h: {dist: uniform, lo: 6.0, hi: 14.0, assumption: true, confidence: low,
-    note: "hours of fighting until the airborne troops run dry: they landed with what they carried, weapons containers were scattered, and nothing came in once the transport stream stopped. Added for issue #13 (the Dutch retook both fields the same day); prior set before the anchor run"}
+  mass.ammo_out_h: {dist: uniform, lo: 6.0, hi: 10.5, source: WOH, assumption: true, confidence: medium,
+    note: "hours of fighting until the airborne troops run dry. WOH: at the truce of about 10:00-10:30 (H+6) the Germans redistributed their 'scarce ammo' and used captured Dutch MGs; the field defence collapsed, with its ammunition caches exploding under Dutch artillery, shortly before the RAF raid at 15:10 (H+10.9, about 10.5 h after the drop). 0.4.0-0.5.0: uniform 6-14 h, an assumption for issue #13. SOURCED in 0.6.0 from the timeline, not from the anchors (joint 0.62 -> 0.63)"}
   # HOLD --------------------------------------------------------------------
   hold.strength: {dist: uniform, lo: 250, hi: 450, source: WOH, assumption: true, confidence: low, note: "III Bn Regiment Grenadiers: one company and the heavy-MG company on the NW and SW sides of the field (plus two platoons of Landsverk armoured cars), a second company in an outer NW screen, a third in reserve. No headcount in any source; counts the company, the MG company and the armoured-car crews at the field (about 150 a company). Was 300-700"}
   hold.quality: {dist: uniform, lo: 0.8, hi: 1.0, assumption: true,
@@ -239,5 +239,7 @@ anchors:
   - {id: runway_blocked, metric: runway_end, op: lt, value: 0.6, source: WOH,
      note: "Ypenburg rendered unusable by the many wrecks"}
   - {id: no_airbridge, metric: airbridge, op: eq, value: false, source: WOH}
+  - {id: germans_off_field_by_1510, metric: attacker_hours_on_field, op: le, value: 11.0, source: WOH,
+     note: "the German defence of the airbase collapsed before the RAF raid at 15:10 (H+10.9); the last pockets held farmhouses outside the field. ADDED in 0.6.0 with the sourcing of mass.ammo_out_h"}
   - {id: germans_lose_field, metric: attacker_holds_end, op: eq, value: false, source: WOH,
      note: "by evening every German near Ypenburg had been killed or captured"}
