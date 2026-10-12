@@ -51,9 +51,9 @@ parameters:
   hold.dug_in: {dist: fixed, value: 1.2, source: WOH, assumption: true, note: "L-shaped positions facing the landing strip, so the paratroops attacked them from behind; Ypenburg 1.3"}
   hold.base_hazard: {dist: uniform, lo: 0.03, hi: 0.08, source: WOH, assumption: true, confidence: low, note: "two of three platoons of one company fled into Rotterdam without fighting; many defenders near the burning buildings ran during the bombing"}
   hold.ammo_out_h: {dist: fixed, value: 1000.0, assumption: true, note: "the AA platoons fired until their stocks were exhausted, but the field fell first"}
-  hold.decision_h: {dist: uniform, lo: 1.0, hi: 2.0, source: WOH, assumption: true, confidence: low, note: "no telephone lines between the companies and the battalion HQ: runners only"}
-  hold.comms_loss: {dist: uniform, lo: 0.3, hi: 0.6, source: WOH, assumption: true, confidence: low, note: "no telephone lines; the CP was in a base building bombed at the start"}
-  hold.fog: {dist: uniform, lo: 0.2, hi: 0.5, assumption: true, confidence: low}
+  hold.decision_h: {dist: fixed, value: 0.0, source: WOH, assumption: true, confidence: low, note: "0 = no battalion command cycle; each company's morale acts turn by turn. No telephone lines linked the companies to the battalion HQ, the commander left for Rotterdam early, one company fled and another surrendered quickly on its own. REVISED in 0.7.0 after the first anchor run: was uniform 1-2 h with comms_loss 0.3-0.6 and fog 0.2-0.5, which in this model means a commander who judges the situation and holds (see the Maleme garrison sweep); the source describes the opposite. Joint 0.41 -> 0.50 (Lanchester), 0.59 -> 0.65 (CRT)"}
+  hold.comms_loss: {dist: fixed, value: 0.0, assumption: true, note: "inactive without a command cycle (see hold.decision_h)"}
+  hold.fog: {dist: fixed, value: 0.0, assumption: true, note: "inactive without a command cycle (see hold.decision_h)"}
   hold.night_moves: {dist: fixed, value: 0, assumption: true, note: "the fight was in daylight"}
   hold.move_delay_h: {dist: fixed, value: 0.0, assumption: true, note: "0 = orders executed at once"}
   hold.perimeter_frac: {dist: fixed, value: 0.0, assumption: true, note: "inactive; kept for the factor structure shared with Ypenburg"}

@@ -10,8 +10,8 @@ cd "$(dirname "$0")/.."
 N=${N:-1000}
 OUT=${OUT:-results}
 W=${W:-$(python -c "import os; print(max(1, (os.cpu_count() or 1) - 1))")}
-CPAIRS=${CPAIRS-ypenburg_1940:valkenburg_1940,ypenburg_1940:waalhaven_1940}
-PAIRS=${PAIRS-hostomel_2022:maleme_1941,hostomel_2022:ypenburg_1940,maleme_1941:heraklion_1941,maleme_1941:rethymno_1941,maleme_1941:ypenburg_1940,ypenburg_1940:valkenburg_1940,ypenburg_1940:waalhaven_1940}
+CPAIRS=${CPAIRS-ypenburg_1940:valkenburg_1940,ypenburg_1940:waalhaven_1940,valkenburg_1940:ockenburg_1940}
+PAIRS=${PAIRS-hostomel_2022:maleme_1941,hostomel_2022:ypenburg_1940,maleme_1941:heraklion_1941,maleme_1941:rethymno_1941,maleme_1941:ypenburg_1940,ypenburg_1940:valkenburg_1940,ypenburg_1940:waalhaven_1940,ypenburg_1940:ockenburg_1940}
 
 battlelab lint scenarios/*.yaml
 python -m pytest -q

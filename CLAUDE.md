@@ -4,7 +4,7 @@ Guidance for Claude Code working in this repository. Read `README.md`, `docs/ARC
 
 ## What this is
 
-`battlelab` is a Monte Carlo framework for comparative analysis of historical battles, currently one scenario family ("airhead": seizing an airfield and flying troops in) with seven members: Hostomel 2022, Maleme 1941, Ypenburg 1940, Valkenburg 1940 (soft ground), Heraklion and Rethymno 1941 (within-campaign controls for Maleme), and Waalhaven 1940 (a German success the same morning, the control for Ypenburg). It has two engines behind one analysis layer: a native Python engine (board-game turn sequence, pluggable mechanics) and a Lua harness that runs replications inside Command: Modern Operations (public edition). Status: v0.6.0. Current results are in `results/SUMMARY.md`.
+`battlelab` is a Monte Carlo framework for comparative analysis of historical battles, currently one scenario family ("airhead": seizing an airfield and flying troops in) with eight members: Hostomel 2022, Maleme 1941, Ypenburg 1940, Valkenburg 1940 (soft ground), Ockenburg 1940 (the third Hague field), Heraklion and Rethymno 1941 (within-campaign controls for Maleme), and Waalhaven 1940 (a German success the same morning, the control for Ypenburg). It has two engines behind one analysis layer: a native Python engine (board-game turn sequence, pluggable mechanics) and a Lua harness that runs replications inside Command: Modern Operations (public edition). Status: v0.6.0. Current results are in `results/SUMMARY.md`.
 
 ## Commands
 
@@ -62,7 +62,7 @@ mkdir -p /tmp/out && cd cmo && lua5.3 tests/test_harness.lua lua /tmp/out -  # L
 
 ## Done (see CHANGELOG)
 
-Unreleased: context swaps (`swap --context`, `report --context-pairs`).
+Unreleased: context swaps (`swap --context`, `report --context-pairs`); Ockenburg 1940 (eighth member); Waalhaven command values revised.
 
 0.6.0: Waalhaven 1940 (seventh member); daylight confirmation of control (#5); Ypenburg ammunition limit sourced, new anchor `germans_off_field_by_1510`.
 

@@ -1,0 +1,245 @@
+id: ockenburg_1940
+title: "Ockenburg airfield, The Hague, 10 May 1940"
+family: airhead
+description: >
+  The smallest of the three Hague landings: an auxiliary field made of joined
+  football pitches near the beach at Loosduinen, held by 96 recruits of a depot
+  company who were not on alert. One platoon of paratroops came down nearby;
+  fifteen minutes later 18 Ju 52 landed about 250 men of II./IR 65, then 8 more
+  with the divisional staff, and the field was German by 07:45. The Germans
+  turned on Loosduinen and were stopped; when Dutch 12 cm howitzers shelled the
+  strip most of them moved into the woods to the south-east, and two Grenadier
+  companies and a recruit company retook the field at about 14:30. A failure
+  case like Ypenburg and Valkenburg, with the Valkenburg pattern: the attackers
+  leave the field, and the defenders retake a lightly held strip.
+clock:
+  h_hour_local: 4.6         # Bf 110 strafing ~04:30, then the drop
+  dt_h: 0.25
+  horizon_h: 48
+
+sources:
+  WOH:
+    cite: "War over Holland - May 1940: the Dutch struggle, 'Ockenburg' (10 May, airlandings around The Hague); read in full"
+    url: "https://www.waroverholland.nl/10-may/airlanding/ockenburg"
+  WPH:
+    cite: "Wikipedia, 'Battle for The Hague' (EN) and 'Slag om Den Haag' (NL)"
+    url: "https://en.wikipedia.org/wiki/Battle_for_The_Hague"
+
+parameters:
+  # AIR ---------------------------------------------------------------------
+  air.att.ingress_loss: {dist: uniform, lo: 0.0, hi: 0.03, source: WOH, assumption: true, note: "no AA at the field; one AAA battery 2,000 m to the north-east"}
+  air.att.approach_loss: {dist: uniform, lo: 0.0, hi: 0.03, source: WOH, assumption: true, note: "as ingress: the field had no AA of its own"}
+  air.att.suppression: {dist: uniform, lo: 0.1, hi: 0.3, source: WOH, assumption: true, note: "Ockenburg was not bombed; a squadron of Bf 110s strafed the defences and parked aircraft just before the drop"}
+  air.att.interdiction: {dist: uniform, lo: 0.1, hi: 0.3, assumption: true, note: "same value as Ypenburg"}
+  air.att.cas: {dist: uniform, lo: 1.1, hi: 1.3, assumption: true, note: "same value as Ypenburg; fighters strafed the Dutch counterattacks"}
+  # MASS --------------------------------------------------------------------
+  mass.aircraft: {dist: fixed, value: 12, source: WOH, assumption: true, note: "3./FJR 2, about 135 men, at 12 a load (same capacity as Ypenburg)"}
+  mass.capacity: {dist: fixed, value: 12, assumption: true, note: "same value as Ypenburg"}
+  mass.dz_loss: {dist: uniform, lo: 0.75, hi: 0.85, source: WOH, confidence: high, note: "two of the three platoons were diverted (some as far as Hook of Holland); of the one platoon dropped in the dunes some drowned in the sea, and about 25 reached the field"}
+  mass.reserve_aircraft: {dist: fixed, value: 0, assumption: true, note: "no second drop"}
+  mass.reserve_capacity: {dist: fixed, value: 12, assumption: true}
+  mass.reserve_dz: {dist: fixed, value: 0.0, assumption: true}
+  mass.t_reserve: {dist: fixed, value: 30.0, assumption: true}
+  mass.shock: {dist: uniform, lo: 0.3, hi: 0.7, source: WOH, assumption: true, confidence: low, note: "same value as Ypenburg; the depot company was not on alert (the alert telegram did not apply to Ockenburg) and most of it was resting in a building"}
+  mass.shock_decay_h: {dist: uniform, lo: 1.0, hi: 4.0, assumption: true, note: "same value as Ypenburg"}
+  mass.cornered: {dist: uniform, lo: 0.2, hi: 0.6, assumption: true, note: "same value as Ypenburg (same division)"}
+  mass.ammo_out_h: {dist: fixed, value: 1000.0, assumption: true, note: "no German ammunition shortage reported at Ockenburg; the force held out in the Belvedere woods afterwards"}
+  # HOLD --------------------------------------------------------------------
+  hold.strength: {dist: uniform, lo: 100, hi: 120, source: WOH, confidence: high, note: "96 men of the 22nd Depot Company with three light MGs on the field, plus a 20-man searchlight section with carbines near the gate"}
+  hold.quality: {dist: uniform, lo: 0.5, hi: 0.7, source: WOH, confidence: medium, note: "recruits enlisted in February who had finished only the first phase of basic training; they fought hard under an energetic captain"}
+  hold.dug_in: {dist: fixed, value: 1.0, source: WOH, note: "not on alert: two-man posts at the MG positions, the rest of the company in a building"}
+  hold.base_hazard: {dist: uniform, lo: 0.02, hi: 0.06, assumption: true, confidence: low}
+  hold.ammo_out_h: {dist: fixed, value: 1000.0, assumption: true, note: "the searchlight crew had 20-30 rounds a man, but the field fell within about three hours"}
+  hold.decision_h: {dist: fixed, value: 0.0, assumption: true, note: "0 = no command cycle; Captain Boot led from the trenches and was killed"}
+  hold.comms_loss: {dist: fixed, value: 0.0, assumption: true}
+  hold.fog: {dist: fixed, value: 0.0, assumption: true}
+  hold.night_moves: {dist: fixed, value: 0, assumption: true}
+  hold.move_delay_h: {dist: fixed, value: 0.0, assumption: true}
+  hold.perimeter_frac: {dist: fixed, value: 0.0, assumption: true, note: "inactive; kept for the factor structure shared with Ypenburg"}
+  hold.perimeter_fire: {dist: fixed, value: 0.0, assumption: true, note: "inactive (see hold.perimeter_frac)"}
+  # RESPONSE ----------------------------------------------------------------
+  response.t_ca: {dist: uniform, lo: 5.5, hi: 7.5, source: WOH, assumption: true, confidence: low, note: "a Grenadier company tried to approach the German-held road junction east of the field and was stopped by infantry fire and strafing fighters; no time given, after the fight for Loosduinen (about 10:00)"}
+  response.strength: {dist: uniform, lo: 120, hi: 180, source: WOH, assumption: true, note: "one Grenadier company"}
+  response.commit_h: {dist: uniform, lo: 8, hi: 14, source: WOH, assumption: true, note: "hours a counterattack keeps attacking; applies to both. Same value as Ypenburg. REVISED after the first anchor run: was 1-3 h, unsourced, set with only the first company's failed probe in mind. That made the decisive second assault give up while winning, which contradicts WOH (it stormed on until the field was taken and mopped up). Joint 0.14 -> 0.20 (Lanchester), 0.39 -> 0.47 (CRT); the recapture 0.25 -> 0.93"}
+  response.withdraw_ratio: {dist: fixed, value: 2.0, assumption: true, note: "same value as Ypenburg"}
+  response.t_ca2: {dist: uniform, lo: 8.5, hi: 9.8, source: WOH, confidence: medium, note: "after the artillery barrage, two companies (and a fresh company of recruits) stormed the road junction and the east side of the field; Ockenburg was Dutch again around 14:30 (H+9.9)"}
+  response.strength2: {dist: uniform, lo: 300, hi: 450, source: WOH, assumption: true, note: "two Grenadier companies and a recruit company at about 150 each; a Jagers battalion fought the Germans in the woods to the south at the same time"}
+  # DENIAL ------------------------------------------------------------------
+  denial.obstacles0: {dist: fixed, value: 0.0, assumption: true, note: "no obstruction reported"}
+  denial.t_fires: {dist: uniform, lo: 7.0, hi: 9.0, source: WOH, assumption: true, confidence: low, note: "three batteries of 12 cm howitzers at Poeldijk shelled the strip in support of the assault (no time given); Dutch bombers had already struck it at 07:30, which is not modelled"}
+  denial.fire_intensity: {dist: uniform, lo: 0.5, hi: 0.8, source: WOH, confidence: medium, note: "an intensive observer-directed barrage along the whole strip that destroyed at least twelve Ju 52; it kept firing through a Luftwaffe attack on the batteries"}
+  denial.crater_rate: {dist: uniform, lo: 0.0, hi: 0.03, assumption: true, note: "same value as Ypenburg"}
+  denial.demolish_rate: {dist: fixed, value: 0.0, assumption: true, note: "no demolition reported"}
+  # RISK --------------------------------------------------------------------
+  risk.tolerance: {dist: uniform, lo: 0.40, hi: 0.70, assumption: true, note: "same value as Ypenburg (same Luftwaffe command and plan)"}
+  risk.land_contested: {dist: fixed, value: 1, source: WOH, confidence: high, note: "18 Ju 52 landed a mere fifteen minutes after the jump, while the paratroops were still fighting the defenders"}
+  risk.commit_lag_h: {dist: fixed, value: 0.0, assumption: true, note: "0 = no commitment delay (only used in shuttle mode)"}
+  risk.commit_cycle_h: {dist: fixed, value: 0.0, assumption: true, note: "0 = no decision cycle (only used in shuttle mode)"}
+  risk.commit_daylight: {dist: fixed, value: 0, assumption: true, note: "0 = a report of control counts at once (only used in shuttle mode)"}
+  # CONTEXT (not swapped) ---------------------------------------------------
+  ctx.aircraft: {dist: fixed, value: 18, assumption: true, note: "nominal; the wave sizes are set by ctx.wave1_n to ctx.wave3_n"}
+  ctx.troops_per_aircraft: {dist: uniform, lo: 13, hi: 16, source: WOH, confidence: medium, note: "about 250 men in 18 aircraft, about 130 in 8"}
+  ctx.wave1_t: {dist: uniform, lo: 0.2, hi: 0.35, source: WOH, confidence: high, note: "a mere fifteen minutes after the jump"}
+  ctx.wave2_t: {dist: uniform, lo: 0.35, hi: 0.75, source: WOH, confidence: medium, note: "'soon followed' by eight more, mainly the divisional staff"}
+  ctx.wave3_t: {dist: uniform, lo: 2.2, hi: 2.6, source: WOH, confidence: medium, note: "Generalleutnant Graf von Sponeck landed at 07:00 (he had been meant for Ypenburg)"}
+  ctx.wave1_n: {dist: fixed, value: 18, source: WOH, confidence: high, note: "eighteen Ju 52"}
+  ctx.wave2_n: {dist: fixed, value: 8, source: WOH, confidence: high, note: "eight more"}
+  ctx.wave3_n: {dist: fixed, value: 2, source: WOH, confidence: medium, note: "28 Ju 52 stood on the field in all. About 20 more landed in the dunes and fields around and their men gathered at Ockenburg (600-650 in all); they are not modelled"}
+  ctx.bog_risk: {dist: fixed, value: 0.0, assumption: true, note: "football pitches; no aircraft reported stuck"}
+  ctx.redeploy_delay_h: {dist: uniform, lo: 1.0, hi: 5.0, source: WOH, assumption: true, confidence: low, note: "hours after taking the field until most Germans leave it: first against Loosduinen (stopped about 10:00), then into the woods when the artillery shelled the strip. Set before the anchor run"}
+  ctx.redeploy_frac: {dist: uniform, lo: 0.55, hi: 0.75, source: WOH, confidence: medium, note: "Sponeck and about 350 men escaped into the woods and the Belvedere estate; about 120 were captured on the field and 35 at the road junction (350 / 505 = 0.69)"}
+  ctx.loiter_h: {dist: fixed, value: 0.5, assumption: true, note: "same value as Ypenburg"}
+  ctx.night_limited_air: {dist: fixed, value: 1, assumption: true, note: "1940 air power is essentially day-only"}
+  ctx.wreck_obstacle: {dist: uniform, lo: 0.03, hi: 0.06, assumption: true, note: "same value as Ypenburg: a small field of joined football pitches"}
+  # MECHANIC CONSTANTS (identical across the family) ------------------------
+  mech.kill_rate: {dist: fixed, value: 0.01, assumption: true, note: "casualties per effective shooter-hour"}
+  mech.ratio_coeff: {dist: fixed, value: 0.10, assumption: true}
+  mech.casualty_coeff: {dist: fixed, value: 0.30, assumption: true}
+  mech.ammo_hazard: {dist: fixed, value: 2.0, assumption: true}
+  mech.go_width: {dist: fixed, value: 0.02, assumption: true,
+    note: "logistic go/no-go rule only: spread of accepted risk around the tolerance, per wave or sortie"}
+  mech.info_lag_h: {dist: fixed, value: 0.0, assumption: true,
+    note: "delay between the true landing risk and the decision maker's estimate; 0 = perfect information"}
+  mech.contested_risk: {dist: fixed, value: 0.35, source: WOH, assumption: true,
+    note: "carried over from Ypenburg (same operation, same Luftwaffe units): of the 150-200 men of the first wave only few came out unscathed; value shared across the family"}
+  doctrine.hasty_defense: {dist: fixed, value: 1.2, assumption: true}
+  doctrine.clear_rate: {dist: fixed, value: 0.15, assumption: true}
+
+sides:
+  DE:
+    role: attacker
+    air: {cas: $air.att.cas, suppress_enemy_fires: $air.att.suppression, interdiction: $air.att.interdiction,
+          ingress_loss: $air.att.ingress_loss, approach_loss: $air.att.approach_loss,
+          night_limited: $ctx.night_limited_air}
+    doctrine: {risk_tolerance: $risk.tolerance, clear_rate: $doctrine.clear_rate,
+               hasty_defense: $doctrine.hasty_defense, land_contested: $risk.land_contested}
+  NL:
+    role: defender
+    air: {night_limited: $ctx.night_limited_air}
+    doctrine: {demolish_rate: $denial.demolish_rate}
+
+zones:
+  airfield: {kind: airfield, control: NL, runway: {obstacles: $denial.obstacles0}}
+  woods: {kind: open, control: NL}          # Ockenburg estate and Belvedere woods, south-east of the field
+  perimeter: {kind: open, control: NL}        # NW/SW edge positions overlooking the field
+
+units:
+  depot_company:
+    side: NL
+    kind: infantry
+    strength: "$hold.strength * (1 - $hold.perimeter_frac)"
+    quality: $hold.quality
+    dug_in: $hold.dug_in
+    morale: {base_hazard: $hold.base_hazard, ammo_out_h: $hold.ammo_out_h,
+             decision_h: $hold.decision_h, comms_loss: $hold.comms_loss, fog: $hold.fog,
+             night_moves: $hold.night_moves, move_delay_h: $hold.move_delay_h}
+    arrive: {t: 0.0, zone: airfield}
+  grenadiers_perimeter:
+    side: NL
+    kind: infantry
+    strength: "$hold.strength * $hold.perimeter_frac"
+    quality: $hold.quality
+    dug_in: $hold.dug_in
+    morale: {base_hazard: $hold.base_hazard, ammo_out_h: $hold.ammo_out_h}
+    arrive: {t: 0.0, zone: perimeter}
+  fallschirmjaeger:
+    side: DE
+    kind: parachute_infantry
+    morale: {on_break: disperse, ratio_scale: $mass.cornered, ammo_out_h: $mass.ammo_out_h}
+    arrive: {t: 0.0, zone: airfield, mode: parachute, aircraft: $mass.aircraft,
+             capacity: $mass.capacity, dz_loss: $mass.dz_loss,
+             shock: $mass.shock, shock_decay_h: $mass.shock_decay_h}
+  airborne_reserve:
+    side: DE
+    kind: parachute_infantry
+    morale: {on_break: disperse, ratio_scale: $mass.cornered, ammo_out_h: $mass.ammo_out_h}
+    arrive: {t: $mass.t_reserve, zone: airfield, mode: parachute, aircraft: $mass.reserve_aircraft,
+             capacity: $mass.reserve_capacity, dz_loss: $mass.reserve_dz,
+             shock: $mass.shock, shock_decay_h: $mass.shock_decay_h, only_if_present: true}
+  nl_counterattack:
+    side: NL
+    kind: infantry
+    strength: $response.strength
+    morale: {commit_h: $response.commit_h, withdraw_ratio: $response.withdraw_ratio}
+    arrive: {t: $response.t_ca, zone: airfield}
+  nl_counterattack_2:
+    side: NL
+    kind: infantry
+    strength: $response.strength2
+    morale: {commit_h: $response.commit_h, withdraw_ratio: $response.withdraw_ratio}
+    arrive: {t: $response.t_ca2, zone: airfield}
+  airlanded_infantry:
+    side: DE
+    kind: airlanded_infantry
+    morale: {on_break: disperse, ratio_scale: $mass.cornered, ammo_out_h: $mass.ammo_out_h}
+
+  woods_force:                  # receives the troops that leave the field (Redeploy)
+    side: DE
+    kind: airlanded_infantry
+    morale: {on_break: disperse, ratio_scale: $mass.cornered, ammo_out_h: $mass.ammo_out_h}
+
+redeploy:
+  - {side: DE, from_zone: airfield, to_zone: woods, units: [fallschirmjaeger, airlanded_infantry],
+     to_unit: woods_force, after_control_h: $ctx.redeploy_delay_h, fraction: $ctx.redeploy_frac}
+
+fires:
+  - {id: nl_perimeter_fire, side: NL, zone: airfield, from_zone: perimeter, active_from: 0.0,
+     intensity: $hold.perimeter_fire}
+  - {id: nl_artillery, side: NL, zone: airfield, active_from: $denial.t_fires,
+     intensity: $denial.fire_intensity, crater_rate: $denial.crater_rate}
+
+airlift:
+  side: DE
+  zone: airfield
+  unit: airlanded_infantry
+  aircraft: $ctx.aircraft
+  troops_per_aircraft: $ctx.troops_per_aircraft
+  mode: waves
+  waves: [$ctx.wave1_t, $ctx.wave2_t, $ctx.wave3_t]
+  wave_aircraft: [$ctx.wave1_n, $ctx.wave2_n, $ctx.wave3_n]
+  bog_risk: $ctx.bog_risk
+  loiter_h: $ctx.loiter_h
+  wreck_obstacle: $ctx.wreck_obstacle
+  contested_risk: $mech.contested_risk
+  commit_lag_h: $risk.commit_lag_h
+  commit_cycle_h: $risk.commit_cycle_h
+  commit_daylight: $risk.commit_daylight
+
+mechanics:
+  # resolver: lanchester | crt. The CRT is ILLUSTRATIVE, not calibrated: at 1:1 it
+  # costs the attacker ~6%/h against Lanchester's 1%/h, and its exchange ratio
+  # grows roughly linearly with odds rather than with odds squared
+  # (`battlelab resolvers`). Use it to test whether a conclusion depends on the
+  # attrition model, never for magnitudes.
+  combat: {resolver: lanchester, kill_rate: $mech.kill_rate, fire_weight_defend: 1.0, fire_weight_attack: 2.0}
+  morale: {ratio_coeff: $mech.ratio_coeff, casualty_coeff: $mech.casualty_coeff, ammo_hazard: $mech.ammo_hazard}
+  go_no_go: {rule: threshold, width: $mech.go_width, info_lag_h: $mech.info_lag_h}   # rule: threshold | logistic
+
+outcome: {zone: airfield, airbridge_troops: 500}
+
+factors:
+  AIR: [air.att.ingress_loss, air.att.approach_loss, air.att.suppression, air.att.interdiction, air.att.cas]
+  MASS: [mass.aircraft, mass.capacity, mass.dz_loss, mass.reserve_aircraft, mass.reserve_capacity,
+         mass.reserve_dz, mass.t_reserve, mass.shock, mass.shock_decay_h,
+         mass.cornered, mass.ammo_out_h]
+  HOLD: [hold.strength, hold.quality, hold.dug_in, hold.base_hazard, hold.ammo_out_h,
+         hold.perimeter_frac, hold.perimeter_fire]
+  COMMAND: [hold.decision_h, hold.comms_loss, hold.fog, hold.night_moves, hold.move_delay_h]
+  RESPONSE: [response.t_ca, response.strength, response.commit_h, response.withdraw_ratio,
+             response.t_ca2, response.strength2]
+  DENIAL: [denial.obstacles0, denial.t_fires, denial.fire_intensity, denial.crater_rate, denial.demolish_rate]
+  RISK: [risk.tolerance, risk.land_contested, risk.commit_lag_h, risk.commit_cycle_h, risk.commit_daylight]
+
+anchors:
+  - {id: germans_take_field, metric: attacker_ever_controls, op: eq, value: true, source: WOH,
+     note: "the whole defence was eliminated or driven off at 07:45"}
+  - {id: field_taken_by_0745, metric: t_control, op: le, value: 3.5, source: WOH,
+     note: "07:45 is H+3.15"}
+  - {id: first_wave_lands_in_the_fight, metric: t_first_landing, op: le, value: 0.75, source: WOH,
+     note: "18 Ju 52 landed fifteen minutes after the jump"}
+  - {id: dutch_retake_field, metric: defender_retakes, op: eq, value: true, source: WOH,
+     note: "Ockenburg was in Dutch hands again around 14:30"}
+  - {id: germans_off_field_by_1430, metric: attacker_hours_on_field, op: le, value: 10.5, source: WOH,
+     note: "14:30 is H+9.9; some Germans hid among the wrecks for a while"}
+  - {id: germans_lose_field, metric: attacker_holds_end, op: eq, value: false, source: WOH,
+     note: "the survivors held out in the woods, off the field, until 13 May"}
