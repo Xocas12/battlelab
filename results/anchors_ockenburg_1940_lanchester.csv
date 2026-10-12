@@ -1,0 +1,8 @@
+anchor,metric,op,target,share,lo95,hi95,source
+germans_take_field,attacker_ever_controls,eq,True,0.9705,0.9621347389353845,0.9770612534025329,WOH
+field_taken_by_0745,t_control,le,3.5,0.8395,0.8227638792727449,0.854934397876507,WOH
+first_wave_lands_in_the_fight,t_first_landing,le,0.75,0.992,0.9870438100676844,0.9950697462134108,WOH
+dutch_retake_field,defender_retakes,eq,True,0.9295,0.9174379936309925,0.9399152023501668,WOH
+germans_off_field_by_1430,attacker_hours_on_field,le,10.5,0.2345,0.21645096743508435,0.253567022010788,WOH
+germans_lose_field,attacker_holds_end,eq,False,0.963,0.953799932300838,0.970424816801087,WOH
+ALL (joint),,,,0.1965,0.17967414780647364,0.21448954257703776,

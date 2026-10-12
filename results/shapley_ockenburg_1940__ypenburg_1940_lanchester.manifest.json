@@ -1,0 +1,12 @@
+{
+  "framework": "battlelab",
+  "version": "0.6.0",
+  "created": "2026-10-12T20:59:52",
+  "python": "3.11.15",
+  "numpy": "2.4.6",
+  "home": "f39382ca9993c8e3",
+  "away": "ca2df3156a26fd7b",
+  "n": 1000,
+  "seed": 1,
+  "resolver": "lanchester"
+}
