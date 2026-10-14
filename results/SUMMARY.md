@@ -25,18 +25,20 @@ Hand-written interpretation. Every number below is a placeholder filled in from 
 
 **The Crete controls: what made Maleme different?** Heraklion and Rethymno share Maleme's Luftwaffe, HQ and airlift values, so a swap between them isolates what differed on the ground.
 
-* **Maleme's garrison decides it, not its withdrawal.** The defenders' parameters are now two bundles: HOLD (garrison size, quality, entrenchment) and COMMAND (decision cycle, lost contact, fog, night moves).
+* **Maleme's garrison decides it, through the 22nd Battalion's withdrawal.** The defenders' parameters are two bundles: HOLD (garrison size, quality, entrenchment) and COMMAND, the withdrawal's decision rule (decision cycle, lost contact, fog, night moves).
   * Heraklion with all of Maleme's factors goes from 0.03 to 0.54, and Rethymno from 0.03 to 0.58.
   * In both, HOLD is the largest contribution (+0.39 and +0.35; under the CRT +0.21 and +0.18). COMMAND is small (+0.04 and +0.06).
-* **The reverse holds.** Maleme with Heraklion's garrison alone falls from 0.61 to 0.01. With Heraklion's command behaviour alone (no command cycle) it stays at 0.61.
+  * A small COMMAND does not make the withdrawal minor. Swapping it changes how the battalion decides to leave, not whether it can: under Heraklion's rule it leaves on its own morale hazard instead of on a commander's order.
+* **The reverse holds.** Maleme with Heraklion's garrison alone falls from 0.61 to 0.01. With Heraklion's decision rule alone (no command cycle) it stays at 0.61.
+* **Without the withdrawal, Maleme holds** (section 5b, `maleme_garrison_no_withdrawal`). The Germans can take the field only after the 22nd Battalion has left it: control needs one side alone on the field, and Maleme's troop-carriers do not land on a contested one (`risk.land_contested` is 0). With voluntary departure switched off, no command decision falls inside the 48 hours and the battalion leaves only if it collapses. P(airbridge) is then 0.00 at Maleme's own size (650), against 0.56 as modelled, and 0.00 with 400 defenders. Only a garrison of about 300 is destroyed often enough to lose the field without leaving it (0.23).
 * **How big a garrison would have held Maleme** (section 5b):
   * P(airbridge) falls from 0.71 with 500 defenders at the field to 0.20 with 1,000, 0.04 with 1,500 and 0.01 with 2,000.
   * Without the command cycle the curve is almost the same at Maleme's own size (0.56 against 0.56 at 650). It is flatter for big garrisons (0.08 at 2,000), because turn-by-turn morale lets even a large garrison drift away, while a commander who judges the situation holds.
-  * So in this model, the lost contact and night withdrawal explain *when* Maleme fell (the timing anchors), while the size of the force at the field explains *whether*.
+  * So in this model the garrison acts through the withdrawal, not instead of it. At Maleme's size the withdrawal is necessary: without it the field holds. A larger garrison takes fewer losses at better odds, so its commander is less likely to order it out before the paratroops are worn down. The decision rule (lost contact, night moves) mostly sets *when* the battalion leaves, which is what the timing anchors test.
 * **Sanity check.** RISK contributes exactly +0.00, because the three share the same HQ values. Any other number would mean the swap machinery leaks.
 * **Caveats.**
   * The finding rests on judged garrison sizes: 500-650 at Maleme, and 1,500-3,000 of Heraklion's 8,024 able to fight at the airfield. With a Heraklion garrison below about 1,000, the comparison would look different; see the sweep.
-  * It is also a statement about this model's attrition and morale, not a historical verdict. The common reading stresses the 22nd Battalion's withdrawal, and the model does reproduce that withdrawal; it just does not need it to lose Maleme.
+  * It is also a statement about this model's attrition and morale, not a historical verdict. The common reading stresses the 22nd Battalion's withdrawal, and the model agrees that Maleme was lost through it: at the battalion's sourced size the field falls only if the battalion leaves. What the model adds is that a much larger garrison would rarely have been ordered out.
 * **Weak anchors.** The Heraklion and Rethymno anchors hold in about 98-99% of runs, which only says the model lets strong, alert defenders win. Their garrisons and counterattacks are now taken from Long's official history (0.5.0), which did not move them.
 
 **Valkenburg: the ground and the village, not the fight.** Valkenburg is the same operation as Ypenburg on an unfinished airfield that could not carry loaded Ju 52s.
@@ -464,12 +466,17 @@ The same swaps (Lanchester, n = 500 per configuration) under the hard threshold,
 
 ## 5b. One-parameter sweeps
 
-P(airbridge), n = 1,000 per point (`linesweep_*.csv`). `maleme_garrison`: maleme_1941, `hold.strength`; `maleme_garrison_no_command`: maleme_1941, `hold.strength` with {'hold.decision_h': 0, 'hold.comms_loss': 0, 'hold.night_moves': 0}.
+P(airbridge), n = 1,000 per point (`linesweep_*.csv`).
 
-| sweep | 500 | 650 | 800 | 1000 | 1250 | 1500 | 2000 | 2500 | 3000 |
-|---|---|---|---|---|---|---|---|---|---|
-| maleme_garrison | 0.71 | 0.56 | 0.37 | 0.20 | 0.09 | 0.04 | 0.01 | 0.00 | 0.00 |
-| maleme_garrison_no_command | 0.80 | 0.56 | 0.37 | 0.25 | 0.17 | 0.13 | 0.08 | 0.05 | 0.04 |
+* `maleme_garrison`: maleme_1941, `hold.strength`. As modelled: the 22nd Battalion can leave on its commander's withdrawal order.
+* `maleme_garrison_no_command`: maleme_1941, `hold.strength` with {'hold.decision_h': 0, 'hold.comms_loss': 0, 'hold.night_moves': 0}. No command cycle: the battalion can leave on its own turn-by-turn morale hazard instead.
+* `maleme_garrison_no_withdrawal`: maleme_1941, `hold.strength` with {'hold.decision_h': 1000}. No voluntary departure: the first command decision falls after the 48-hour horizon, so the battalion leaves only if it collapses (5% of its peak strength).
+
+| sweep | 300 | 400 | 500 | 650 | 800 | 1000 | 1250 | 1500 | 2000 | 2500 | 3000 |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| maleme_garrison | 0.85 | 0.79 | 0.71 | 0.56 | 0.37 | 0.20 | 0.09 | 0.04 | 0.01 | 0.00 | 0.00 |
+| maleme_garrison_no_command | 0.95 | 0.89 | 0.80 | 0.56 | 0.37 | 0.25 | 0.17 | 0.13 | 0.08 | 0.05 | 0.04 |
+| maleme_garrison_no_withdrawal | 0.23 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 |
 
 ## 5. Counterfactual surface for hostomel_2022
 

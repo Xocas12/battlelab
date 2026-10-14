@@ -42,6 +42,8 @@ class ReportConfig:
     context_pairs: list[tuple[str, str]] = field(default_factory=list)  # 3b: + CONTEXT bundle
     # one-parameter sweeps: (tag, scenario id, parameter, values, fixed overrides)
     line_sweeps: list[tuple[str, str, str, list[float], dict]] = field(default_factory=list)
+    # what each sweep's fixed overrides mean, in words (by tag; printed in section 5b)
+    line_sweep_notes: dict[str, str] = field(default_factory=dict)
     log: bool = True
 
 
@@ -221,26 +223,9 @@ def run_report(cfg: ReportConfig) -> Path:
                                     by_id[cfg.go_rule_pair[1]], out))
 
     # 5b. one-parameter sweeps ---------------------------------------------------
-    rows_ls = []
-    for tag, sid, param, xs, fixed in cfg.line_sweeps:
-        if sid not in by_id:
-            continue
-        _say(cfg, f"line sweep {tag}")
-        sc = by_id[sid].with_overrides(fixed) if fixed else by_id[sid]
-        df = experiment.sweep(sc, {param: list(xs)}, N, seed, workers=W)
-        experiment.save(df, out, f"linesweep_{tag}", {"scenario": sc.fingerprint(), "n": N,
-                                                      "seed": seed, "fixed": fixed})
-        for x, pv in zip(df[param], df["p"]):
-            values[f"linesweep.{tag}.{x:g}"] = float(pv)
-            rows_ls.append({"sweep": tag, "x": x, "p": pv})
-    if rows_ls:
-        t = pd.DataFrame(rows_ls).pivot_table(index="sweep", columns="x", values="p")
-        t.columns = [f"{c:g}" for c in t.columns]
-        sec.append("## 5b. One-parameter sweeps\n\n"
-                   f"P(airbridge), n = {N:,} per point (`linesweep_*.csv`). "
-                   + "; ".join(f"`{tag}`: {sid}, `{param}`" + (f" with {fixed}" if fixed else "")
-                               for tag, sid, param, _, fixed in cfg.line_sweeps)
-                   + ".\n\n" + md_table(t.reset_index()))
+    ls_section = _line_sweep_section(cfg, by_id, values, out)
+    if ls_section:
+        sec.append(ls_section)
 
     # 5. sweep ------------------------------------------------------------------
     if cfg.sweep_scenario and cfg.sweep_scenario in by_id:
@@ -434,6 +419,34 @@ def _context_section(cfg: ReportConfig, by_id: dict, values: dict, out: Path,
             "Ordinary swaps leave context alone by design (MODELING_STANDARDS §5); this "
             "section asks how much of a difference it explains. Structure (zones, units, "
             "the number of waves) is never swapped.\n\n" + "\n\n".join(parts))
+
+
+def _line_sweep_section(cfg: ReportConfig, by_id: dict, values: dict, out: Path) -> str | None:
+    """Section 5b: one-parameter sweeps (`cfg.line_sweeps`), one table row per
+    sweep. Value keys: linesweep.<tag>.<x>."""
+    N, seed, W = cfg.n, cfg.seed, cfg.workers
+    rows, legend = [], []
+    for tag, sid, param, xs, fixed in cfg.line_sweeps:
+        if sid not in by_id:
+            continue
+        _say(cfg, f"line sweep {tag}")
+        sc = by_id[sid].with_overrides(fixed) if fixed else by_id[sid]
+        df = experiment.sweep(sc, {param: list(xs)}, N, seed, workers=W)
+        experiment.save(df, out, f"linesweep_{tag}", {"scenario": sc.fingerprint(), "n": N,
+                                                      "seed": seed, "fixed": fixed})
+        for x, pv in zip(df[param], df["p"]):
+            values[f"linesweep.{tag}.{x:g}"] = float(pv)
+            rows.append({"sweep": tag, "x": x, "p": pv})
+        note = cfg.line_sweep_notes.get(tag)
+        legend.append(f"* `{tag}`: {sid}, `{param}`" + (f" with {fixed}" if fixed else "")
+                      + (f". {note.rstrip('.')}." if note else "."))
+    if not rows:
+        return None
+    t = pd.DataFrame(rows).pivot_table(index="sweep", columns="x", values="p")
+    t.columns = [f"{c:g}" for c in t.columns]
+    return ("## 5b. One-parameter sweeps\n\n"
+            f"P(airbridge), n = {N:,} per point (`linesweep_*.csv`).\n\n"
+            + "\n".join(legend) + "\n\n" + md_table(t.reset_index()))
 
 
 def _go_rule_section(cfg: ReportConfig, a: Scenario, b: Scenario, out: Path) -> str:

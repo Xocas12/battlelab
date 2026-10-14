@@ -52,6 +52,7 @@ mkdir -p /tmp/out && cd cmo && lua5.3 tests/test_harness.lua lua /tmp/out -  # L
 * **Ypenburg anchors depend on how "holding the field" is read.** With the 0.3.0 shock and no-retreat mechanisms and the anchor `germans_hold_on_field` (German troops on the field for at least 3 h), the joint share was about 0.54 (0.51 since 0.6.0, which added the sourced anchor `germans_off_field_by_1510`). Under the old sole-control reading (`attacker_ever_controls`), it is still about 0.04: in a one-zone model the Dutch never all leave while the Germans hold the buildings. Multiple perimeter zones would settle it (issue #3 follow-up).
 * **Maleme under CRT.** The command cycle fixed Maleme under Lanchester (joint about 0.68) but not under CRT (about 0.13): the CRT bleeds an attacker at near parity about 6 times faster (`battlelab resolvers`), so the Germans rarely hold on long enough.
 * **Maleme timing.** The New Zealand withdrawal lands at nightfall (H+12) in most runs; `hold.move_delay_h` spreads it but was not adopted (see the parameter note). Since 0.6.0 the daylight confirmation (`risk.commit_daylight`, replacing the decision cycle) puts the first landings in the afternoon of day 2. The anchor `landings_begin_day2_afternoon` (Long: about 16:00, H+32) holds in about 56% of runs, and the Maleme joint share is about 0.54 (Lanchester). Under the CRT it stays low (about 0.08).
+* **Maleme falls only through the withdrawal.** Control needs one side alone on the field and `risk.land_contested` is 0, so nothing lands while the 22nd Battalion is there. With voluntary departure switched off (report sweep `maleme_garrison_no_withdrawal`, `hold.decision_h` = 1000) P(airbridge) is 0 at the sourced garrison size; only about 300 defenders collapse often enough to lose the field. The garrison acts through the withdrawal, and COMMAND is the withdrawal's decision rule, not the withdrawal itself (#25).
 * **Hard go/no-go threshold** is still the default. The logistic and lagged variants exist (`mechanics.go_no_go`, `--go-rule`, `--set mech.info_lag_h=...`); `results/SUMMARY.md` section 4 compares them. The zero single-swap of Maleme's DENIAL into Hostomel is a property of the threshold rule.
 * Arrival order for simultaneous arrivals is the YAML order of `units`.
 * Empty zones keep their last controller.
@@ -62,7 +63,7 @@ mkdir -p /tmp/out && cd cmo && lua5.3 tests/test_harness.lua lua /tmp/out -  # L
 
 ## Done (see CHANGELOG)
 
-Unreleased: context swaps (`swap --context`, `report --context-pairs`); Ockenburg 1940 (eighth member); Waalhaven command values revised.
+Unreleased: context swaps (`swap --context`, `report --context-pairs`); Ockenburg 1940 (eighth member); Waalhaven command values revised; Maleme garrison sweep without voluntary departure (#25).
 
 0.6.0: Waalhaven 1940 (seventh member); daylight confirmation of control (#5); Ypenburg ammunition limit sourced, new anchor `germans_off_field_by_1510`.
 
