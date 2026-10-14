@@ -668,6 +668,37 @@ def test_parameters_doc_is_current(tmp_path):
         "docs/PARAMETERS.md is stale: run `battlelab params --out docs/PARAMETERS.md`"
 
 
+def test_readme_hostomel_headline_matches_swap_tables():
+    """README's Hostomel-Maleme headline must match the committed swap tables (#27).
+
+    The swap brings in Maleme's defenders as well as the German attackers, its
+    total moves in opposite directions under the two resolvers, and only the
+    HOLD/RISK ranking holds under both.
+    """
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    bullet = next(line for line in readme.splitlines()
+                  if line.startswith("* **Hostomel 2022 vs Maleme 1941.**"))
+    assert "1941 German factors" not in bullet
+    assert "defenders' together" in bullet
+    factors = ["AIR", "MASS", "HOLD", "COMMAND", "RESPONSE", "DENIAL", "RISK"]
+    attackers = {"AIR", "MASS", "RISK"}
+    for resolver in ("lanchester", "crt"):
+        tab = pd.read_csv(ROOT / "results" / f"swap_hostomel_2022__maleme_1941_{resolver}.csv")
+        values = {tuple(int(r[f]) for f in factors): float(r["p"]) for _, r in tab.iterrows()}
+        base, full = values[(0,) * 7], values[(1,) * 7]
+        attack_only = values[tuple(int(f in attackers) for f in factors)]
+        assert f"({base:.2f} to {full:.2f})" in bullet, resolver
+        label = "Lanchester" if resolver == "lanchester" else "the CRT"
+        assert f"{attack_only:.2f} under {label}" in bullet, resolver
+        phi = analysis.shapley(values, len(factors))
+        top = {factors[i] for i in np.argsort(-np.abs(phi))[:2]}
+        assert top == {"HOLD", "RISK"}, (resolver, top)
+    sentences = [s for s in bullet.split(". ") if "both combat models" in s]
+    robust = [s for s in sentences if "go/no-go" in s]
+    assert len(robust) == 1 and "ranking" in robust[0], robust
+    assert "Lanchester only" in robust[0]
+
+
 # ----------------------------------------------- wave sizes, redeployment ---
 def test_wave_aircraft_sizes_each_wave():
     vkb = Scenario.load(ROOT / "scenarios" / "valkenburg_1940.yaml")
