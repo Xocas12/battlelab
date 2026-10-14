@@ -319,6 +319,41 @@ def test_fog_makes_withdrawal_earlier(mal):
     assert a > b + 0.1
 
 
+def _line_sweep(tag):
+    from battlelab.cli import DEFAULT_LINE_SWEEPS
+    found = [s for s in DEFAULT_LINE_SWEEPS if s[0] == tag]
+    assert found, f"no default line sweep {tag!r}"
+    return found[0]
+
+
+def _exits(w, unit):
+    return [e.data["reason"] for e in w.log
+            if e.kind == "leaves_fight" and e.data["unit"] == unit]
+
+
+def test_maleme_falls_only_through_the_withdrawal(mal):
+    """Issue #25. Maleme falls only after the 22nd Battalion leaves on an order.
+    The report's no-withdrawal sweep removes every order (and the continuous
+    hazard), so the battalion can only collapse, and at its sourced size the
+    Germans never take the field."""
+    tag, sid, param, _, fixed = _line_sweep("maleme_garrison_no_withdrawal")
+    assert (sid, param) == (mal.id, "hold.strength")
+    off = mal.with_overrides(fixed)
+    falls = 0
+    for i in range(40):
+        p = mal.space.sample(1, i)
+        w, _ = mal.run(p, 1, i)
+        if w.metrics["airbridge"]:
+            falls += 1
+            assert _exits(w, "nz_22_bn") == ["ordered_withdrawal"]
+        p = off.space.sample(1, i)
+        w, _ = off.run(p, 1, i)
+        assert not any(e.kind == "command_decision" for e in w.log)
+        assert set(_exits(w, "nz_22_bn")) <= {"collapse"}
+        assert not w.metrics["attacker_ever_controls"] and not w.metrics["airbridge"]
+    assert falls >= 10
+
+
 # ------------------------------------------------------------ go / no-go ---
 def _airlift(scenario, run=0):
     w, mechs = scenario.build(scenario.space.sample(1, run), 1, run)
@@ -451,6 +486,7 @@ def test_report_smoke(tmp_path):
                        factors=["RISK", "HOLD"], log=False,
                        line_sweeps=[("m_hold", "maleme_1941", "hold.strength",
                                      [500.0, 2000.0], {})],
+                       line_sweep_notes={"m_hold": "Garrison only"},
                        pairs=[("hostomel_2022", "maleme_1941")])
     text = run_report(cfg).read_text()
     for head in ("## 1.", "## 2.", "## 3.", "## 4.", "## 5.", "## 6."):
@@ -460,6 +496,8 @@ def test_report_smoke(tmp_path):
     assert (tmp_path / "shapley_hostomel_2022__maleme_1941_lanchester.csv").exists()
     assert "## Reading these results" not in text                  # no NOTES.md: no section
     assert "## 5b. One-parameter sweeps" in text
+    assert "* `m_hold`: maleme_1941, `hold.strength`. Garrison only.\n" in text
+    assert "\n| m_hold | " in text
     assert text.count("given maleme_1941's factors.**") == 1          # one pair, both directions
     assert text.count("given hostomel_2022's factors.**") == 1
     assert (tmp_path / "linesweep_m_hold.csv").exists()
@@ -666,6 +704,24 @@ def test_parameters_doc_is_current(tmp_path):
     main(["params", *map(str, ALL_SCENARIOS), "--out", str(out)])
     assert out.read_text() == (ROOT / "docs" / "PARAMETERS.md").read_text(), \
         "docs/PARAMETERS.md is stale: run `battlelab params --out docs/PARAMETERS.md`"
+
+
+def test_summary_has_maleme_garrison_with_and_without_withdrawal():
+    """Issue #25: SUMMARY.md section 5b carries P(airbridge) by Maleme garrison size
+    with and without voluntary departure, row for row equal to the saved sweeps."""
+    from battlelab.cli import DEFAULT_LINE_SWEEPS
+    res = ROOT / "results"
+    text = (res / "SUMMARY.md").read_text(encoding="utf-8")
+    sec = text[text.index("## 5b. One-parameter sweeps"):]
+    sec = sec[:sec.find("\n## ", 1)]
+    rows = {line.split("|")[1].strip(): [c.strip() for c in line.strip().strip("|").split("|")]
+            for line in sec.splitlines() if line.startswith("| maleme_")}
+    tags = [s[0] for s in DEFAULT_LINE_SWEEPS]
+    assert {"maleme_garrison", "maleme_garrison_no_withdrawal"} <= set(tags)
+    for tag, _, param, xs, _ in DEFAULT_LINE_SWEEPS:
+        df = pd.read_csv(res / f"linesweep_{tag}.csv")
+        assert list(df[param]) == list(xs), f"linesweep_{tag}.csv is stale: rerun the report"
+        assert rows[tag][1:] == [f"{p:.2f}" for p in df["p"]], f"SUMMARY.md row {tag} is stale"
 
 
 # ----------------------------------------------- wave sizes, redeployment ---

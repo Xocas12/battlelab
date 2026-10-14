@@ -229,12 +229,27 @@ def cmd_resolvers(a):
         experiment.save(t, a.out, "resolvers", {"kill_rate": a.kill_rate, "round_h": a.round_h})
 
 
-GARRISON = [500, 650, 800, 1000, 1250, 1500, 2000, 2500, 3000]
+GARRISON = [300, 400, 500, 650, 800, 1000, 1250, 1500, 2000, 2500, 3000]
 NO_COMMAND = {"hold.decision_h": 0, "hold.comms_loss": 0, "hold.night_moves": 0}
+# The first command decision falls after the 48 h horizon, so no withdrawal is
+# ever ordered and the continuous morale hazard is off too (MoraleCheck applies
+# one or the other). The 22nd Battalion then leaves only by an immediate exit;
+# at Maleme under Lanchester that is collapse at 5% of its peak strength.
+NO_WITHDRAWAL = {"hold.decision_h": 1000}
 DEFAULT_LINE_SWEEPS = [
     ("maleme_garrison", "maleme_1941", "hold.strength", GARRISON, {}),
     ("maleme_garrison_no_command", "maleme_1941", "hold.strength", GARRISON, NO_COMMAND),
+    ("maleme_garrison_no_withdrawal", "maleme_1941", "hold.strength", GARRISON, NO_WITHDRAWAL),
 ]
+LINE_SWEEP_NOTES = {
+    "maleme_garrison": "As modelled: the 22nd Battalion can leave on its commander's "
+                       "withdrawal order",
+    "maleme_garrison_no_command": "No command cycle: the battalion can leave on its own "
+                                  "turn-by-turn morale hazard instead",
+    "maleme_garrison_no_withdrawal": "No voluntary departure: the first command decision "
+                                     "falls after the 48-hour horizon, so the battalion "
+                                     "leaves only if it collapses (5% of its peak strength)",
+}
 
 
 def _pairs(spec: str | None) -> list[tuple[str, str]] | None:
@@ -252,7 +267,8 @@ def cmd_report(a):
     cfg = ReportConfig(scenarios=files, n=a.n, seed=a.seed, workers=a.workers, out=a.out,
                        sweep_scenario=a.sweep, go_rule_pair=tuple(a.go_pair.split(","))
                        if a.go_pair else None, line_sweeps=DEFAULT_LINE_SWEEPS,
-                       pairs=_pairs(a.pairs), context_pairs=_pairs(a.context_pairs) or [])
+                       line_sweep_notes=LINE_SWEEP_NOTES, pairs=_pairs(a.pairs),
+                       context_pairs=_pairs(a.context_pairs) or [])
     run_report(cfg)
 
 
