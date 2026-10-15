@@ -131,16 +131,16 @@ Rejection calibration against all anchors (n = 6,000; `calibrate_*.csv`):
 * **waalhaven_1940**: acceptance 0.493; largest shifts (prior SD) `mass.shock` +0.11, `hold.strength` -0.10, `hold.quality` -0.07; the anchors barely constrain the parameters.
 * **ypenburg_1940**: acceptance 0.517; largest shifts (prior SD) `risk.tolerance` +0.40, `mass.ammo_out_h` -0.25, `air.att.approach_loss` -0.11; the anchors barely constrain the parameters.
 
-First-order variance share of P(airbridge) by parameter (n = 4,000; `screen_*.csv`), parameters above twice the noise floor:
+First-order variance share (eta^2) of P(airbridge) by parameter (n = 4,000; `screen_*.csv`). Listed: parameters above the 95th percentile of the largest eta^2 over 999 shuffles of the outcome, so a batch in which no parameter matters lists none with probability at least 0.95. The noise floor is the expected eta^2 of a parameter that does nothing:
 
-* **heraklion_1941**: `air.att.cas` 0.01 (noise floor ~0.002). Low-confidence or assumed: `air.att.cas`.
-* **hostomel_2022**: `denial.t_fires` 0.16, `risk.tolerance` 0.13, `air.att.approach_loss` 0.08, `denial.obstacles0` 0.03, `ctx.wave1_t` 0.03 (noise floor ~0.002). Low-confidence or assumed: `denial.t_fires`, `risk.tolerance`, `air.att.approach_loss`, `denial.obstacles0`, `ctx.wave1_t`.
-* **maleme_1941**: `mass.dz_loss` 0.04, `denial.t_fires` 0.01, `hold.quality` 0.01, `ctx.exploit_delay` 0.01, `hold.strength` 0.01 (noise floor ~0.002). Low-confidence or assumed: `hold.quality`, `ctx.exploit_delay`.
-* **ockenburg_1940**: none (noise floor ~nan).
-* **rethymno_1941**: `mass.dz_loss` 0.00 (noise floor ~0.002). Low-confidence or assumed: `mass.dz_loss`.
-* **valkenburg_1940**: `ctx.troops_per_aircraft` 0.01, `hold.strength` 0.01, `ctx.wave2_t` 0.00 (noise floor ~0.002). Low-confidence or assumed: `ctx.troops_per_aircraft`, `ctx.wave2_t`.
-* **waalhaven_1940**: `risk.tolerance` 0.03, `air.att.approach_loss` 0.01, `air.att.ingress_loss` 0.00 (noise floor ~0.002). Low-confidence or assumed: `risk.tolerance`, `air.att.approach_loss`, `air.att.ingress_loss`.
-* **ypenburg_1940**: `ctx.troops_per_aircraft` 0.03 (noise floor ~0.002).
+* **heraklion_1941**: none (threshold 0.00645, noise floor ~0.00225).
+* **hostomel_2022**: `denial.t_fires` 0.158, `risk.tolerance` 0.134, `air.att.approach_loss` 0.0777, `denial.obstacles0` 0.0314, `ctx.wave1_t` 0.0258 (threshold 0.00667, noise floor ~0.00225). Low-confidence or assumed: `denial.t_fires`, `risk.tolerance`, `air.att.approach_loss`, `denial.obstacles0`, `ctx.wave1_t`.
+* **maleme_1941**: `mass.dz_loss` 0.0387 (threshold 0.00648, noise floor ~0.00225).
+* **ockenburg_1940**: none (threshold nan, noise floor ~nan).
+* **rethymno_1941**: none (threshold 0.00638, noise floor ~0.00225).
+* **valkenburg_1940**: `ctx.troops_per_aircraft` 0.0143 (threshold 0.00668, noise floor ~0.00225). Low-confidence or assumed: `ctx.troops_per_aircraft`.
+* **waalhaven_1940**: `risk.tolerance` 0.0307, `air.att.approach_loss` 0.00662 (threshold 0.00644, noise floor ~0.00225). Low-confidence or assumed: `risk.tolerance`, `air.att.approach_loss`.
+* **ypenburg_1940**: `ctx.troops_per_aircraft` 0.0299 (threshold 0.00662, noise floor ~0.00225).
 
 Parameters flagged as assumptions: heraklion_1941 53 of 59, hostomel_2022 48 of 62, maleme_1941 52 of 59, ockenburg_1940 52 of 67, rethymno_1941 54 of 59, valkenburg_1940 52 of 65, waalhaven_1940 50 of 60, ypenburg_1940 50 of 61.
 

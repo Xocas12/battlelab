@@ -45,6 +45,28 @@ class ReportConfig:
     log: bool = True
 
 
+SCREEN_PERMS = 999     # outcome shuffles behind the screening threshold
+SCREEN_ALPHA = 0.05    # family-wise false-positive rate of the screening list
+
+
+def screen_line(s: Scenario, scr: pd.DataFrame, threshold: float) -> str:
+    """One scenario's bullet in the screening list of section 2.
+
+    Lists at most five parameters whose eta^2 is above `threshold` (see
+    `analysis.screen_threshold`). Values are printed to three significant
+    figures: at n = 4,000 the floor is ~0.002 and the threshold ~0.006, so two
+    decimals would round both, and most listed values, to 0.00 or 0.01.
+    """
+    floor = float(scr.noise_floor.max()) if len(scr) else float("nan")
+    above = scr[scr.eta2 > threshold].head(5)
+    items = ", ".join(f"`{r.param}` {r.eta2:.3g}" for r in above.itertuples()) or "none"
+    flagged = [r.param for r in above.itertuples() if s.space[r.param].prov.assumption
+               or s.space[r.param].prov.confidence == "low"]
+    return (f"* **{s.id}**: {items} (threshold {threshold:.3g}, noise floor ~{floor:.3g})."
+            + (f" Low-confidence or assumed: {', '.join(f'`{p}`' for p in flagged)}."
+               if flagged else ""))
+
+
 def _say(cfg: ReportConfig, msg: str):
     if cfg.log:
         print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
@@ -149,24 +171,25 @@ def run_report(cfg: ReportConfig) -> Path:
                    "the anchors barely constrain the parameters")
         cal_lines.append(f"* **{s.id}**: acceptance {acc:.3f}; largest shifts (prior SD) "
                          f"{moved}; {verdict}.")
-        scr = analysis.screen(df.head(4 * N))      # runs 0..4N-1: the same as a 4N batch
+        scr_df = df.head(4 * N)                    # runs 0..4N-1: the same as a 4N batch
+        scr = analysis.screen(scr_df)
+        thr = analysis.screen_threshold(scr_df, perms=SCREEN_PERMS, alpha=SCREEN_ALPHA,
+                                        seed=seed)
         experiment.save(scr, out, f"screen_{s.id}_airbridge",
-                        {"scenario": s.fingerprint(), "n": 4 * N, "seed": seed})
-        floor = float(scr.noise_floor.max()) if len(scr) else float("nan")
-        above = scr[scr.eta2 > 2 * floor].head(5)
-        items = ", ".join(f"`{r.param}` {r.eta2:.2f}" for r in above.itertuples()) or "none"
-        flagged = [r.param for r in above.itertuples() if s.space[r.param].prov.assumption
-                   or s.space[r.param].prov.confidence == "low"]
-        scr_lines.append(f"* **{s.id}**: {items} (noise floor ~{floor:.3f})."
-                         + (f" Low-confidence or assumed: {', '.join(f'`{p}`' for p in flagged)}."
-                            if flagged else ""))
+                        {"scenario": s.fingerprint(), "n": 4 * N, "seed": seed,
+                         "threshold": thr, "perms": SCREEN_PERMS, "alpha": SCREEN_ALPHA})
+        scr_lines.append(screen_line(s, scr, thr))
     n_ass = ", ".join(f"{s.id} {sum(p.prov.assumption for _, p in s.space.items())} of "
                       f"{len(s.space.names())}" for s in scen)
     sec.append("## 2. What the record constrains, and what drives the outcome\n\n"
                f"Rejection calibration against all anchors (n = {6 * N:,}; "
                "`calibrate_*.csv`):\n\n" + "\n".join(cal_lines)
-               + f"\n\nFirst-order variance share of P(airbridge) by parameter (n = {4 * N:,}; "
-               "`screen_*.csv`), parameters above twice the noise floor:\n\n"
+               + f"\n\nFirst-order variance share (eta^2) of P(airbridge) by parameter "
+               f"(n = {4 * N:,}; `screen_*.csv`). Listed: parameters above the 95th "
+               f"percentile of the largest eta^2 over {SCREEN_PERMS} shuffles of the outcome, "
+               "so a batch in which no parameter matters lists none with probability at "
+               "least 0.95. The noise floor is the expected eta^2 of a parameter that does "
+               "nothing:\n\n"
                + "\n".join(scr_lines)
                + f"\n\nParameters flagged as assumptions: {n_ass}.")
 

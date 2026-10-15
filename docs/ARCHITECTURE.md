@@ -62,6 +62,7 @@ YAML sections: `clock`, `sources`, `parameters`, `sides`, `zones`, `units` (with
 * `analysis.check_anchors` → per-anchor and joint share of runs that reproduce history.
 * `analysis.abc_posterior` → rejection calibration: prior vs posterior of every sampled parameter given the anchors.
 * `analysis.screen` → first-order variance share per parameter (binned), with its noise floor.
+* `analysis.screen_threshold` → family-wise permutation threshold for those shares (max over parameters, shuffled outcome); the report lists only parameters above it.
 * `analysis.compare_backends` → run-by-run comparison of two result tables (native vs CMO) on shared draws.
 * `report.run_report` → the standard pipeline over all scenarios and `results/SUMMARY.md`; every statement in it is computed from the saved tables.
 

@@ -132,30 +132,77 @@ def check_anchors(df: pd.DataFrame, anchors: list[dict]) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 # Parameter screening
 # ---------------------------------------------------------------------------
+def _screen_bins(df: pd.DataFrame, y: pd.Series, bins: int):
+    """(name, quantile bins) for every parameter `screen` looks at."""
+    if y.var() == 0:
+        return []
+    out = []
+    for col in [c for c in df.columns if c.startswith("p.")]:
+        x = df[col]
+        if x.nunique() < 3:
+            continue
+        out.append((col[2:], pd.qcut(x, bins, duplicates="drop")))
+    return out
+
+
 def screen(df: pd.DataFrame, metric: str = "airbridge", bins: int = 10) -> pd.DataFrame:
     """First-order variance share of each sampled parameter (binned eta^2).
 
     Cheap screening from a plain Monte Carlo batch: for each parameter, how much
     of the outcome variance is explained by knowing that parameter alone. Fixed
     parameters are skipped. Use it to decide what to pin down next.
+
+    `noise_floor` is (bins - 1) / n, the expected eta^2 of a parameter that
+    does nothing: the mean under the null, not a significance cut. Use
+    `screen_threshold` to decide which parameters stand out from noise.
     """
     y = df[f"m.{metric}"].astype(float)
     var = y.var()
     rows = []
-    for col in [c for c in df.columns if c.startswith("p.")]:
-        x = df[col]
-        if x.nunique() < 3 or var == 0:
-            continue
-        q = pd.qcut(x, bins, duplicates="drop")
+    for name, q in _screen_bins(df, y, bins):
+        x = df[f"p.{name}"]
         eta2 = y.groupby(q, observed=True).mean().var(ddof=0) / var
         corr = np.corrcoef(x, y)[0, 1]
-        rows.append({"param": col[2:], "eta2": eta2, "direction": np.sign(corr),
+        rows.append({"param": name, "eta2": eta2, "direction": np.sign(corr),
                      "noise_floor": (q.cat.categories.size - 1) / len(y)})
     cols = ["param", "eta2", "direction", "noise_floor"]
     if not rows:          # constant outcome (or nothing sampled): nothing to screen
         return pd.DataFrame(columns=cols)
     return pd.DataFrame(rows, columns=cols).sort_values(
         "eta2", ascending=False).reset_index(drop=True)
+
+
+def screen_threshold(df: pd.DataFrame, metric: str = "airbridge", bins: int = 10,
+                     perms: int = 999, alpha: float = 0.05, seed: int = 0) -> float:
+    """Family-wise permutation threshold for the eta^2 values of `screen`.
+
+    Shuffles the outcome `perms` times and records, for each shuffle, the
+    largest eta^2 over every parameter `screen` looks at (max-T). A parameter
+    whose eta^2 is strictly above the returned value has permutation p-value
+    (1 + #{shuffles whose maximum >= eta^2}) / (perms + 1) <= alpha, so the
+    chance that a batch in which nothing matters lists any parameter at all is
+    at most `alpha`. Returns NaN when there is nothing to screen.
+    """
+    k = int(np.floor(alpha * (perms + 1)))
+    if k < 1:
+        raise ValueError(f"perms={perms} is too few for alpha={alpha}")
+    y = df[f"m.{metric}"].astype(float)
+    var = y.var()
+    groups = _screen_bins(df, y, bins)
+    if not groups:
+        return float("nan")
+    yv = y.to_numpy()
+    rng = np.random.default_rng(seed)
+    ys = rng.permuted(np.tile(yv, (perms, 1)), axis=1)       # (perms, n)
+    best = np.zeros(perms)
+    for _, q in groups:
+        codes = q.cat.codes.to_numpy()
+        _, codes = np.unique(codes, return_inverse=True)       # observed bins only
+        onehot = np.zeros((len(yv), codes.max() + 1))
+        onehot[np.arange(len(yv)), codes] = 1.0
+        means = (ys @ onehot) / onehot.sum(axis=0)              # (perms, bins)
+        best = np.maximum(best, means.var(axis=1, ddof=0) / var)
+    return float(np.sort(best)[::-1][k - 1])
 
 
 # ---------------------------------------------------------------------------

@@ -147,6 +147,9 @@ def cmd_screen(a):
     df = experiment.run_batch(s, a.n, a.seed, a.workers)
     t = analysis.screen(df, a.metric)
     print(t.to_string(index=False, float_format=FMT))
+    thr = analysis.screen_threshold(df, a.metric, seed=a.seed)
+    print(f"permutation threshold (family-wise 5%, 999 shuffles): {thr:.3g}; "
+          f"above it: {', '.join(t.param[t.eta2 > thr]) or 'none'}")
     if a.out:
         experiment.save(t, a.out, f"screen_{_tag(s, a)}_{a.metric}",
                         {"scenario": s.fingerprint(), "n": a.n, "seed": a.seed})
