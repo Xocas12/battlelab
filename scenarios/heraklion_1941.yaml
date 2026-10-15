@@ -18,7 +18,7 @@ sources:
     cite: "Gavin Long, 'Greece, Crete and Syria', ch. 13 'Heraklion'; times British"
     url: "https://s3-ap-southeast-2.amazonaws.com/awm-media/collection/RCDIG1070151/document/5519477.PDF"
   NZH:
-    cite: "NZHistory, 'The Battle for Crete - The battle: days 1-3', Manatu Taonga (updated 3 Nov 2020); used for values shared with Maleme (same Luftwaffe, HQ and airlift)"
+    cite: "NZHistory, 'The Battle for Crete - The battle: days 1-3', Manatu Taonga (updated 3 Nov 2020); used for values shared with Maleme: the HQ (RISK) and the airlift organisation (ctx.exploit_delay). The Luftwaffe support (AIR) and the drop (MASS) differ from Maleme's"
     url: "https://nzhistory.govt.nz/war/the-battle-for-crete/the-battle-day-1-3"
   WPH:
     cite: "Wikipedia, 'Battle of Heraklion' (search excerpt only)"
