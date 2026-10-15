@@ -451,8 +451,12 @@ def test_report_smoke(tmp_path):
                        factors=["RISK", "HOLD"], log=False,
                        line_sweeps=[("m_hold", "maleme_1941", "hold.strength",
                                      [500.0, 2000.0], {})],
-                       pairs=[("hostomel_2022", "maleme_1941")])
+                       pairs=[("hostomel_2022", "maleme_1941")],
+                       plan_checks=[("hostomel_2022", "maleme_1941", "ctx.aircraft", [18.0])])
     text = run_report(cfg).read_text()
+    assert "*Plan check for hostomel_2022 given maleme_1941's factors*" in text
+    assert "*Plan check for maleme_1941 given hostomel_2022" not in text   # home->away only
+    assert (tmp_path / "plancheck_hostomel_2022__maleme_1941.csv").exists()
     for head in ("## 1.", "## 2.", "## 3.", "## 4.", "## 5.", "## 6."):
         assert head in text
     assert "hostomel_2022 given maleme_1941's factors" in text
@@ -729,3 +733,40 @@ def test_screen_constant_outcome():
     df = pd.DataFrame({"p.a": np.linspace(0, 1, 50), "m.airbridge": [True] * 50})
     out = analysis.screen(df)
     assert out.empty and list(out.columns) == ["param", "eta2", "direction", "noise_floor"]
+
+
+# ------------------------------------------------- Ypenburg wave size (#30) ---
+def test_ypenburg_wave_size_is_flagged_beyond_wave_one():
+    """#30: ctx.aircraft sizes all three waves but is sourced for the first only."""
+    prov = Scenario.load(YPB).space["ctx.aircraft"].prov
+    assert prov.assumption and prov.confidence == "low"
+    notes = (ROOT / "results" / "NOTES.md").read_text(encoding="utf-8")
+    assert "its wave sizes, wave times and Dutch counterattacks were sourced" not in notes
+    assert "waves 2 and 3" in notes
+
+
+def test_plan_check_prints_ceiling_and_wave_size_rows(tmp_path):
+    """#30: the report prints Ypenburg's unopposed ceiling and a wave-size sensitivity
+    next to the Ypenburg-Waalhaven swap."""
+    from battlelab.report import ReportConfig, _plan_check, unopposed
+    ypb = Scenario.load(YPB)
+    wh = Scenario.load(ROOT / "scenarios" / "waalhaven_1940.yaml")
+    assert unopposed(ypb).space["hold.strength"].dist.bounds() == (0, 0)
+    cfg = ReportConfig(scenarios=[], n=40, seed=3, out=str(tmp_path), log=False,
+                       factors=["MASS", "HOLD"])
+    values: dict[str, float] = {}
+    text = _plan_check(cfg, ypb, wh, "ctx.aircraft", [12.0, 24.0], values, tmp_path)
+    assert "Unopposed ceiling as shipped" in text and "| 12 (as shipped) |" in text
+    assert "| 24 |" in text and "landed (base)" in text
+    # 36 aircraft at 12-16 men straddle the 500-troop line; 72 clear it unopposed
+    assert values["ceiling.ypenburg_1940.lanchester"] < 0.9
+    plan = "plan.ypenburg_1940__waalhaven_1940"
+    assert values["ceiling.ypenburg_1940.lanchester"] == values[f"{plan}.12.ceiling"]
+    assert values[f"{plan}.24.ceiling"] == 1.0
+    assert "The ceiling is below 0.9" in text
+    # the as-shipped row reproduces the swap's own corners (common random numbers)
+    res = experiment.factor_swap(ypb, wh, 40, seed=3, factors=["MASS", "HOLD"])
+    k = len(res.factors)
+    assert values[f"{plan}.12.base"] == res.value((0,) * k)
+    assert values[f"{plan}.12.full"] == res.value((1,) * k)
+    assert (tmp_path / "plancheck_ypenburg_1940__waalhaven_1940.csv").exists()

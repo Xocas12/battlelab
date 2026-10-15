@@ -24,6 +24,13 @@ from .scenario import Scenario
 
 RESOLVER_NAMES = ("lanchester", "crt")
 
+# The "unopposed ceiling": no defenders at the field, no counterattacks, no defensive
+# fire or obstacles, no flak losses. What is left of P(airbridge) is what the airlift
+# plan itself can deliver against the outcome threshold.
+UNOPPOSED = {"hold.strength": 0, "response.strength": 0, "response.strength2": 0,
+             "denial.fire_intensity": 0, "denial.obstacles0": 0,
+             "air.att.ingress_loss": 0, "air.att.approach_loss": 0}
+
 
 @dataclass
 class ReportConfig:
@@ -42,6 +49,9 @@ class ReportConfig:
     context_pairs: list[tuple[str, str]] = field(default_factory=list)  # 3b: + CONTEXT bundle
     # one-parameter sweeps: (tag, scenario id, parameter, values, fixed overrides)
     line_sweeps: list[tuple[str, str, str, list[float], dict]] = field(default_factory=list)
+    # plan checks next to a swap: (home id, away id, plan parameter, values). Prints the
+    # base, full-swap and unopposed P(airbridge) at each value (Lanchester).
+    plan_checks: list[tuple[str, str, str, list[float]]] = field(default_factory=list)
     log: bool = True
 
 
@@ -197,7 +207,11 @@ def run_report(cfg: ReportConfig) -> Path:
                     "resolver": r}
             experiment.save(res.table(), out, f"swap_{h.id}__{w.id}_{r}", meta)
             experiment.save(t, out, f"shapley_{h.id}__{w.id}_{r}", meta)
-        swap_parts.append(_swap_section(h, w, res_by_r, N, n_crt))
+        part = _swap_section(h, w, res_by_r, N, n_crt)
+        for ch in [c for c in cfg.plan_checks if (c[0], c[1]) == (h.id, w.id)]:
+            _say(cfg, f"  plan check {h.id} <- {w.id}: {ch[2]}")
+            part += "\n\n" + _plan_check(cfg, h, w, ch[2], ch[3], values, out)
+        swap_parts.append(part)
         from . import plots
         plots.shapley_bars({r: t for r, (_, t) in res_by_r.items()},
                            {r: f"{h.id} + {w.id} factors ({r})" for r in res_by_r},
@@ -390,6 +404,63 @@ def _swap_section(h: Scenario, w: Scenario, res_by_r: dict, n_lan: int, n_crt: i
                f"; sign differs for {', '.join(flips)}.")
     return (f"**{h.id} given {w.id}'s factors.** P(airbridge) {base_l:.2f} -> {full_l:.2f} "
             f"under Lanchester, {base_c:.2f} -> {full_c:.2f} under CRT. {robust}\n\n"
+            + md_table(df))
+
+
+def unopposed(s: Scenario) -> Scenario:
+    """`s` with the opposition removed (UNOPPOSED, as far as `s` has those parameters)."""
+    return s.with_overrides({k: v for k, v in UNOPPOSED.items() if k in s.space})
+
+
+def _plan_check(cfg: ReportConfig, h: Scenario, w: Scenario, param: str, xs: list[float],
+                values: dict, out: Path) -> str:
+    """How much of a swap's result rests on one plan parameter of the home scenario.
+
+    For each value of `param`: P(airbridge) of the home scenario, of the home scenario
+    with all of the away scenario's factor bundles, and with the opposition removed
+    (the unopposed ceiling). Value keys: ceiling.<home>.lanchester and
+    plan.<home>__<away>.<x>.base|full|ceiling."""
+    N, seed, W = cfg.n, cfg.seed, cfg.workers
+    hl, wl = _variant(h, "lanchester"), _variant(w, "lanchester")
+    factors = cfg.factors or list(h.factors)
+    full = experiment.variant(hl, wl, factors, (1,) * len(factors))
+    shipped = h.space[param].dist
+    own = shipped.bounds()[0] if shipped.bounds()[0] == shipped.bounds()[1] else None
+    configs = [unopposed(hl)]
+    for x in xs:
+        o = {param: x}
+        configs += [hl.with_overrides(o), full.with_overrides(o), unopposed(hl.with_overrides(o))]
+    dfs = experiment.run_batches(configs, N, seed, W, keep_params=False)
+    ceiling = float(dfs[0]["m.airbridge"].mean())
+    values[f"ceiling.{h.id}.lanchester"] = ceiling
+    rows = []
+    for i, x in enumerate(xs):
+        b, f, c = dfs[1 + 3 * i: 4 + 3 * i]
+        pb, pf, pc = (float(d["m.airbridge"].mean()) for d in (b, f, c))
+        key = f"plan.{h.id}__{w.id}.{x:g}"
+        values[f"{key}.base"], values[f"{key}.full"], values[f"{key}.ceiling"] = pb, pf, pc
+        rows.append({param: f"{x:g}" + (" (as shipped)" if own is not None and x == own else ""),
+                     "base": pb, "full swap": pf, "effect": pf - pb, "unopposed ceiling": pc,
+                     "landed (base)": int(round(float(b["m.landed"].mean()))),
+                     "landed (full swap)": int(round(float(f["m.landed"].mean())))})
+    df = pd.DataFrame(rows)
+    experiment.save(df, out, f"plancheck_{h.id}__{w.id}",
+                    {"home": h.fingerprint(), "away": w.fingerprint(), "n": N, "seed": seed,
+                     "param": param, "values": list(xs), "unopposed": UNOPPOSED,
+                     "resolver": "lanchester"})
+    thr = float(h.doc.get("outcome", {}).get("airbridge_troops", 500))
+    verdict = (f"The ceiling is below 0.9: even unopposed, the plan often cannot land {thr:,.0f} "
+               "troops, so P(airbridge) compresses every factor effect in this swap; read "
+               "the swap together with the rows below and the landed troops."
+               if ceiling < 0.9 else
+               "The ceiling is at least 0.9, so the outcome threshold does not by itself "
+               "bound this swap.")
+    return (f"*Plan check for {h.id} given {w.id}'s factors* (Lanchester, n = {N:,} per "
+            f"cell; `plancheck_{h.id}__{w.id}.csv`). Unopposed ceiling as shipped: "
+            f"{ceiling:.2f} (P(airbridge) with no defenders, counterattacks, defensive fire, "
+            f"obstacles or flak losses). {verdict} Rows vary `{param}`; `full swap` takes "
+            "all of the away scenario's factor bundles, `effect` is full swap minus base, "
+            "and `landed` is the mean number of troops air-landed.\n\n"
             + md_table(df))
 
 

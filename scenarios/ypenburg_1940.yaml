@@ -91,8 +91,8 @@ parameters:
   risk.commit_cycle_h: {dist: fixed, value: 0.0, assumption: true, note: "0 = no decision cycle (only used in shuttle mode)"}
   risk.commit_daylight: {dist: fixed, value: 0, assumption: true, note: "0 = a report of control counts at once, day or night (only used in shuttle mode)"}
   # CONTEXT (not swapped) ---------------------------------------------------
-  ctx.aircraft: {dist: fixed, value: 12, source: WOH, confidence: medium,
-    note: "first twelve Ju 52 with the first air-landing infantry"}
+  ctx.aircraft: {dist: fixed, value: 12, source: WOH, assumption: true, confidence: low,
+    note: "aircraft in EACH of the three waves. Sourced for wave 1 only: the first twelve Ju 52 with the first air-landing infantry (WOH). No source gives a size for waves 2 and 3 (WOH: wave 2 'shared more or less the fate of the first', fourteen burning aircraft blocked wave 3, and the plan put the bulk of IR 65 onto Ypenburg), so 12 for them is an assumption. It matters: 36 aircraft at 12-16 men can land 432-576 troops, right on the 500-troop airbridge line, so the report prints a wave-size sensitivity and the unopposed ceiling next to the Ypenburg-Waalhaven swap. 0.5.0-0.6.0: listed as sourced for all three waves (issue #30)"}
   ctx.troops_per_aircraft: {dist: uniform, lo: 12, hi: 16, source: WOH, confidence: medium,
     note: "about 150-200 men on board the first wave"}
   ctx.wave1_t: {dist: uniform, lo: 0.9, hi: 1.1, source: WOH, confidence: high, note: "the first twelve Ju 52 (KGrzbV.12) landed at about 05:15"}
