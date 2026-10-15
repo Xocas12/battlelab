@@ -235,6 +235,11 @@ DEFAULT_LINE_SWEEPS = [
     ("maleme_garrison", "maleme_1941", "hold.strength", GARRISON, {}),
     ("maleme_garrison_no_command", "maleme_1941", "hold.strength", GARRISON, NO_COMMAND),
 ]
+# Ypenburg's waves are all sized by ctx.aircraft = 12, sourced for the first wave only,
+# and 3 x 12 aircraft sit on the 500-troop airbridge line (issue #30)
+DEFAULT_PLAN_CHECKS = [
+    ("ypenburg_1940", "waalhaven_1940", "ctx.aircraft", [12.0, 14.0, 16.0, 24.0]),
+]
 
 
 def _pairs(spec: str | None) -> list[tuple[str, str]] | None:
@@ -252,6 +257,7 @@ def cmd_report(a):
     cfg = ReportConfig(scenarios=files, n=a.n, seed=a.seed, workers=a.workers, out=a.out,
                        sweep_scenario=a.sweep, go_rule_pair=tuple(a.go_pair.split(","))
                        if a.go_pair else None, line_sweeps=DEFAULT_LINE_SWEEPS,
+                       plan_checks=DEFAULT_PLAN_CHECKS,
                        pairs=_pairs(a.pairs), context_pairs=_pairs(a.context_pairs) or [])
     run_report(cfg)
 
