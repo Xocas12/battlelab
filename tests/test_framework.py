@@ -729,3 +729,53 @@ def test_screen_constant_outcome():
     df = pd.DataFrame({"p.a": np.linspace(0, 1, 50), "m.airbridge": [True] * 50})
     out = analysis.screen(df)
     assert out.empty and list(out.columns) == ["param", "eta2", "direction", "noise_floor"]
+
+
+def _null_batch(rng, n=1000, k=22):
+    """k inert uniform parameters and a binary outcome that ignores all of them."""
+    df = pd.DataFrame({f"p.x{i:02d}": rng.uniform(size=n) for i in range(k)})
+    df["m.airbridge"] = rng.uniform(size=n) < 0.3
+    return df
+
+
+def test_screen_threshold_family_wise_rate_on_null():
+    # #32: the report listed every parameter above twice the noise floor, which
+    # on 22 inert parameters lists at least one about half the time. The
+    # permutation threshold must keep that family-wise rate at or below 5%.
+    rng = np.random.default_rng(32)
+    reps, hits, old_hits = 200, 0, 0
+    for r in range(reps):
+        df = _null_batch(rng)
+        scr = analysis.screen(df)
+        thr = analysis.screen_threshold(df, perms=199, seed=r)
+        hits += bool((scr.eta2 > thr).any())
+        old_hits += bool((scr.eta2 > 2 * scr.noise_floor.max()).any())
+    assert old_hits / reps > 0.3          # the old cut: pure noise listed most of the time
+    # 5% of 200 is 10; P(Binomial(200, 0.05) >= 19) ~ 0.003
+    assert hits <= 18, f"{hits} of {reps} null batches listed a parameter"
+
+
+def test_screen_threshold_keeps_real_drivers():
+    rng = np.random.default_rng(7)
+    df = _null_batch(rng, n=2000)
+    df["m.airbridge"] = rng.uniform(size=len(df)) < 0.2 + 0.4 * df["p.x03"]
+    scr = analysis.screen(df)
+    thr = analysis.screen_threshold(df, perms=199, seed=1)
+    assert list(scr.param[scr.eta2 > thr]) == ["x03"]
+    assert thr == analysis.screen_threshold(df, perms=199, seed=1)   # seeded
+    assert thr > scr.noise_floor.max()
+    const = df.assign(**{"m.airbridge": True})
+    assert np.isnan(analysis.screen_threshold(const))
+    with pytest.raises(ValueError):
+        analysis.screen_threshold(df, perms=10)                       # cannot reach 5%
+
+
+def test_report_screen_line_uses_threshold_and_three_figures():
+    from battlelab.report import screen_line
+    s = Scenario.load(ROOT / "scenarios" / "heraklion_1941.yaml")
+    scr = pd.DataFrame({"param": ["mass.dz_loss", "air.att.cas"], "eta2": [0.00712, 0.0052],
+                        "direction": [-1.0, 1.0], "noise_floor": [0.00225, 0.00225]})
+    line = screen_line(s, scr, 0.0063)
+    assert "`mass.dz_loss` 0.00712" in line and "air.att.cas" not in line
+    assert "threshold 0.0063, noise floor ~0.00225" in line
+    assert screen_line(s, scr, 0.01).startswith("* **heraklion_1941**: none (")
