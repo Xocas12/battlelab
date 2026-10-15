@@ -729,3 +729,76 @@ def test_screen_constant_outcome():
     df = pd.DataFrame({"p.a": np.linspace(0, 1, 50), "m.airbridge": [True] * 50})
     out = analysis.screen(df)
     assert out.empty and list(out.columns) == ["param", "eta2", "direction", "noise_floor"]
+
+
+# --------------------------------------------------------------- liveness ---
+# Sampled parameters that change no run when pinned at either end of their prior
+# range (runs 0..299, seed 1, every metric compared run for run), and anchors that
+# hold in the plain batch and in every one of those end-of-range batches (#26).
+# A parameter listed here is declared but does nothing in its own scenario; an
+# anchor listed here cannot fail anywhere in the prior box.
+LIVENESS_N = 300
+DEAD_PARAMS = {
+    "heraklion_1941": ["denial.demolish_rate", "risk.tolerance"],
+    "hostomel_2022": ["ctx.wave2_t", "denial.crater_rate", "denial.demolish_rate"],
+    "maleme_1941": ["response.commit_h", "risk.tolerance"],
+    "rethymno_1941": ["denial.demolish_rate", "response.commit_h", "risk.tolerance"],
+    "waalhaven_1940": ["mass.cornered", "response.commit_h", "response.t_ca"],
+}
+FLAT_ANCHORS = {
+    "hostomel_2022": ["runway_unusable"],
+    "waalhaven_1940": ["counterattack_fails"],
+}
+
+
+@pytest.mark.parametrize("path", ALL_SCENARIOS, ids=lambda p: p.stem)
+def test_liveness_lists_dead_parameters_and_flat_anchors(path):
+    s = Scenario.load(path)
+    params, anchors = experiment.liveness(s, LIVENESS_N, seed=1)
+    sampled = [k for k, p in s.space.items() if not isinstance(p.dist, Fixed)]
+    assert sorted(params.param) == sorted(sampled)
+    dead = params[params.runs_changed == 0]
+    assert (dead.n_compared == LIVENESS_N).all()
+    assert sorted(dead.param) == DEAD_PARAMS.get(s.id, [])
+    assert sorted(anchors.anchor[anchors.failing_runs == 0]) == FLAT_ANCHORS.get(s.id, [])
+
+
+def test_liveness_screening_gives_the_full_verdict(host):
+    names = ["denial.crater_rate", "hold.strength", "response.commit_h", "ctx.wave2_t"]
+    quick, qa = experiment.liveness(host, 40, seed=3, params=names, screen_n=5)
+    full, fa = experiment.liveness(host, 40, seed=3, params=names, screen_n=40)
+    assert list(quick.param) == list(full.param)
+    assert list(quick.runs_changed == 0) == list(full.runs_changed == 0)
+    assert list(qa.failing_runs == 0) == list(fa.failing_runs == 0)
+    pinned = host.with_overrides({"denial.crater_rate": 0.12})
+    p2, _ = experiment.liveness(pinned, 10, seed=3, params=names)
+    assert "denial.crater_rate" not in set(p2.param)            # fixed: no range to test
+
+
+def test_runway_anchor_is_marked_and_left_out_of_the_joint(host):
+    from battlelab.report import RESOLVER_NAMES, anchor_section
+    dfs = [experiment.run_batch(host.with_resolver(r), 150, seed=1) for r in RESOLVER_NAMES]
+    flat = analysis.non_discriminating(dfs, host.anchors)
+    assert flat == ["runway_unusable"]
+    tabs = {(host.id, r): analysis.check_anchors(df, host.anchors, exclude=flat)
+            for r, df in zip(RESOLVER_NAMES, dfs)}
+    text = anchor_section([host], tabs, {host.id: flat}, 150)
+    assert "| hostomel_2022 | runway_unusable (non-discriminating) |" in text
+    assert "| hostomel_2022 | ALL (joint, without runway_unusable) |" in text
+    # excluding an anchor that held in every run leaves the joint share unchanged
+    for r, df in zip(RESOLVER_NAMES, dfs):
+        plain = analysis.check_anchors(df, host.anchors).set_index("anchor")
+        assert tabs[(host.id, r)].set_index("anchor").share.equals(plain.share)
+
+
+def test_check_anchors_exclude_leaves_anchor_out_of_joint():
+    df = pd.DataFrame({"m.airbridge": [True, True, False, False],
+                       "m.runway_end": [0.0, 0.9, 0.0, 0.9]})
+    anchors = [{"id": "ab", "metric": "airbridge", "op": "eq", "value": True},
+               {"id": "rw", "metric": "runway_end", "op": "lt", "value": 0.6}]
+    t = analysis.check_anchors(df, anchors).set_index("anchor")
+    assert t.loc["ALL (joint)", "share"] == 0.25
+    t = analysis.check_anchors(df, anchors, exclude=["rw"]).set_index("anchor")
+    assert t.loc["ALL (joint)", "share"] == 0.5 and t.loc["rw", "share"] == 0.5
+    assert analysis.non_discriminating([df], anchors) == []
+    assert analysis.non_discriminating([df[df["m.runway_end"] < 0.6]], anchors) == ["rw"]

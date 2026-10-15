@@ -6,6 +6,7 @@
   battlelab anchors scenarios/maleme_1941.yaml -n 2000
   battlelab screen scenarios/hostomel_2022.yaml -n 4000
   battlelab calibrate scenarios/maleme_1941.yaml -n 8000
+  battlelab liveness scenarios/*.yaml -n 300 -w 4
   battlelab swap scenarios/hostomel_2022.yaml scenarios/maleme_1941.yaml -n 1500 --out results/
   battlelab sweep scenarios/hostomel_2022.yaml --grid risk.tolerance=0:0.4:9 \\
                   --grid denial.t_fires=2:12:11 -n 500 --out results/
@@ -130,6 +131,30 @@ def cmd_anchors(a):
         experiment.save(t, a.out, f"anchors_{tag}", {"scenario": s.fingerprint(), "n": a.n,
                                                     "seed": a.seed, "variant": s.variant})
         plots.anchors_bar({tag: t}, str(Path(a.out) / f"anchors_{tag}.png"))
+
+
+def cmd_liveness(a):
+    dead_total = 0
+    for f in a.scenarios:
+        s = _load(f, a.resolver, a.go_rule, a.set)
+        pt, at = experiment.liveness(s, a.n, a.seed, a.workers)
+        dead = pt[pt.runs_changed == 0]
+        never = at[at.failing_runs == 0]
+        dead_total += len(dead) + len(never)
+        print(f"{s.id}: {len(dead)} of {len(pt)} sampled parameters change no run across "
+              f"their range; {len(never)} of {len(at)} anchors never fail "
+              f"(n = {a.n} per variant, seed {a.seed})")
+        for r in dead.itertuples():
+            print(f"    parameter {r.param}  [{r.lo:g}, {r.hi:g}]")
+        for r in never.itertuples():
+            print(f"    anchor    {r.anchor}  (held in all {r.variants} variants)")
+        if a.out:
+            meta = {"scenario": s.fingerprint(), "n": a.n, "seed": a.seed,
+                    "variant": s.variant}
+            experiment.save(pt, a.out, f"liveness_{_tag(s, a)}_params", meta)
+            experiment.save(at, a.out, f"liveness_{_tag(s, a)}_anchors", meta)
+    if a.strict and dead_total:
+        sys.exit(1)
 
 
 def cmd_calibrate(a):
@@ -340,6 +365,14 @@ def main(argv=None):
     common(p, 8000)
     p.add_argument("--anchors", help="comma-separated anchor ids (default: all)")
     p.set_defaults(fn=cmd_calibrate)
+
+    p = sub.add_parser("liveness", help="parameters that change no run across their range, "
+                                        "and anchors that never fail")
+    p.add_argument("scenarios", nargs="+")
+    common(p, 300)
+    p.add_argument("--strict", action="store_true", help="exit 1 if anything is listed")
+    p.add_argument("--out")
+    p.set_defaults(fn=cmd_liveness)
 
     p = sub.add_parser("screen")
     p.add_argument("scenario")

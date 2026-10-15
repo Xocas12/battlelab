@@ -176,6 +176,80 @@ def sweep(scenario: Scenario, grid: dict[str, list[float]], n: int, seed: int = 
     return pd.DataFrame(rows)
 
 
+# ---------------------------------------------------------------------------
+# Liveness
+# ---------------------------------------------------------------------------
+def _runs_changed(a: pd.DataFrame, b: pd.DataFrame) -> int:
+    """Runs (same index, same seed) whose metrics differ anywhere; NaN equals NaN."""
+    cols = [c for c in a.columns if c.startswith("m.")]
+    x, y = a[cols], b[cols]
+    differ = (x != y) & ~(x.isna() & y.isna())
+    return int(differ.any(axis=1).sum())
+
+
+def liveness(scenario: Scenario, n: int, seed: int = 1, workers: int = 1,
+             params: list[str] | None = None,
+             screen_n: int = 20) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Which declared parameters and anchors can do anything inside the prior box.
+
+    Each sampled (non-fixed) parameter is pinned at the low and then the high end
+    of its range, every other draw unchanged (CRN), and the two batches are
+    compared run by run on every metric. A parameter with `runs_changed` 0 changed
+    none of runs 0..n-1 across its range. Runs 0..screen_n-1 are compared first,
+    and only a parameter that changed none of them is run on to n, so `runs_changed`
+    of a live parameter counts within its first `n_compared` runs; the verdict
+    (zero or not over n runs) is the same as comparing all n.
+
+    An anchor is checked over the plain batch (n runs) and every end-of-range
+    batch; `failing_runs` 0 means it held in all of them, so nothing in the prior
+    box makes it fail and it cannot discriminate between runs.
+
+    Returns (parameters: param, lo, hi, runs_changed, n_compared;
+             anchors: anchor, failing_runs, variants_failing, variants).
+    """
+    from .analysis import anchor_holds  # analysis imports this module
+
+    ends = []
+    for k, p in scenario.space.items():
+        lo, hi = p.dist.bounds()
+        if lo < hi and (params is None or k in params):
+            ends.append((k, lo, hi))
+    pins = [(scenario.with_overrides({k: lo}), scenario.with_overrides({k: hi}))
+            for k, lo, hi in ends]
+    m = min(n, max(1, screen_n))
+
+    def batches(scs: list[Scenario], count: int, start: int) -> list[pd.DataFrame]:
+        if workers > 1:
+            with ProcessPoolExecutor(workers) as ex:
+                return run_batches(scs, count, seed, workers, keep_params=False,
+                                   start=start, executor=ex)
+        return run_batches(scs, count, seed, keep_params=False, start=start)
+
+    base = batches([scenario], n, 0)[0]
+    first = batches([v for pair in pins for v in pair], m, 0)
+    runs = [(first[2 * i], first[2 * i + 1]) for i in range(len(ends))]
+    changed = [_runs_changed(a, b) for a, b in runs]
+    again = [i for i, c in enumerate(changed) if c == 0] if n > m else []
+    if again:
+        rest = batches([v for i in again for v in pins[i]], n - m, m)
+        for j, i in enumerate(again):
+            a, b = rest[2 * j], rest[2 * j + 1]
+            changed[i] = _runs_changed(a, b)
+            runs[i] = (pd.concat([runs[i][0], a], ignore_index=True),
+                       pd.concat([runs[i][1], b], ignore_index=True))
+    prow = [{"param": k, "lo": lo, "hi": hi, "runs_changed": changed[i],
+             "n_compared": len(runs[i][0])} for i, (k, lo, hi) in enumerate(ends)]
+    dfs = [base] + [df for pair in runs for df in pair]
+    arow = []
+    for a in scenario.anchors:
+        fails = [int((~anchor_holds(df, a)).sum()) for df in dfs]
+        arow.append({"anchor": a["id"], "failing_runs": sum(fails),
+                     "variants_failing": sum(f > 0 for f in fails), "variants": len(dfs)})
+    return (pd.DataFrame(prow, columns=["param", "lo", "hi", "runs_changed", "n_compared"]),
+            pd.DataFrame(arow, columns=["anchor", "failing_runs", "variants_failing",
+                                        "variants"]))
+
+
 def parse_grid(spec: str) -> tuple[str, list[float]]:
     """'name=lo:hi:steps' or 'name=a,b,c'."""
     name, rng = spec.split("=", 1)

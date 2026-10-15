@@ -108,17 +108,32 @@ def _anchor_mask(df: pd.DataFrame, a: dict) -> pd.Series:
     return _OPS[a["op"]](pd.to_numeric(s, errors="coerce"), a["value"])
 
 
-def check_anchors(df: pd.DataFrame, anchors: list[dict]) -> pd.DataFrame:
+def anchor_holds(df: pd.DataFrame, a: dict) -> pd.Series:
+    """Per run: does it reproduce anchor `a` (a missing value counts as no)."""
+    return _anchor_mask(df, a).fillna(False).astype(bool)
+
+
+def non_discriminating(dfs: list[pd.DataFrame], anchors: list[dict]) -> list[str]:
+    """Anchors that hold in every run of every batch given. Such an anchor cannot
+    tell runs apart, so it is no evidence of fit and adds nothing to a joint share."""
+    return [a["id"] for a in anchors if all(bool(anchor_holds(df, a).all()) for df in dfs)]
+
+
+def check_anchors(df: pd.DataFrame, anchors: list[dict],
+                  exclude: tuple[str, ...] | list[str] = ()) -> pd.DataFrame:
     """Share of runs reproducing each historical fact, and all of them jointly.
 
     A model is not "validated" by a high joint share; but a very low share for
     an anchor means the model treats what actually happened as a fluke, which
     is a red flag worth investigating before trusting any counterfactual.
+    Anchors listed in `exclude` (e.g. non-discriminating ones) keep their own
+    row but are left out of the joint share.
     """
     rows, joint = [], pd.Series(True, index=df.index)
     for a in anchors:
-        m = _anchor_mask(df, a).fillna(False)
-        joint &= m
+        m = anchor_holds(df, a)
+        if a["id"] not in exclude:
+            joint &= m
         lo, hi = wilson(m.sum(), len(m))
         rows.append({"anchor": a["id"], "metric": a["metric"], "op": a["op"],
                      "target": a["value"], "share": m.mean(), "lo95": lo, "hi95": hi,
