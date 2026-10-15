@@ -140,6 +140,12 @@ def cmd_calibrate(a):
     print(f"anchors used: {[x['id'] for x in use]}")
     print(f"acceptance: {acc:.3f} ({int(acc * len(df))} of {len(df)} runs reproduce all of them)")
     print(post.to_string(index=False, float_format=FMT))
+    top = list(post.param.head(analysis.CAL_PAIR_TOP)) if len(post) else []
+    pairs = analysis.abc_pairs(df, use, top)
+    if len(pairs):
+        print(f"\nacceptance by prior tercile cell, pairs of the top {len(top)} parameters:")
+        print(pairs.to_string(index=False, float_format=FMT))
+    print(f"\nverdict: {analysis.calibration_verdict(post, pairs, acc, len(df))}")
 
 
 def cmd_screen(a):

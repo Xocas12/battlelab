@@ -60,7 +60,7 @@ YAML sections: `clock`, `sources`, `parameters`, `sides`, `zones`, `units` (with
 * `factor_swap(home, away)` → full factorial over factor bundles (2^k configurations, same seeds throughout), `SwapResult`.
 * `analysis.shapley` → exact Shapley values of the swap game; `shapley_table` adds bootstrap intervals over runs (Monte Carlo noise only).
 * `analysis.check_anchors` → per-anchor and joint share of runs that reproduce history.
-* `analysis.abc_posterior` → rejection calibration: prior vs posterior of every sampled parameter given the anchors.
+* `analysis.abc_posterior` → rejection calibration: prior vs posterior of every sampled parameter given the anchors (KS distance, p10-p90 width, SD ratio, acceptance by prior quintile); `analysis.abc_pairs` → acceptance over tercile cells of parameter pairs; `analysis.calibration_verdict` → the one-line reading used by `calibrate` and the report.
 * `analysis.screen` → first-order variance share per parameter (binned), with its noise floor.
 * `analysis.compare_backends` → run-by-run comparison of two result tables (native vs CMO) on shared draws.
 * `report.run_report` → the standard pipeline over all scenarios and `results/SUMMARY.md`; every statement in it is computed from the saved tables.

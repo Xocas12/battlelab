@@ -134,20 +134,16 @@ def run_report(cfg: ReportConfig) -> Path:
     for s in scen:
         df = experiment.run_batch(s, 6 * N, seed, W)
         post, acc = analysis.abc_posterior(df, s.anchors)
-        experiment.save(post, out, f"calibrate_{s.id}",
-                        {"scenario": s.fingerprint(), "n": 6 * N, "seed": seed,
-                         "acceptance": acc})
+        top_p = list(post.param.head(analysis.CAL_PAIR_TOP)) if len(post) else []
+        joint = analysis.abc_pairs(df, s.anchors, top_p)
+        meta = {"scenario": s.fingerprint(), "n": 6 * N, "seed": seed, "acceptance": acc}
+        experiment.save(post, out, f"calibrate_{s.id}", meta)
+        experiment.save(joint, out, f"calibrate_pairs_{s.id}", meta)
         top = post.head(3)
-        moved = ", ".join(f"`{r.param}` {r.shift_sd:+.2f}" for r in top.itertuples())
-        mx = float(post.shift_sd.abs().max()) if len(post) else float("nan")
-        verdict = ("history is rare in the model, so the posterior rests on "
-                   f"{int(round(acc * len(df)))} runs; shifts are what it would take to "
-                   "make history typical, not evidence" if acc < 0.1 else
-                   "the record constrains some parameters" if mx >= 0.5 else
-                   "no parameter moves by half a prior SD: poor anchor fit is structural, "
-                   "not parametric" if acc < 0.3 else
-                   "the anchors barely constrain the parameters")
-        cal_lines.append(f"* **{s.id}**: acceptance {acc:.3f}; largest shifts (prior SD) "
+        moved = ", ".join(f"`{r.param}` {r.ks:.2f} (mean {r.shift_sd:+.2f} SD)"
+                          for r in top.itertuples())
+        verdict = analysis.calibration_verdict(post, joint, acc, len(df))
+        cal_lines.append(f"* **{s.id}**: acceptance {acc:.3f}; largest changes (KS) "
                          f"{moved}; {verdict}.")
         scr = analysis.screen(df.head(4 * N))      # runs 0..4N-1: the same as a 4N batch
         experiment.save(scr, out, f"screen_{s.id}_airbridge",

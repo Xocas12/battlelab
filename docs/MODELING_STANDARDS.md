@@ -22,10 +22,10 @@ Anchors state what happened in terms of model metrics (`t_control between [1, 4]
 
 ## 3. Calibration is not validation
 
-`battlelab calibrate` keeps the runs that reproduce all anchors and compares parameter distributions before and after. Two outcomes are informative:
+`battlelab calibrate` keeps the runs that reproduce all anchors and compares parameter distributions before and after. Read the whole distribution, not the mean: cutting the bottom fifth off a uniform prior moves its mean by only 0.35 prior SD, and a narrowing from both sides does not move it at all. For each parameter it reports the Kolmogorov-Smirnov distance in prior-quantile units (`ks`), the posterior p10-p90 range as a share of the prior's (`width`), the SD ratio, prior and posterior p10/p90, and the acceptance in the worst and best prior quintile; for pairs of the top four parameters, the acceptance in each cell of a tercile grid. A parameter is constrained when `ks` is at least 0.1, `width` at most 0.85, or one prior quintile accepts at most half the overall share (each beyond Monte Carlo noise); a pair is constrained when one of its cells does. Two outcomes are informative:
 
-* A parameter whose posterior moves a lot is constrained by the historical record. Consider narrowing its prior, and say so.
-* If no parameter moves but the anchor shares are poor, the problem is structural (a missing mechanism), not parametric. Do not respond by widening priors until history fits.
+* A parameter or pair that is constrained is pinned down, at least in part, by the historical record. Consider narrowing its prior, and say so.
+* If the anchor shares are poor and no region of the prior fixes them (no parameter is constrained, or even the best prior quintile of every parameter accepts fewer than 30% of runs), the problem is structural (a missing mechanism), not parametric. Do not respond by widening priors until history fits.
 
 Anchors used for calibration cannot then be cited as independent validation. Hold some out.
 
