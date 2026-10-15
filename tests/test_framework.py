@@ -729,3 +729,60 @@ def test_screen_constant_outcome():
     df = pd.DataFrame({"p.a": np.linspace(0, 1, 50), "m.airbridge": [True] * 50})
     out = analysis.screen(df)
     assert out.empty and list(out.columns) == ["param", "eta2", "direction", "noise_floor"]
+
+
+# ---------------------------------------------------------- calibration ---
+def _calib_df(accept, n=6000, seed=11):
+    """Three independent uniform parameters and an anchor metric `accept(x, y, rng)`."""
+    rng = np.random.default_rng(seed)
+    x, y, z = rng.random(n), rng.random(n), rng.random(n)
+    return pd.DataFrame({"p.x": x, "p.y": y, "p.z": z, "m.ok": accept(x, y, rng)})
+
+
+_OK = [{"id": "ok", "metric": "ok", "op": "eq", "value": True}]
+
+
+def _calib(df):
+    post, acc = analysis.abc_posterior(df, _OK)
+    pairs = analysis.abc_pairs(df, _OK, list(post.param.head(analysis.CAL_PAIR_TOP)))
+    return post.set_index("param"), pairs, acc, analysis.calibration_verdict(
+        post, pairs, acc, len(df))
+
+
+def test_calibration_one_sided_cut_is_constrained():
+    df = _calib_df(lambda x, y, rng: x > np.quantile(x, 0.2))      # bottom fifth ruled out
+    post, _, acc, verdict = _calib(df)
+    assert acc == pytest.approx(0.8, abs=0.001)
+    assert abs(post.loc["x", "shift_sd"]) < 0.5        # the mean barely moves (1.73 * 0.2) ...
+    assert post.loc["x", "ks"] == pytest.approx(0.2, abs=0.01)    # ... the distribution does
+    assert post.loc["x", "q_min"] == 1 and post.loc["x", "acc_q_min"] == 0.0
+    assert post.loc["x", "prior_p10"] < 0.15 < post.loc["x", "post_p10"]
+    assert post.loc["x", "constrained"] and not post.loc[["y", "z"], "constrained"].any()
+    assert verdict.startswith("the record constrains `x`") and "barely" not in verdict
+
+
+def test_calibration_symmetric_narrowing_is_constrained():
+    df = _calib_df(lambda x, y, rng: (x > 0.1) & (x < 0.9))
+    post, _, _, verdict = _calib(df)
+    assert abs(post.loc["x", "shift_sd"]) < 0.05 and post.loc["x", "sd_ratio"] < 0.85
+    assert post.loc["x", "width"] == pytest.approx(0.8, abs=0.02)
+    assert post.loc["x", "constrained"] and "constrains `x`" in verdict
+
+
+def test_calibration_joint_constraint_is_found_by_pairs():
+    df = _calib_df(lambda x, y, rng: ~((x > np.quantile(x, 2 / 3))          # only (hi, hi)
+                                       & (y > np.quantile(y, 2 / 3))))
+    post, pairs, _, verdict = _calib(df)
+    assert not post.constrained.any()                 # invisible one parameter at a time
+    row = pairs[(pairs.param_a.isin(["x", "y"])) & (pairs.param_b.isin(["x", "y"]))].iloc[0]
+    assert row.constrained and row.cell_min == "hi/hi" and row.acc_min == 0.0
+    assert not pairs[pairs.param_a.eq("z") | pairs.param_b.eq("z")].constrained.any()
+    assert "jointly (hi/hi accepts 0.00)" in verdict
+
+
+@pytest.mark.parametrize("p, expect", [(0.5, "the anchors barely constrain"),
+                                       (0.2, "poor anchor fit is structural")])
+def test_calibration_noise_is_not_constrained(p, expect):
+    post, pairs, _, verdict = _calib(_calib_df(lambda x, y, rng: rng.random(len(x)) < p))
+    assert not post.constrained.any() and not pairs.constrained.any()
+    assert expect in verdict

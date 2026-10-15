@@ -1,6 +1,7 @@
 """Analysis shared by every backend (native engine or CMO)."""
 from __future__ import annotations
 
+import itertools
 import math
 import operator
 
@@ -161,18 +162,94 @@ def screen(df: pd.DataFrame, metric: str = "airbridge", bins: int = 10) -> pd.Da
 # ---------------------------------------------------------------------------
 # Calibration by rejection (approximate Bayesian computation)
 # ---------------------------------------------------------------------------
+# A parameter counts as constrained by the anchors when any of these holds,
+# each clear of Monte Carlo noise (CAL_KS_P, CAL_Z):
+# * its posterior differs from its prior by at least CAL_KS_MIN in the
+#   Kolmogorov-Smirnov distance (prior-quantile units: 0.2 means a fifth of the
+#   prior's mass has moved);
+# * its posterior p10-p90 range covers at most CAL_WIDTH of the prior's
+#   (measured in prior quantiles, so a narrowing from both sides counts);
+# * a region of the prior is down-weighted: a prior quintile (one parameter) or
+#   a tercile cell (a pair) accepts at most CAL_DOWN times the overall share.
+# The posterior mean alone misses most constraints: cutting the bottom fifth of
+# a uniform prior moves its mean by only 0.35 prior SD, and a symmetric
+# narrowing does not move it at all.
+CAL_KS_MIN = 0.1
+CAL_KS_P = 0.001
+CAL_WIDTH = 0.85
+CAL_DOWN = 0.5
+CAL_Z = 3.0
+CAL_QUANTILES = 5
+CAL_PAIR_TOP = 4
+CAL_PAIR_BINS = 3
+CAL_STRUCTURAL = 0.3
+
+
+def abc_mask(df: pd.DataFrame, anchors: list[dict]) -> pd.Series:
+    """Runs that reproduce every anchor."""
+    keep = pd.Series(True, index=df.index)
+    for a in anchors:
+        keep &= _anchor_mask(df, a).fillna(False)
+    return keep
+
+
+def _kolmogorov_sf(lam: float) -> float:
+    """P(K > lam) for the Kolmogorov distribution (asymptotic KS p-value)."""
+    if lam < 0.2:
+        return 1.0
+    s = sum((-1) ** (k - 1) * math.exp(-2 * k * k * lam * lam) for k in range(1, 101))
+    return float(min(1.0, max(0.0, 2 * s)))
+
+
+def _ks_vs_prior(x: pd.Series, keep: pd.Series) -> tuple[float, float]:
+    """KS distance between posterior and prior, and its p-value.
+
+    The distance is max |F_post - F_prior| over the sampled values, so it is in
+    prior-quantile units and does not depend on the parameter's scale. Since
+    F_prior = acc F_accepted + (1 - acc) F_rejected, it is (1 - acc) times the
+    two-sample KS distance between accepted and rejected runs, which gives the
+    p-value (asymptotic, with Stephens' correction).
+    """
+    v = x.to_numpy(float)
+    srt = np.sort(v)
+    post = np.sort(v[keep.to_numpy(bool)])
+    n, m = len(srt), len(post)
+    if m == 0 or m == n:
+        return 0.0, 1.0
+    grid = np.unique(srt)
+    d = float(np.max(np.abs(np.searchsorted(post, grid, side="right") / m
+                            - np.searchsorted(srt, grid, side="right") / n)))
+    ne = m * (n - m) / n
+    lam = (math.sqrt(ne) + 0.12 + 0.11 / math.sqrt(ne)) * d / (1 - m / n)
+    return d, _kolmogorov_sf(lam)
+
+
+def _down_weighted(cell_acc: float, cell_n: int, acc: float) -> bool:
+    """A region accepting at most CAL_DOWN of the overall share, beyond noise."""
+    if cell_n == 0 or not 0 < acc < 1:
+        return False
+    z = (acc - cell_acc) / math.sqrt(acc * (1 - acc) / cell_n)
+    return cell_acc <= CAL_DOWN * acc and z >= CAL_Z
+
+
 def abc_posterior(df: pd.DataFrame, anchors: list[dict]) -> tuple[pd.DataFrame, float]:
     """Keep the runs that reproduce every anchor; compare parameter
     distributions before (prior) and after (posterior) the filter.
 
-    A parameter whose posterior moves far from its prior is one the historical
-    record actually constrains. Parameters that do not move are not identified
-    by these anchors - no amount of fitting will pin them down. Do not reuse
-    the anchors used here as independent validation.
+    Per parameter: prior and posterior means and p10/p90; `shift_sd`, the mean
+    shift in prior SDs; `sd_ratio`, posterior over prior SD; `ks`, the
+    Kolmogorov-Smirnov distance in prior-quantile units, with `ks_p`; `width`,
+    the posterior p10-p90 range as a share of the prior's, both measured in
+    prior quantiles; and the acceptance in the worst and best prior quintile
+    (`acc_q_min` in quintile `q_min`, 1 = lowest values; `acc_q_max`).
+    `constrained` marks a parameter the anchors constrain (see CAL_KS_MIN): a
+    one-sided cut, a two-sided narrowing or a down-weighted region, not only a
+    moved mean. Rows are sorted
+    by `ks`. A parameter that is not constrained alone may still be constrained
+    jointly with another (`abc_pairs`). Do not reuse the anchors used here as
+    independent validation.
     """
-    keep = pd.Series(True, index=df.index)
-    for a in anchors:
-        keep &= _anchor_mask(df, a).fillna(False)
+    keep = abc_mask(df, anchors)
     acc = float(keep.mean())
     rows = []
     for col in [c for c in df.columns if c.startswith("p.")]:
@@ -183,13 +260,101 @@ def abc_posterior(df: pd.DataFrame, anchors: list[dict]) -> tuple[pd.DataFrame, 
         if len(post) < 2:
             continue
         sd = x.std()
+        ks, ks_p = _ks_vs_prior(x, keep)
+        q = pd.qcut(x, CAL_QUANTILES, labels=False, duplicates="drop")
+        by_q = keep.groupby(q).agg(["mean", "size"])
+        worst = by_q["mean"].idxmin()
+        down = _down_weighted(float(by_q.loc[worst, "mean"]), int(by_q.loc[worst, "size"]),
+                              acc)
+        srt = np.sort(x.to_numpy(float))
+        pv = post.to_numpy(float)
+        u = (np.searchsorted(srt, pv, "left") + np.searchsorted(srt, pv, "right")) / (2 * len(srt))
+        width = float(np.quantile(u, 0.9) - np.quantile(u, 0.1)) / 0.8
+        width_se = 0.5 * math.sqrt((1 - acc) / len(post))     # random subset of the prior
+        narrow = width <= CAL_WIDTH and (1 - width) >= CAL_Z * width_se
         rows.append({"param": col[2:], "prior_mean": x.mean(), "post_mean": post.mean(),
+                     "prior_p10": x.quantile(0.1), "prior_p90": x.quantile(0.9),
                      "post_p10": post.quantile(0.1), "post_p90": post.quantile(0.9),
-                     "shift_sd": (post.mean() - x.mean()) / sd if sd > 0 else 0.0})
+                     "shift_sd": (post.mean() - x.mean()) / sd if sd > 0 else 0.0,
+                     "sd_ratio": post.std() / sd if sd > 0 else 1.0,
+                     "ks": ks, "ks_p": ks_p, "width": width,
+                     "acc_q_min": float(by_q["mean"].min()), "q_min": int(worst) + 1,
+                     "acc_q_max": float(by_q["mean"].max()),
+                     "constrained": bool((ks >= CAL_KS_MIN and ks_p < CAL_KS_P) or narrow
+                                         or down)})
     out = pd.DataFrame(rows)
     if len(out):
-        out = out.sort_values("shift_sd", key=np.abs, ascending=False).reset_index(drop=True)
+        out = out.sort_values("ks", ascending=False, kind="stable").reset_index(drop=True)
     return out, acc
+
+
+def abc_pairs(df: pd.DataFrame, anchors: list[dict], params: list[str],
+              bins: int = CAL_PAIR_BINS) -> pd.DataFrame:
+    """Acceptance over a grid of prior quantile bins for each pair of `params`.
+
+    Catches what a per-parameter summary cannot: two parameters that are each
+    harmless alone but rule history out together. Per pair: the worst and best
+    cell and their acceptance, and `constrained` if the worst cell is
+    down-weighted (at most CAL_DOWN of the overall acceptance, beyond noise).
+    Cells are named lo/mid/hi for three bins, else by bin number.
+    """
+    keep = abc_mask(df, anchors)
+    acc = float(keep.mean())
+    names = ["lo", "mid", "hi"] if bins == 3 else [str(i + 1) for i in range(bins)]
+    rows = []
+    for a, b in itertools.combinations(params, 2):
+        qa = pd.qcut(df[f"p.{a}"], bins, labels=False, duplicates="drop")
+        qb = pd.qcut(df[f"p.{b}"], bins, labels=False, duplicates="drop")
+        g = keep.groupby([qa, qb]).agg(["mean", "size"])
+        lo, hi = g["mean"].idxmin(), g["mean"].idxmax()
+        rows.append({"param_a": a, "param_b": b,
+                     "cell_min": f"{names[int(lo[0])]}/{names[int(lo[1])]}",
+                     "acc_min": float(g.loc[lo, "mean"]), "n_min": int(g.loc[lo, "size"]),
+                     "cell_max": f"{names[int(hi[0])]}/{names[int(hi[1])]}",
+                     "acc_max": float(g.loc[hi, "mean"]),
+                     "constrained": _down_weighted(float(g.loc[lo, "mean"]),
+                                                   int(g.loc[lo, "size"]), acc)})
+    cols = ["param_a", "param_b", "cell_min", "acc_min", "n_min", "cell_max", "acc_max",
+            "constrained"]
+    out = pd.DataFrame(rows, columns=cols)
+    if len(out):
+        out = out.sort_values("acc_min", kind="stable").reset_index(drop=True)
+    return out
+
+
+def calibration_verdict(post: pd.DataFrame, pairs: pd.DataFrame, acc: float,
+                        n: int) -> str:
+    """One-line reading of `abc_posterior` and `abc_pairs` over `n` runs.
+
+    Constrained means a one-sided cut, a narrowing or a down-weighted region
+    (see CAL_KS_MIN), not a moved mean. Poor fit is called structural when no
+    parameter or pair is constrained and acceptance is below CAL_STRUCTURAL, or
+    when some are but no prior quintile of any parameter lifts acceptance to
+    CAL_STRUCTURAL.
+    """
+    if acc < 0.1:
+        return ("history is rare in the model, so the posterior rests on "
+                f"{int(round(acc * n))} runs; shifts are what it would take to "
+                "make history typical, not evidence")
+    cons = post[post.constrained] if len(post) else post
+    single = set(cons.param) if len(cons) else set()
+    joint = (pairs[pairs.constrained & ~pairs.param_a.isin(single)
+                   & ~pairs.param_b.isin(single)] if len(pairs) else pairs)
+    best = float(post.acc_q_max.max()) if len(post) else acc
+    if len(cons) or len(joint):
+        items = [f"`{r.param}` (KS {r.ks:.2f}, p10-p90 width {r.width:.2f}; prior quintile "
+                 f"{r.q_min} accepts {r.acc_q_min:.3f})" for r in cons.head(3).itertuples()]
+        items += [f"`{r.param_a}` with `{r.param_b}` jointly ({r.cell_min} accepts "
+                  f"{r.acc_min:.2f})" for r in joint.head(2).itertuples()]
+        out = "the record constrains " + ", ".join(items)
+        if best < CAL_STRUCTURAL:
+            out += (f", but no prior quintile lifts acceptance above {best:.2f}: poor "
+                    "anchor fit is mostly structural, not parametric")
+        return out
+    if acc < CAL_STRUCTURAL:
+        return ("no parameter or pair is constrained: poor anchor fit is structural, "
+                "not parametric")
+    return "the anchors barely constrain the parameters"
 
 
 # ---------------------------------------------------------------------------
