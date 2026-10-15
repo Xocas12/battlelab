@@ -9,7 +9,9 @@ description: >
   the fight went on, and the field was German by 06:30. More than a thousand
   men were flown in that day; a weak Dutch night attack never reached the
   field. A success case and a within-campaign control for Ypenburg: the two
-  share the German side, so a swap isolates what differed on the ground.
+  share the German HQ values (RISK) and the Luftwaffe's interdiction and
+  close air support. The drop (MASS), the bombing's suppression and the Dutch
+  flak differ, so a swap exchanges those as well as the ground.
 clock:
   h_hour_local: 4.9         # drop shortly before 05:00, after an hour of bombing from 03:55
   dt_h: 0.25

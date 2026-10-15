@@ -729,3 +729,34 @@ def test_screen_constant_outcome():
     df = pd.DataFrame({"p.a": np.linspace(0, 1, 50), "m.airbridge": [True] * 50})
     out = analysis.screen(df)
     assert out.empty and list(out.columns) == ["param", "eta2", "direction", "noise_floor"]
+
+
+# ------------------------------------------------- what the controls share ---
+CONTROL_PAIRS = [("maleme_1941", "heraklion_1941"), ("maleme_1941", "rethymno_1941"),
+                 ("ypenburg_1940", "waalhaven_1940")]
+# Phrases that claimed a control shares its partner's whole German side (#29).
+OVERCLAIMS = ["share Maleme's Luftwaffe", "Luftwaffe, HQ", "share the German side",
+              "isolates what differed on the ground"]
+
+
+def test_control_claims_match_shared_bundles():
+    """The notes and scenario files may only claim the bundles a control really shares."""
+    texts = {"results/NOTES.md": (ROOT / "results" / "NOTES.md").read_text(encoding="utf-8")}
+    for a_id, b_id in CONTROL_PAIRS:
+        a = Scenario.load(ROOT / "scenarios" / f"{a_id}.yaml")
+        b = Scenario.load(ROOT / "scenarios" / f"{b_id}.yaml")
+        shared = {f for f, names in a.factors.items()
+                  if all(a.space[n].dist == b.space[n].dist for n in names)}
+        assert "RISK" in shared                                   # what the text still claims
+        assert "AIR" not in shared and "MASS" not in shared        # what the text now says differs
+        path = ROOT / "scenarios" / f"{b_id}.yaml"
+        texts[f"scenarios/{b_id}.yaml"] = path.read_text(encoding="utf-8")
+    for name, text in texts.items():
+        for phrase in OVERCLAIMS:
+            assert phrase not in text, f"{name} still says {phrase!r}"
+    # the Crete section reports AIR's Shapley contribution in every Crete swap
+    notes = texts["results/NOTES.md"]
+    crete = notes[notes.index("**The Crete controls"):notes.index("**Valkenburg")]
+    for pair in ["heraklion_1941__maleme_1941", "rethymno_1941__maleme_1941",
+                 "maleme_1941__heraklion_1941", "maleme_1941__rethymno_1941"]:
+        assert "{{shapley." + pair + ".lanchester.AIR|signed}}" in crete
