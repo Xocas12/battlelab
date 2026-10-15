@@ -18,6 +18,7 @@ Anchors state what happened in terms of model metrics (`t_control between [1, 4]
 
 * A high joint share does **not** validate the model. Many wrong models reproduce a few coarse facts.
 * A low share for an individual anchor is a red flag: the model treats history as unusual. Investigate before trusting any counterfactual built on it.
+* An anchor that holds in every run cannot fail, so it is no test at all. Section 1 of the report marks an anchor that held in every run under both resolvers as non-discriminating and leaves it out of the joint share; `battlelab liveness` asks the stronger question, whether any run at either end of any parameter's range makes it fail. The same command lists declared parameters that change no run across their range: a parameter like that is a claim about the battle the model never uses.
 * Prefer several weak, independent anchors (timing, sequence, magnitude) to one strong one. This is pattern-oriented modelling (Grimm et al., 2005): a structure earns trust by reproducing multiple patterns at once.
 
 ## 3. Calibration is not validation

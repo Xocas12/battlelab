@@ -101,11 +101,13 @@ def run_report(cfg: ReportConfig) -> Path:
     # 1. anchors ----------------------------------------------------------------
     _say(cfg, "anchors")
     anchor_tabs: dict[tuple[str, str], pd.DataFrame] = {}
+    flat: dict[str, list[str]] = {}       # non-discriminating anchors per scenario
     for s in scen:
-        for r in RESOLVER_NAMES:
-            v = _variant(s, r)
-            df = experiment.run_batch(v, 2 * N, seed, W)
-            t = analysis.check_anchors(df, s.anchors)
+        vs = {r: _variant(s, r) for r in RESOLVER_NAMES}
+        dfs = {r: experiment.run_batch(v, 2 * N, seed, W) for r, v in vs.items()}
+        flat[s.id] = analysis.non_discriminating(list(dfs.values()), s.anchors)
+        for r, v in vs.items():
+            t = analysis.check_anchors(dfs[r], s.anchors, exclude=flat[s.id])
             anchor_tabs[(s.id, r)] = t
             for _, row in t.iterrows():
                 key = "joint" if row["anchor"] == "ALL (joint)" else row["anchor"]
@@ -113,20 +115,7 @@ def run_report(cfg: ReportConfig) -> Path:
             experiment.save(t, out, f"anchors_{s.id}_{r}",
                             {"scenario": v.fingerprint(), "n": 2 * N, "seed": seed,
                              "variant": v.variant})
-    rows = []
-    for s in scen:
-        for aid in [x["id"] for x in s.anchors] + ["ALL (joint)"]:
-            row = {"scenario": s.id, "anchor": aid}
-            for r in RESOLVER_NAMES:
-                t = anchor_tabs[(s.id, r)].set_index("anchor")
-                row[r] = t.loc[aid, "share"]
-            rows.append(row)
-    anchors_df = pd.DataFrame(rows)
-    sec.append("## 1. Is history a typical outcome in the model?\n\n"
-               f"Share of runs reproducing each historical fact (n = {2 * N:,} per scenario "
-               "per resolver; files `anchors_*.csv`). A low share means the model treats what "
-               "happened as unusual; a high share does not validate it.\n\n"
-               + md_table(anchors_df))
+    sec.append(anchor_section(scen, anchor_tabs, flat, 2 * N))
 
     # 2. calibration and screening ----------------------------------------------
     _say(cfg, "calibration and screening")
@@ -346,6 +335,39 @@ def apply_notes(out_dir: str | Path) -> Path:
         text = text[:first + 1] + block + text[first + 1:]
     path.write_text(text)
     return path
+
+
+def anchor_section(scen: list[Scenario], anchor_tabs: dict[tuple[str, str], pd.DataFrame],
+                   flat: dict[str, list[str]], n: int) -> str:
+    """Section 1. `flat` lists, per scenario, the anchors that held in every run
+    under both resolvers: they are marked non-discriminating and are not part of
+    the joint share (`check_anchors(..., exclude=...)`)."""
+    rows = []
+    for s in scen:
+        nd = flat.get(s.id, [])
+        for aid in [x["id"] for x in s.anchors] + ["ALL (joint)"]:
+            label = aid
+            if aid in nd:
+                label = f"{aid} (non-discriminating)"
+            elif aid == "ALL (joint)" and nd:
+                label = f"ALL (joint, without {', '.join(nd)})"
+            row = {"scenario": s.id, "anchor": label}
+            for r in RESOLVER_NAMES:
+                t = anchor_tabs[(s.id, r)].set_index("anchor")
+                row[r] = t.loc[aid, "share"]
+            rows.append(row)
+    listed = "; ".join(f"`{sid}`: {', '.join(f'`{a}`' for a in nd)}"
+                       for sid, nd in flat.items() if nd)
+    flat_txt = ("\n\nAn anchor marked non-discriminating held in every run under both "
+                "resolvers, so it cannot tell runs apart: it is no evidence of fit, and it is "
+                f"left out of the joint share (which it could not change). This run: {listed}. "
+                "`battlelab liveness` checks whether anything in the prior box can make an "
+                "anchor fail." if listed else "")
+    return ("## 1. Is history a typical outcome in the model?\n\n"
+            f"Share of runs reproducing each historical fact (n = {n:,} per scenario "
+            "per resolver; files `anchors_*.csv`). A low share means the model treats what "
+            "happened as unusual; a high share does not validate it."
+            + flat_txt + "\n\n" + md_table(pd.DataFrame(rows)))
 
 
 def _in_box(values: pd.Series, bounds: tuple[float, float]) -> list[float]:
