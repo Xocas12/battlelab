@@ -178,6 +178,7 @@ def run_report(cfg: ReportConfig) -> Path:
         wanted = {frozenset(p) for p in cfg.pairs}
         pairs = [(a, b) for a, b in pairs if frozenset((a.id, b.id)) in wanted]
     n_crt = max(50, int(N * 0.4))
+    donor_scans: dict[tuple, list[dict]] = {}
     for h, w in pairs:
         res_by_r = {}
         for r, n in (("lanchester", N), ("crt", n_crt)):
@@ -197,7 +198,15 @@ def run_report(cfg: ReportConfig) -> Path:
                     "resolver": r}
             experiment.save(res.table(), out, f"swap_{h.id}__{w.id}_{r}", meta)
             experiment.save(t, out, f"shapley_{h.id}__{w.id}_{r}", meta)
-        swap_parts.append(_swap_section(h, w, res_by_r, N, n_crt))
+        factors = res_by_r["lanchester"][0].factors
+        key = (w.id, tuple(factors))
+        if key not in donor_scans:
+            _say(cfg, f"  donor check {w.id}")
+            donor_scans[key] = donor_scan(_variant(w, "lanchester"), factors, N, seed, W)
+        swap_parts.append(
+            _swap_section(h, w, _ends(res_by_r), {r: t for r, (_, t) in res_by_r.items()})
+            + donor_section(h, w, donor_scans[key], res_by_r["lanchester"][1], N, seed, W,
+                            values, out))
         from . import plots
         plots.shapley_bars({r: t for r, (_, t) in res_by_r.items()},
                            {r: f"{h.id} + {w.id} factors ({r})" for r in res_by_r},
@@ -362,11 +371,19 @@ def _pivot(df: pd.DataFrame, x: str, y: str) -> pd.DataFrame:
     return piv.reset_index()
 
 
-def _swap_section(h: Scenario, w: Scenario, res_by_r: dict, n_lan: int, n_crt: int) -> str:
-    (rl, tl), (rc, tc) = res_by_r["lanchester"], res_by_r["crt"]
-    k = len(rl.factors)
-    base_l, full_l = rl.value((0,) * k), rl.value((1,) * k)
-    base_c, full_c = rc.value((0,) * k), rc.value((1,) * k)
+def _ends(res_by_r: dict) -> dict[str, tuple[float, float]]:
+    """P(outcome) with nothing and with every bundle swapped, per resolver."""
+    out = {}
+    for r, (res, _) in res_by_r.items():
+        k = len(res.factors)
+        out[r] = (res.value((0,) * k), res.value((1,) * k))
+    return out
+
+
+def _swap_section(h: Scenario, w: Scenario, ends: dict[str, tuple[float, float]],
+                  tabs: dict[str, pd.DataFrame]) -> str:
+    tl, tc = tabs["lanchester"], tabs["crt"]
+    (base_l, full_l), (base_c, full_c) = ends["lanchester"], ends["crt"]
     m = tl.set_index("factor").join(tc.set_index("factor"), lsuffix="_l", rsuffix="_c")
     m = m.loc[tl.factor]
     df = pd.DataFrame({
@@ -422,7 +439,8 @@ def _context_section(cfg: ReportConfig, by_id: dict, values: dict, out: Path,
                 experiment.save(res.table(), out, f"ctxswap_{h.id}__{w.id}_{r}", meta)
                 experiment.save(t, out, f"ctxshapley_{h.id}__{w.id}_{r}", meta)
             shared, only = experiment.context_params(h, w)
-            parts.append(_swap_section(h, w, res_by_r, N, n_crt).replace(
+            parts.append(_swap_section(h, w, _ends(res_by_r),
+                                       {r: t for r, (_, t) in res_by_r.items()}).replace(
                 "'s factors.**", "'s factors and shared context.**", 1)
                 + f"\n\nCONTEXT = {', '.join(f'`{x}`' for x in shared)}. Not swappable "
                   f"(only one scenario has them, or they are structure): "
@@ -434,6 +452,226 @@ def _context_section(cfg: ReportConfig, by_id: dict, values: dict, out: Path,
             "Ordinary swaps leave context alone by design (MODELING_STANDARDS §5); this "
             "section asks how much of a difference it explains. Structure (zones, units, "
             "the number of waves) is never swapped.\n\n" + "\n\n".join(parts))
+
+
+# Donor check (issue #31) ---------------------------------------------------------
+DONOR_SAME = 0.99   # share of the donor's runs unchanged that counts as "cannot tell apart"
+DONOR_MOVE = 0.03   # single-swap change across that range that earns a full factorial
+DONOR_STEPS = 8     # fixed values tried on each side of the prior
+
+
+def same_runs(a: pd.DataFrame, b: pd.DataFrame) -> np.ndarray:
+    """Per run: every metric equal (NaN equals NaN). With common random numbers,
+    two batches that differ only in one parameter are compared run for run."""
+    cols = [c for c in a.columns if c.startswith("m.")]
+    x = a[cols].to_numpy(dtype=float)
+    y = b[cols].to_numpy(dtype=float)
+    return ((x == y) | (np.isnan(x) & np.isnan(y))).all(axis=1)
+
+
+def _beyond(lo: float, hi: float) -> tuple[list[float], list[float]]:
+    """Fixed values below and above a prior's bounds, nearest first."""
+    dn = lo / DONOR_STEPS if lo > 0 else 2 * (hi - lo) / DONOR_STEPS
+    up = hi / DONOR_STEPS if hi > 0 else 2 * (hi - lo) / DONOR_STEPS
+    below = [round(lo - j * dn, 10) for j in range(1, DONOR_STEPS + 1)]
+    above = [round(hi + j * up, 10) for j in range(1, DONOR_STEPS + 1)]
+    if lo >= 0:
+        below = [x for x in below if x >= 0]
+    if lo >= 0 and hi <= 1:          # a share or a probability: stay inside [0, 1]
+        above = [x for x in above if x <= 1]
+    return below, above
+
+
+def _joint(df: pd.DataFrame, anchors: list[dict]) -> float:
+    if not anchors:
+        return float("nan")
+    t = analysis.check_anchors(df, anchors)
+    return float(t.loc[t.anchor == "ALL (joint)", "share"].iloc[0])
+
+
+def donor_scan(w: Scenario, factors: list[str], n: int, seed: int = 1,
+               workers: int = 1) -> list[dict]:
+    """Which parameters of `w`'s swapped bundles does `w` itself not identify?
+
+    Each non-fixed parameter is fixed at both ends of its prior. With common random
+    numbers the two batches differ only in that parameter, so when none of the n runs
+    changes, `w`'s runs (and with them its anchors, calibration and screening) cannot
+    see where in the prior the value lies. For each such parameter, fixed values are
+    then tried beyond the prior, nearest first, for as long as at least DONOR_SAME of
+    `w`'s runs stay as they are with the shipped prior: that is the range a swap from
+    `w` cannot choose between. Returns one dict per flagged parameter."""
+    cand = [(f, p) for f in factors for p in w.factors[f] if w.space[p].dist.kind != "fixed"]
+    if not cand:
+        return []
+    ends = experiment.run_batches(
+        [w.with_overrides({p: b}) for _, p in cand for b in w.space[p].dist.bounds()],
+        n, seed, workers, keep_params=False)
+    flagged = [(f, p, ends[2 * i], ends[2 * i + 1]) for i, (f, p) in enumerate(cand)
+               if same_runs(ends[2 * i], ends[2 * i + 1]).all()]
+    if not flagged:
+        return []
+    base = experiment.run_batch(w, n, seed, workers, keep_params=False)
+    grids = [_beyond(*w.space[p].dist.bounds()) for _, p, _, _ in flagged]
+    tries = [(i, x) for i, (below, above) in enumerate(grids) for x in below + above]
+    dfs = experiment.run_batches([w.with_overrides({flagged[i][1]: x}) for i, x in tries],
+                                 n, seed, workers, keep_params=False)
+    got = {(i, x): df for (i, x), df in zip(tries, dfs)}
+    out = []
+    for i, (f, p, d_lo, d_hi) in enumerate(flagged):
+        lo, hi = w.space[p].dist.bounds()
+        below, above = grids[i]
+        low, high = (lo, d_lo), (hi, d_hi)
+        for x in below:
+            if same_runs(base, got[(i, x)]).mean() < DONOR_SAME:
+                break
+            low = (x, got[(i, x)])
+        for x in above:
+            if same_runs(base, got[(i, x)]).mean() < DONOR_SAME:
+                break
+            high = (x, got[(i, x)])
+        pts = {x: df for x, df in (low, (lo, d_lo), (hi, d_hi), high)}
+        points = [{"value": None, "same": 1.0, "joint": _joint(base, w.anchors)}]
+        points += [{"value": x, "same": float(same_runs(base, df).mean()),
+                    "joint": _joint(df, w.anchors)} for x, df in sorted(pts.items())]
+        out.append({"factor": f, "param": p, "lo": lo, "hi": hi, "low": low[0],
+                    "high": high[0], "points": points})
+    return out
+
+
+def _num(x: float) -> str:
+    return f"{x:.4g}"
+
+
+def donor_section(h: Scenario, w: Scenario, scan: list[dict], tl: pd.DataFrame,
+                  n: int, seed: int, workers: int, values: dict[str, float],
+                  out: Path) -> str:
+    """The donor check for one swap (Lanchester): the parameters `w`'s own runs cannot
+    identify (see `donor_scan`), and the Shapley value and single swap of their
+    bundle at the ends of the range `w` cannot tell apart."""
+    head = "\n\n*Donor check.* "
+    if not scan:
+        return (head + f"Every non-fixed parameter in {w.id}'s swapped bundles changes some "
+                f"of its runs between the two ends of its prior (n = {n:,}).")
+    meta = {"home": h.fingerprint(), "away": w.fingerprint(), "n": n, "seed": seed,
+            "resolver": "lanchester", "same": DONOR_SAME, "move": DONOR_MOVE}
+    h, w = _variant(h, "lanchester"), _variant(w, "lanchester")
+    factors = list(tl.factor)
+    shipped = tl.set_index("factor")
+    pair = f"{h.id}__{w.id}.lanchester"
+    names = ", ".join(f"`{d['param']}` ({d['factor']}, {_num(d['lo'])}-{_num(d['hi'])})"
+                      for d in scan)
+    text = (head + f"Fixed at either end of its prior (same seeds, n = {n:,}), each of these "
+            f"parameters of {w.id}'s swapped bundles changes none of {w.id}'s runs: {names}. "
+            f"{w.id}'s anchors, calibration and screening therefore cannot see where in the "
+            "prior the value lies, and the Shapley values above rest on that prior wherever "
+            "the parameter matters here. Below, each one is fixed across the range over which "
+            f"at least {DONOR_SAME:.0%} of {w.id}'s runs stay as they are with the shipped "
+            f"prior (Lanchester, n = {n:,}; `donorcheck_{h.id}__{w.id}.csv`).")
+    rows_csv = []
+    for d in scan:
+        f, p = d["factor"], d["param"]
+        values[f"donor.{pair}.{p}.low"] = d["low"]
+        values[f"donor.{pair}.{p}.high"] = d["high"]
+        pts = d["points"]
+        ws = [w if pt["value"] is None else w.with_overrides({p: pt["value"]}) for pt in pts]
+        singles = [float(shipped.loc[f, "single_swap_p"])] + [
+            float(df["m.airbridge"].astype(float).mean()) for df in experiment.run_batches(
+                [experiment.variant(h, wx, [f], (1,)) for wx in ws[1:]], n, seed, workers,
+                keep_params=False)]
+        full = max(abs(s - singles[0]) for s in singles) >= DONOR_MOVE
+        phis: list[pd.Series | None] = [shipped.shapley]
+        for wx in ws[1:]:
+            if full:
+                res = experiment.factor_swap(h, wx, n, seed, factors=factors, workers=workers)
+                phi = analysis.shapley({m: v.mean() for m, v in res.runs.items()},
+                                       len(res.factors))
+                phis.append(pd.Series(phi, index=res.factors))
+            else:
+                phis.append(None)
+        rows = []
+        for pt, s, ph in zip(pts, singles, phis):
+            x = pt["value"]
+            label = "shipped prior" if x is None else _num(x)
+            if x is not None:
+                tag = f"{p}.{_num(x)}"
+                values[f"donorsame.{pair}.{tag}"] = pt["same"]
+                values[f"donorjoint.{pair}.{tag}"] = pt["joint"]
+                values[f"donorsingle.{pair}.{tag}.{f}"] = s
+                if ph is not None:
+                    for g, v in ph.items():
+                        values[f"donorshapley.{pair}.{tag}.{g}"] = float(v)
+            top = (" and ".join(ph.abs().sort_values(ascending=False).index[:2])
+                   if ph is not None else "")
+            row = {f"`{p}`": label, "runs unchanged": f"{pt['same']:.1%}",
+                   "joint anchors": pt["joint"], f"{f} Shapley": None if ph is None
+                   else float(ph[f]), f"{f} single": s, "two largest": top}
+            rows.append(row)
+            rows_csv.append({"param": p, "factor": f, "value": x, "donor_same": pt["same"],
+                             "donor_joint": pt["joint"], "single": s,
+                             "shapley": row[f"{f} Shapley"], "two_largest": top})
+        span = (f"`{p}` ({f}): {w.id}'s runs stay the same from {_num(d['low'])} to "
+                f"{_num(d['high'])}")
+        if full:
+            text += f"\n\n{span}.\n\n" + md_table(pd.DataFrame(rows))
+        else:
+            text += (f"\n\n{span}; {f} swapped alone stays within {DONOR_MOVE:.2f} of the "
+                     f"shipped {singles[0]:.2f} over that range ({min(singles):.2f} to "
+                     f"{max(singles):.2f}), so its Shapley value was not recomputed.")
+    experiment.save(pd.DataFrame(rows_csv), out, f"donorcheck_{h.id}__{w.id}", meta)
+    return text
+
+
+_BLOCK_END = re.compile(r"\n\n(\*\*\S+ given \S+'s factors\.\*\*|## )")
+
+
+def apply_donor_check(out_dir: str | Path, scenarios: list[str],
+                      pairs: list[tuple[str, str]], workers: int = 1) -> Path:
+    """Run only the donor check for the listed pairs (both directions) against the
+    swaps already saved in `out_dir`, and rewrite those pairs' blocks of section 3
+    in SUMMARY.md. Refuses saved swaps made with other scenario versions."""
+    import json
+
+    out = Path(out_dir)
+    path = out / "SUMMARY.md"
+    text = path.read_text()
+    vals = pd.read_csv(out / "report_values.csv")
+    values = dict(zip(vals["key"], vals["value"].astype(float)))
+    by_id = {s.id: s for s in map(Scenario.load, scenarios)}
+    scans: dict[tuple, list[dict]] = {}
+    for a, b in pairs:
+        for h, w in ((by_id[a], by_id[b]), (by_id[b], by_id[a])):
+            tabs, ends = {}, {}
+            for r in RESOLVER_NAMES:
+                name = f"{h.id}__{w.id}_{r}"
+                meta = json.loads((out / f"shapley_{name}.manifest.json").read_text())
+                if (meta["home"], meta["away"]) != (h.fingerprint(), w.fingerprint()):
+                    raise SystemExit(f"{out / name}: saved for other scenario versions; "
+                                     "rerun the report")
+                tabs[r] = pd.read_csv(out / f"shapley_{name}.csv")
+                sw = pd.read_csv(out / f"swap_{name}.csv")
+                k = len(tabs[r])
+                ends[r] = (float(sw.loc[sw.n_swapped == 0, "p"].iloc[0]),
+                           float(sw.loc[sw.n_swapped == k, "p"].iloc[0]))
+                if r == "lanchester":
+                    n, seed = int(meta["n"]), int(meta["seed"])
+                    factors = [c for c in sw.columns if c not in ("n_swapped", "p", "n")]
+            key = (w.id, tuple(factors))
+            if key not in scans:
+                scans[key] = donor_scan(_variant(w, "lanchester"), factors, n, seed, workers)
+            block = (_swap_section(h, w, ends, tabs)
+                     + donor_section(h, w, scans[key], tabs["lanchester"], n, seed,
+                                     workers, values, out))
+            header = f"**{h.id} given {w.id}'s factors.**"
+            start = text.find(header)
+            if start < 0:
+                raise SystemExit(f"{path}: no block for {h.id} given {w.id}")
+            m = _BLOCK_END.search(text, start + len(header))
+            end = m.start() if m else len(text.rstrip("\n"))
+            text = text[:start] + block + text[end:]
+    path.write_text(text)
+    experiment.save(pd.DataFrame(sorted(values.items()), columns=["key", "value"]), out,
+                    "report_values", {"seed": seed, "n": n})
+    return apply_notes(out)
 
 
 def _go_rule_section(cfg: ReportConfig, a: Scenario, b: Scenario, out: Path) -> str:

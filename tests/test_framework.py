@@ -473,6 +473,53 @@ def test_report_smoke(tmp_path):
     text = apply_notes(tmp_path).read_text()
     assert text.count("## Reading these results") == 1 and "Edited: " in text
     assert text.index("## Reading these results") < text.index("## 1.")
+    # every swap carries a donor check; rerunning it alone against the saved swaps
+    # reproduces section 3 exactly (same seeds, same files)
+    assert text.count("*Donor check.*") == 2
+    assert (tmp_path / "donorcheck_hostomel_2022__maleme_1941.csv").exists()
+    from battlelab.report import apply_donor_check
+    again = apply_donor_check(tmp_path, [str(HOST), str(MAL)],
+                              [("hostomel_2022", "maleme_1941")]).read_text()
+    assert again == text
+
+
+# ------------------------------------------------------------ donor check ---
+def test_donor_scan_flags_what_the_donor_cannot_see(mal):
+    """#31: Maleme's runs are the same anywhere in its risk.tolerance prior."""
+    from battlelab.report import DONOR_SAME, donor_scan
+    scan = donor_scan(mal, ["RISK"], 60, seed=1)
+    flagged = {d["param"]: d for d in scan}
+    assert set(flagged) == {"risk.tolerance"}            # commit_lag_h does change runs
+    d = flagged["risk.tolerance"]
+    assert (d["lo"], d["hi"]) == (0.25, 0.40)
+    assert d["low"] < 0.25 and d["high"] > 0.40           # the blind range extends beyond it
+    assert d["points"][0]["value"] is None and d["points"][0]["same"] == 1.0
+    assert all(p["same"] >= DONOR_SAME for p in d["points"])
+    assert [p["value"] for p in d["points"][1:]] == sorted(
+        {d["low"], 0.25, 0.40, d["high"]})
+
+
+def test_donor_section_shows_risk_over_the_blind_range(host, mal, tmp_path):
+    """#31: RISK's Shapley value and single swap for Hostomel given Maleme, over the
+    risk.tolerance range Maleme cannot tell apart."""
+    from battlelab.report import donor_scan, donor_section
+    n = 200
+    res = experiment.factor_swap(host, mal, n, seed=1, factors=["RISK", "HOLD"])
+    tl = analysis.shapley_table(res, boot=20)
+    values: dict[str, float] = {}
+    text = donor_section(host, mal, donor_scan(mal, ["RISK"], n, seed=1), tl, n, 1, 1,
+                         values, tmp_path)
+    assert "`risk.tolerance` (RISK, 0.25-0.4)" in text
+    assert "| `risk.tolerance` | runs unchanged |" in text and "RISK Shapley" in text
+    pair = "hostomel_2022__maleme_1941.lanchester"
+    low = values[f"donor.{pair}.risk.tolerance.low"]
+    assert low < 0.2
+    shipped = tl.set_index("factor")
+    tag = f"risk.tolerance.{low:.4g}"
+    assert values[f"donorshapley.{pair}.{tag}.RISK"] < shipped.loc["RISK", "shapley"] - 0.05
+    assert values[f"donorsingle.{pair}.{tag}.RISK"] < shipped.loc["RISK", "single_swap_p"] - 0.1
+    saved = pd.read_csv(tmp_path / "donorcheck_hostomel_2022__maleme_1941.csv")
+    assert set(saved.param) == {"risk.tolerance"} and saved.shapley.notna().all()
 
 
 @pytest.mark.skipif(LUA is None, reason="needs a Lua 5.3 interpreter")

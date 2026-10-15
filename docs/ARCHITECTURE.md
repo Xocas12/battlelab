@@ -63,7 +63,7 @@ YAML sections: `clock`, `sources`, `parameters`, `sides`, `zones`, `units` (with
 * `analysis.abc_posterior` → rejection calibration: prior vs posterior of every sampled parameter given the anchors.
 * `analysis.screen` → first-order variance share per parameter (binned), with its noise floor.
 * `analysis.compare_backends` → run-by-run comparison of two result tables (native vs CMO) on shared draws.
-* `report.run_report` → the standard pipeline over all scenarios and `results/SUMMARY.md`; every statement in it is computed from the saved tables.
+* `report.run_report` → the standard pipeline over all scenarios and `results/SUMMARY.md`; every statement in it is computed from the saved tables. `report.donor_scan` / `donor_section` add the donor check to each swap in section 3; `report.apply_donor_check` reruns only that check against saved swaps.
 
 ## CMO backend
 

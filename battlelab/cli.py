@@ -244,11 +244,16 @@ def _pairs(spec: str | None) -> list[tuple[str, str]] | None:
 def cmd_report(a):
     import glob
 
-    from .report import ReportConfig, apply_notes, run_report
+    from .report import ReportConfig, apply_donor_check, apply_notes, run_report
     if a.notes_only:
         print(f"updated {apply_notes(a.out)}")
         return
     files = a.scenarios or sorted(glob.glob("scenarios/*.yaml"))
+    if a.donor_check_only:
+        if not a.pairs:
+            raise SystemExit("--donor-check-only needs --pairs")
+        print(f"updated {apply_donor_check(a.out, files, _pairs(a.pairs), a.workers)}")
+        return
     cfg = ReportConfig(scenarios=files, n=a.n, seed=a.seed, workers=a.workers, out=a.out,
                        sweep_scenario=a.sweep, go_rule_pair=tuple(a.go_pair.split(","))
                        if a.go_pair else None, line_sweeps=DEFAULT_LINE_SWEEPS,
@@ -397,6 +402,9 @@ def main(argv=None):
                    help="pairs (a:b,c:d) to swap again with a CONTEXT bundle (section 3b)")
     p.add_argument("--notes-only", action="store_true",
                    help="only re-embed results/NOTES.md into the existing SUMMARY.md")
+    p.add_argument("--donor-check-only", action="store_true",
+                   help="only rerun section 3's donor check for --pairs against the saved "
+                        "swaps, and rewrite those pairs in the existing SUMMARY.md")
     p.set_defaults(fn=cmd_report)
 
     p = sub.add_parser("params", help="compare every parameter across scenarios (markdown)")
