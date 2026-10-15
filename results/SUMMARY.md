@@ -12,7 +12,7 @@ Hand-written interpretation. Every number below is a placeholder filled in from 
 
 **How far to trust each scenario.**
 
-* **Hostomel.** It reproduces its history well: all four facts hold jointly in 60% of runs under Lanchester and 50% under the CRT.
+* **Hostomel.** Three facts hold jointly in 60% of runs under Lanchester and 50% under the CRT. The fourth, `runway_unusable`, holds in every run by construction and is left out of that share (section 1): Ukrainian fire craters the runway whenever Ukraine does not hold it, Ukrainian troops demolish it whenever they hold it, and nothing repairs craters, so under the prior the runway is fully cratered by H+42 at the latest in every run, including the runs where Russia gets an airbridge and holds the field. For the same reason `denial.crater_rate`, `denial.demolish_rate` and `ctx.wave2_t` change no Hostomel run (`battlelab liveness`).
 * **Maleme.** All four facts hold together in 54% of runs under Lanchester, and the first troop landings fall in the afternoon of day 2 in 56%. That fit comes from the daylight confirmation (0.6.0): the New Zealanders left Point 107 at night, and the German HQ acted only after a test landing the next morning, then needed most of a day to embark and fly in a battalion. Under the CRT the joint share is still only 8%, because the CRT bleeds the Germans before the landings come.
 * **Ypenburg.** It reaches 51%. That is mostly because its control anchor was reread as "German troops on the field for at least 3 hours" rather than sole control, and partly because of the airborne ammunition limit and the second counterattack (#13). In 0.5.0 its wave sizes, wave times and Dutch counterattacks were sourced from the NIMH and WOH histories. In 0.6.0 the ammunition limit was sourced too: WOH has the Germans short of ammunition by the late-morning truce, and the field defence collapsing before 15:10. That collapse time is now an anchor of its own (80% of runs), which is why the joint share is lower than in 0.5.0.
 
@@ -37,7 +37,7 @@ Hand-written interpretation. Every number below is a placeholder filled in from 
 * **Caveats.**
   * The finding rests on judged garrison sizes: 500-650 at Maleme, and 1,500-3,000 of Heraklion's 8,024 able to fight at the airfield. With a Heraklion garrison below about 1,000, the comparison would look different; see the sweep.
   * It is also a statement about this model's attrition and morale, not a historical verdict. The common reading stresses the 22nd Battalion's withdrawal, and the model does reproduce that withdrawal; it just does not need it to lose Maleme.
-* **Weak anchors.** The Heraklion and Rethymno anchors hold in about 98-99% of runs, which only says the model lets strong, alert defenders win. Their garrisons and counterattacks are now taken from Long's official history (0.5.0), which did not move them.
+* **Weak anchors.** The Heraklion and Rethymno anchors hold in about 98-99% of runs, which only says the model lets strong, alert defenders win. Their garrisons and counterattacks are now taken from Long's official history (0.5.0), which did not move them. Hostomel's `runway_unusable` is weaker still: it cannot fail (see above).
 
 **Valkenburg: the ground and the village, not the fight.** Valkenburg is the same operation as Ypenburg on an unfinished airfield that could not carry loaded Ju 52s.
 
@@ -70,6 +70,8 @@ Hand-written interpretation. Every number below is a placeholder filled in from 
 
 Share of runs reproducing each historical fact (n = 2,000 per scenario per resolver; files `anchors_*.csv`). A low share means the model treats what happened as unusual; a high share does not validate it.
 
+An anchor marked non-discriminating held in every run under both resolvers, so it cannot tell runs apart: it is no evidence of fit, and it is left out of the joint share (which it could not change). This run: `hostomel_2022`: `runway_unusable`. `battlelab liveness` checks whether anything in the prior box can make an anchor fail.
+
 | scenario | anchor | lanchester | crt |
 |---|---|---|---|
 | heraklion_1941 | germans_never_take_field | 0.98 | 0.98 |
@@ -79,8 +81,8 @@ Share of runs reproducing each historical fact (n = 2,000 per scenario per resol
 | hostomel_2022 | vdv_secure_field_in_hours | 0.88 | 0.75 |
 | hostomel_2022 | ukraine_retakes_field | 0.72 | 0.69 |
 | hostomel_2022 | no_airbridge | 0.68 | 0.65 |
-| hostomel_2022 | runway_unusable | 1.00 | 1.00 |
-| hostomel_2022 | ALL (joint) | 0.60 | 0.50 |
+| hostomel_2022 | runway_unusable (non-discriminating) | 1.00 | 1.00 |
+| hostomel_2022 | ALL (joint, without runway_unusable) | 0.60 | 0.50 |
 | maleme_1941 | nz_leave_field_day1 | 0.64 | 0.12 |
 | maleme_1941 | landings_begin_day2_afternoon | 0.56 | 0.09 |
 | maleme_1941 | airbridge | 0.61 | 0.20 |

@@ -16,6 +16,7 @@ battlelab lint scenarios/*.yaml       # must be clean before every commit
 battlelab trace scenarios/hostomel_2022.yaml --run 3     # read one run as a log
 N=200 scripts/reproduce.sh            # smoke run of `battlelab report`; N=1000 for the real thing (~47 min, 4 cores; PAIRS="" for every pair)
 battlelab resolvers                   # loss rates of the two combat resolvers
+battlelab liveness scenarios/*.yaml -n 300 -w 4   # params that change no run, anchors that never fail (pinned in the tests)
 battlelab compare-backends native_runs.csv cmo_results.csv  # run-by-run backend comparison
 mkdir -p /tmp/out && cd cmo && lua5.3 tests/test_harness.lua lua /tmp/out -  # Lua harness vs mock CMO API
 ```
@@ -52,6 +53,7 @@ mkdir -p /tmp/out && cd cmo && lua5.3 tests/test_harness.lua lua /tmp/out -  # L
 * **Ypenburg anchors depend on how "holding the field" is read.** With the 0.3.0 shock and no-retreat mechanisms and the anchor `germans_hold_on_field` (German troops on the field for at least 3 h), the joint share was about 0.54 (0.51 since 0.6.0, which added the sourced anchor `germans_off_field_by_1510`). Under the old sole-control reading (`attacker_ever_controls`), it is still about 0.04: in a one-zone model the Dutch never all leave while the Germans hold the buildings. Multiple perimeter zones would settle it (issue #3 follow-up).
 * **Maleme under CRT.** The command cycle fixed Maleme under Lanchester (joint about 0.68) but not under CRT (about 0.13): the CRT bleeds an attacker at near parity about 6 times faster (`battlelab resolvers`), so the Germans rarely hold on long enough.
 * **Maleme timing.** The New Zealand withdrawal lands at nightfall (H+12) in most runs; `hold.move_delay_h` spreads it but was not adopted (see the parameter note). Since 0.6.0 the daylight confirmation (`risk.commit_daylight`, replacing the decision cycle) puts the first landings in the afternoon of day 2. The anchor `landings_begin_day2_afternoon` (Long: about 16:00, H+32) holds in about 56% of runs, and the Maleme joint share is about 0.54 (Lanchester). Under the CRT it stays low (about 0.08).
+* **Dead parameters and a flat anchor** (#26). `battlelab liveness` (n = 300, seed 1) finds 13 sampled parameters that change no run across their range, pinned in `DEAD_PARAMS` in the tests, and two anchors that never fail: Hostomel's `runway_unusable` (craters are never repaired, so the runway ends fully cratered in every run) and Waalhaven's `counterattack_fails` under Lanchester. Report section 1 marks `runway_unusable` non-discriminating and leaves it out of the joint share. If a change makes one of them live, update the lists.
 * **Hard go/no-go threshold** is still the default. The logistic and lagged variants exist (`mechanics.go_no_go`, `--go-rule`, `--set mech.info_lag_h=...`); `results/SUMMARY.md` section 4 compares them. The zero single-swap of Maleme's DENIAL into Hostomel is a property of the threshold rule.
 * Arrival order for simultaneous arrivals is the YAML order of `units`.
 * Empty zones keep their last controller.

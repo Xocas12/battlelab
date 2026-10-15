@@ -46,6 +46,7 @@ battlelab run scenarios/hostomel_2022.yaml -n 4000 --out results/
 battlelab anchors scenarios/maleme_1941.yaml -n 2000          # is history typical in the model?
 battlelab calibrate scenarios/maleme_1941.yaml -n 8000        # which params does history constrain?
 battlelab screen scenarios/hostomel_2022.yaml -n 4000         # which params drive the outcome?
+battlelab liveness scenarios/*.yaml -n 300 -w 4               # params that change no run, anchors that never fail
 battlelab swap scenarios/hostomel_2022.yaml scenarios/maleme_1941.yaml --both -n 1000 --out results/
 battlelab swap scenarios/ypenburg_1940.yaml scenarios/waalhaven_1940.yaml --both --context   # + shared ctx.* as a CONTEXT bundle
 battlelab sweep scenarios/hostomel_2022.yaml --grid risk.tolerance=0:0.4:9 \
